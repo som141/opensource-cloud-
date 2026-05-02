@@ -22,6 +22,17 @@
 
 GitHub 작업은 이슈 기반 브랜치와 PR 단위로 진행한다. 자세한 규칙은 `docs/conventions/github-workflow.md`를 따른다.
 
+## 모노레포 구성
+
+```text
+backend-api/        Spring Boot REST API 서버
+preprocess-worker/  RabbitMQ 기반 이미지 전처리 Worker
+frontend/           NGINX로 정적 배포되는 웹 프론트엔드
+infra/              Docker Compose, NGINX, RabbitMQ, MinIO, PostgreSQL, monitoring, k8s 설정
+docs/               아키텍처, API, DB, Worker, 운영 문서
+scripts/            로컬 실행과 운영 보조 스크립트
+```
+
 ## 금지 사항
 
 1. Worker를 단순 이미지 리사이징 서비스로 축소하지 않는다.
