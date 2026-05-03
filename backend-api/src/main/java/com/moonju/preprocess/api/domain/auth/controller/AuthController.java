@@ -7,6 +7,10 @@ import com.moonju.preprocess.api.domain.auth.service.AuthService;
 import com.moonju.preprocess.api.domain.auth.service.RefreshTokenCookieService;
 import com.moonju.preprocess.api.global.response.ApiResponse;
 import com.moonju.preprocess.api.global.support.CurrentUser;
+import com.moonju.preprocess.api.infra.openapi.OpenApiConfig;
+import io.swagger.v3.oas.annotations.Operation;
+import io.swagger.v3.oas.annotations.security.SecurityRequirement;
+import io.swagger.v3.oas.annotations.tags.Tag;
 import jakarta.servlet.http.HttpServletRequest;
 import jakarta.servlet.http.HttpServletResponse;
 import org.springframework.http.HttpHeaders;
@@ -17,6 +21,7 @@ import org.springframework.web.bind.annotation.RestController;
 
 @RestController
 @RequestMapping("/api/v1/auth")
+@Tag(name = "Auth", description = "Google OAuth login, current user, refresh token, and logout APIs")
 public class AuthController {
 
     private final AuthService authService;
@@ -28,11 +33,13 @@ public class AuthController {
     }
 
     @GetMapping("/me")
+    @Operation(summary = "Read current user", security = @SecurityRequirement(name = OpenApiConfig.BEARER_AUTH))
     public ApiResponse<AuthMeResponse> me(@CurrentUser Long currentUserId) {
         return ApiResponse.success(authService.me(currentUserId));
     }
 
     @PostMapping("/refresh")
+    @Operation(summary = "Refresh access token with HttpOnly refresh cookie")
     public ApiResponse<TokenRefreshResponse> refresh(HttpServletRequest request, HttpServletResponse response) {
         String refreshToken = refreshTokenCookieService.resolveRefreshToken(request);
         TokenRefreshResponse tokenResponse = authService.refresh(refreshToken);
@@ -44,6 +51,7 @@ public class AuthController {
     }
 
     @PostMapping("/logout")
+    @Operation(summary = "Logout and revoke refresh token")
     public ApiResponse<LogoutResponse> logout(HttpServletRequest request, HttpServletResponse response) {
         String refreshToken = refreshTokenCookieService.resolveRefreshToken(request);
         authService.logout(refreshToken);
