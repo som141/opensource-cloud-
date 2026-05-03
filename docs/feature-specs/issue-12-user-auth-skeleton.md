@@ -1,17 +1,17 @@
 # Issue 12. User/Auth domain skeleton
 
-## 이슈
+## Issue
 
 - Issue: `#12`
 - Title: `✨ [Feat] user/auth 도메인 entity, repository skeleton 추가`
 - Branch: `feat/som/12`
 - Base: `feat/som/9`
 
-## 목표
+## Goal
 
-Google/Kakao 소셜 로그인과 refresh token 관리를 위한 user/auth 도메인의 entity와 repository skeleton을 만든다.
+Create the entity and repository skeleton for Google social login and refresh token management in the user/auth domain.
 
-## 작업 범위
+## Scope
 
 1. `User`
 2. `SocialAccount`
@@ -22,9 +22,9 @@ Google/Kakao 소셜 로그인과 refresh token 관리를 위한 user/auth 도메
 7. `UserRepository`
 8. `SocialAccountRepository`
 9. `RefreshTokenRepository`
-10. entity 단위 테스트
+10. Entity unit tests
 
-## 도메인 모델
+## Domain Model
 
 `User`:
 
@@ -48,24 +48,24 @@ Google/Kakao 소셜 로그인과 refresh token 관리를 위한 user/auth 도메
 3. expiresAt
 4. revokedAt
 
-## repository 기준
+## Repository Rules
 
-1. `UserRepository`는 email 기반 조회를 지원한다.
-2. `SocialAccountRepository`는 provider + providerUserId 기반 조회를 지원한다.
-3. `RefreshTokenRepository`는 tokenHash와 userId 기반 조회/삭제를 지원한다.
+1. `UserRepository` supports email-based lookup.
+2. `SocialAccountRepository` supports provider + providerUserId lookup.
+3. `RefreshTokenRepository` supports tokenHash and userId based lookup and revoke flows.
 
-## 범위 제외
+## Out of Scope
 
 1. OAuth2 login success handler
-2. JWT 발급
-3. Refresh token cookie 설정
-4. SecurityConfig
-5. Controller API
+2. JWT issuance
+3. Refresh token cookie setup
+4. `SecurityConfig`
+5. Controller APIs
 6. DB migration
 
-## 주의 사항
+## Constraints
 
-1. Worker에 인증 로직을 넣지 않는다.
-2. OAuth client secret을 커밋하지 않는다.
-3. Access token을 장기 토큰으로 사용하지 않는다.
-4. API 서버에 OpenCV 전처리 로직을 넣지 않는다.
+1. Worker must not include auth logic.
+2. OAuth client secrets must never be committed.
+3. Access tokens must not be reused as refresh tokens.
+4. API server must not include OpenCV preprocessing logic.
