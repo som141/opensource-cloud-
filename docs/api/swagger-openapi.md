@@ -17,10 +17,49 @@ OpenAPI JSON: http://localhost:8080/v3/api-docs
 The backend uses:
 
 ```gradle
+id 'org.springframework.boot' version '3.4.5'
 implementation 'org.springdoc:springdoc-openapi-starter-webmvc-ui:2.8.5'
 ```
 
-Spring Boot is `3.4.5`, so the springdoc `2.8.x` line is used.
+Spring Boot stays on `3.4.5`. `springdoc-openapi` uses the `2.8.x` line because it is the Spring Boot 3 compatible
+line. The locally verified Swagger UI version is `2.8.5`.
+
+## Local Docker Test
+
+The local backend needs PostgreSQL. If the PostgreSQL container is already running, keep it running.
+
+```powershell
+docker ps
+```
+
+Start the backend from the repository root:
+
+```powershell
+$backendPath = Join-Path (Get-Location) 'backend-api'
+docker run --rm `
+  --name backend-swagger-test `
+  --env-file backend-api\.env `
+  -e DB_URL=jdbc:postgresql://host.docker.internal:5432/image_preprocess `
+  -e RABBIT_HEALTH_ENABLED=false `
+  -p 8080:8080 `
+  -v "${backendPath}:/workspace" `
+  -w /workspace `
+  gradle:8.10-jdk21 gradle bootRun --no-daemon
+```
+
+In another PowerShell window, verify the backend and Swagger endpoints:
+
+```powershell
+Invoke-RestMethod http://localhost:8080/actuator/health
+Invoke-RestMethod http://localhost:8080/v3/api-docs
+Invoke-WebRequest http://localhost:8080/swagger-ui/index.html
+```
+
+Expected result:
+
+- `/actuator/health` returns `status: UP`.
+- `/v3/api-docs` returns OpenAPI JSON with `bearerAuth`.
+- `/swagger-ui/index.html` returns HTTP `200`.
 
 ## JWT Bearer Test Flow
 
