@@ -6,6 +6,10 @@ import com.moonju.preprocess.api.domain.project.service.ProjectMemberService;
 import com.moonju.preprocess.api.global.error.ErrorCode;
 import com.moonju.preprocess.api.global.response.ApiResponse;
 import com.moonju.preprocess.api.global.support.CurrentUser;
+import com.moonju.preprocess.api.infra.openapi.OpenApiConfig;
+import io.swagger.v3.oas.annotations.Operation;
+import io.swagger.v3.oas.annotations.security.SecurityRequirement;
+import io.swagger.v3.oas.annotations.tags.Tag;
 import jakarta.validation.Valid;
 import java.util.List;
 import org.springframework.web.bind.annotation.DeleteMapping;
@@ -18,6 +22,8 @@ import org.springframework.web.bind.annotation.RestController;
 
 @RestController
 @RequestMapping("/api/v1/projects/{projectId}/members")
+@Tag(name = "Project Members", description = "Project member invitation, listing, and removal APIs")
+@SecurityRequirement(name = OpenApiConfig.BEARER_AUTH)
 public class ProjectMemberController {
 
     private final ProjectMemberService projectMemberService;
@@ -27,6 +33,7 @@ public class ProjectMemberController {
     }
 
     @PostMapping
+    @Operation(summary = "Invite project member")
     public ApiResponse<ProjectMemberResponse> invite(
         @CurrentUser Long currentUserId,
         @PathVariable Long projectId,
@@ -40,6 +47,7 @@ public class ProjectMemberController {
     }
 
     @GetMapping
+    @Operation(summary = "List project members")
     public ApiResponse<List<ProjectMemberResponse>> findMembers(
         @CurrentUser Long currentUserId,
         @PathVariable Long projectId
@@ -48,6 +56,7 @@ public class ProjectMemberController {
     }
 
     @DeleteMapping("/{userId}")
+    @Operation(summary = "Remove project member")
     public ApiResponse<Void> remove(
         @CurrentUser Long currentUserId,
         @PathVariable Long projectId,
