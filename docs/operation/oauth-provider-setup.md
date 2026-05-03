@@ -1,88 +1,72 @@
 # OAuth Provider Setup
 
-## 목적
+## Goal
 
-Google/Kakao 소셜 로그인을 실제로 검증하기 전에 필요한 외부 개발자 콘솔 설정과 환경변수를 정리한다.
+Document the external Google OAuth setup required to test the current backend OAuth skeleton.
 
-## 현재 구현 단계
+## Current Scope
 
-현재는 OAuth2 설정 skeleton 단계다.
+Included:
 
-포함:
+1. Google OAuth client registration placeholder
+2. Google user info adapter
+3. OAuth2 login success redirect skeleton
+4. Security configuration skeleton
 
-1. Google/Kakao registration placeholder
-2. Kakao provider endpoint 설정
-3. provider별 user info adapter
-4. OAuth2 login success redirect skeleton
-5. SecurityConfig skeleton
+Excluded:
 
-제외:
+1. Automatic user sign-up
+2. JWT access token issuance
+3. Refresh token cookie storage
+4. Auth controller APIs such as `/api/v1/auth/me`
 
-1. 사용자 자동 가입
-2. JWT access token 발급
-3. refresh token cookie 저장
-4. `/api/v1/auth/me` 같은 인증 API
+## Required Values
 
-## 사용자가 준비해야 할 값
+You need the following values from Google Cloud Console:
 
-실제 로그인 테스트 전 아래 값을 발급받아야 한다.
-
-| Provider | 필요한 값 | 환경변수 |
+| Provider | Required Value | Environment Variable |
 |---|---|---|
 | Google | OAuth Client ID | `GOOGLE_CLIENT_ID` |
 | Google | OAuth Client Secret | `GOOGLE_CLIENT_SECRET` |
-| Kakao | REST API Key | `KAKAO_CLIENT_ID` |
-| Kakao | Client Secret | `KAKAO_CLIENT_SECRET` |
 
-Kakao Client Secret은 Kakao 개발자 콘솔에서 활성화한 경우 필요하다. 현재 skeleton은 `client_secret_post` 방식을 전제로 한다.
+## Local Redirect URI
 
-## 로컬 Redirect URI
-
-Google Console에 등록:
+Register this URI in Google Cloud Console:
 
 ```text
 http://localhost:8080/login/oauth2/code/google
 ```
 
-Kakao Developers에 등록:
-
-```text
-http://localhost:8080/login/oauth2/code/kakao
-```
-
-프론트엔드 성공 redirect:
+Frontend success redirect used by the current skeleton:
 
 ```text
 http://localhost:5173/oauth2/success
 ```
 
-## 환경변수 예시
+## Example Environment Variables
 
 ```text
 GOOGLE_CLIENT_ID=
 GOOGLE_CLIENT_SECRET=
-KAKAO_CLIENT_ID=
-KAKAO_CLIENT_SECRET=
 OAUTH2_SUCCESS_REDIRECT_URI=http://localhost:5173/oauth2/success
 ```
 
-## 운영 Redirect URI
+## Production Redirect URI
 
-운영 환경에서는 NGINX 외부 도메인 기준으로 redirect URI를 등록한다.
+Register the external HTTPS callback URI that matches the NGINX public domain.
 
-예시:
+Example:
 
 ```text
-https://{서비스도메인}/login/oauth2/code/google
-https://{서비스도메인}/login/oauth2/code/kakao
+https://{service-domain}/login/oauth2/code/google
 ```
 
-OAuth provider에 등록한 redirect URI와 Spring Boot가 인식하는 external base URL이 다르면 로그인이 실패한다.
+If the registered redirect URI and the backend external base URL do not match, OAuth login fails.
 
-## 보안 규칙
+## Security Notes
 
-1. client secret을 Git에 커밋하지 않는다.
-2. `.env`는 커밋하지 않는다.
-3. provider console의 redirect URI는 필요한 환경만 등록한다.
-4. 운영은 HTTPS를 전제로 한다.
-5. Access token 발급은 후속 JWT 작업에서 짧은 만료 시간으로 구현한다.
+1. Never commit the real client secret.
+2. Do not commit a real `.env` file.
+3. Register only the environments that you actually operate.
+4. Production should use HTTPS.
+5. Short-lived JWT access tokens will be added in the next auth step.

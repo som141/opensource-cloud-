@@ -1,66 +1,65 @@
 # 07. Auth/User
 
-## 목표
+## Goal
 
-Google/Kakao 소셜 로그인, 사용자, 소셜 계정, 토큰 관리를 구현한다.
+Implement Google social login, user, social account, and token management.
 
-## 먼저 읽을 문서
+## Read First
 
 1. `README.md`
 2. `docs/implementation-plan.md`
 3. `docs/tasks/06-global-error-response.md`
 4. `docs/api/auth-api.md`
 
-## 작업 범위
+## Scope
 
-1. 사용자 entity
-2. 소셜 계정 entity
+1. User entity
+2. Social account entity
 3. Refresh token entity
 4. OAuth2 provider adapter
-5. JWT 발급
-6. 내 정보, 토큰 갱신, 로그아웃 API
+5. JWT issuance
+6. Auth APIs for current user, token refresh, and logout
 
-## 작업 순서
+## Steps
 
-1. `User` entity를 만든다.
-2. `SocialAccount` entity를 만든다.
-3. `RefreshToken` entity를 만든다.
-4. `UserRole`, `UserStatus` enum을 만든다.
-5. repository를 만든다.
-6. Google OAuth2 user info adapter를 만든다.
-7. Kakao OAuth2 user info adapter를 만든다.
-8. OAuth2 user info factory를 만든다.
-9. `SecurityConfig`를 만든다.
-10. `JwtTokenProvider`를 만든다.
-11. `JwtAuthenticationFilter`를 만든다.
-12. OAuth2 login success handler를 만든다.
-13. 신규 사용자 자동 가입을 구현한다.
-14. 기존 소셜 계정 로그인을 구현한다.
-15. access token 발급을 구현한다.
-16. refresh token 저장과 폐기를 구현한다.
-17. `/api/v1/auth/me`를 구현한다.
-18. `/api/v1/auth/refresh`를 구현한다.
-19. `/api/v1/auth/logout`을 구현한다.
-20. 소셜 계정 연결/해제를 구현한다.
-21. 회원 탈퇴 soft delete를 구현한다.
+1. Create the `User` entity.
+2. Create the `SocialAccount` entity.
+3. Create the `RefreshToken` entity.
+4. Create the `UserRole` and `UserStatus` enums.
+5. Create repositories.
+6. Create the Google OAuth2 user info adapter.
+7. Create the OAuth2 user info factory.
+8. Create `SecurityConfig`.
+9. Create `JwtTokenProvider`.
+10. Create `JwtAuthenticationFilter`.
+11. Create the OAuth2 login success handler.
+12. Implement automatic sign-up for the first Google login.
+13. Implement login for an existing social account.
+14. Implement access token issuance.
+15. Implement refresh token storage and rotation.
+16. Implement `/api/v1/auth/me`.
+17. Implement `/api/v1/auth/refresh`.
+18. Implement `/api/v1/auth/logout`.
+19. Implement social account link and unlink APIs if multi-provider support is reintroduced later.
+20. Implement user soft delete.
 
-## 산출물
+## Deliverables
 
-1. Auth/User domain 클래스
-2. OAuth2 infra 클래스
-3. Security infra 클래스
-4. 인증 API
-5. 인증 테스트
+1. Auth/User domain classes
+2. OAuth2 infra classes
+3. Security infra classes
+4. Auth APIs
+5. Auth tests
 
-## 완료 기준
+## Completion Criteria
 
-1. Google과 Kakao provider가 분리되어 있다.
-2. 최초 로그인 시 사용자 row가 생성된다.
-3. provider와 provider user id로 기존 사용자를 찾는다.
-4. Refresh token은 폐기 가능하다.
+1. Google provider integration works through a dedicated adapter.
+2. A user row is created on the first login.
+3. Existing users are found by provider and provider user id.
+4. Refresh tokens can be revoked and rotated.
 
-## 금지 사항
+## Constraints
 
-1. Worker에 인증 로직을 넣지 않는다.
-2. OAuth client secret을 커밋하지 않는다.
-3. Access token을 장기 토큰으로 사용하지 않는다.
+1. Worker must not include auth logic.
+2. OAuth client secrets must never be committed.
+3. Access tokens must not be reused as refresh tokens.

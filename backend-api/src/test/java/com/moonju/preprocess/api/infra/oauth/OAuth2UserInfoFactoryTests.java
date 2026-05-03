@@ -30,29 +30,6 @@ class OAuth2UserInfoFactoryTests {
     }
 
     @Test
-    void createsKakaoUserInfo() {
-        OAuth2UserInfo userInfo = OAuth2UserInfoFactory.create(
-            "kakao",
-            Map.of(
-                "id", 12345L,
-                "kakao_account", Map.of(
-                    "email", "moonju@example.com",
-                    "profile", Map.of(
-                        "nickname", "MoonJu",
-                        "profile_image_url", "https://example.com/kakao.png"
-                    )
-                )
-            )
-        );
-
-        assertThat(userInfo.getProvider()).isEqualTo(SocialProvider.KAKAO);
-        assertThat(userInfo.getProviderUserId()).isEqualTo("12345");
-        assertThat(userInfo.getEmail()).isEqualTo("moonju@example.com");
-        assertThat(userInfo.getName()).isEqualTo("MoonJu");
-        assertThat(userInfo.getProfileImageUrl()).isEqualTo("https://example.com/kakao.png");
-    }
-
-    @Test
     void rejectsUnsupportedProvider() {
         assertThatThrownBy(() -> OAuth2UserInfoFactory.create("github", Map.of()))
             .isInstanceOf(OAuth2LoginFailedException.class)
