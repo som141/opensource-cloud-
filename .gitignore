@@ -39,7 +39,10 @@ out/
 .idea/
 
 .env
+.env.local
+LOCAL_CONFIG.md
+*.local.md
 
 verbly-key.pem
 *.pem
-.md
+AGENTS.md

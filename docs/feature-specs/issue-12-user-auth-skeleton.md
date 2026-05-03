@@ -9,7 +9,7 @@
 
 ## 목표
 
-Google/Kakao 소셜 로그인과 refresh token 관리를 위한 user/auth 도메인의 entity와 repository skeleton을 만든다.
+Google 소셜 로그인과 refresh token 관리를 위한 user/auth 도메인의 entity와 repository skeleton을 만든다.
 
 ## 작업 범위
 
