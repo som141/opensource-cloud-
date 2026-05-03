@@ -1,19 +1,19 @@
 # backend-api
 
-Spring Boot REST API 서버 경로다.
+Spring Boot REST API server.
 
-## 책임
+## Responsibilities
 
-1. Google/Kakao 소셜 로그인
-2. 사용자와 프로젝트 관리
-3. 업로드 세션과 presigned URL 발급
-4. 이미지 메타데이터 관리
-5. Job 등록과 상태 조회
-6. SSE 진행률 제공
-7. Worker internal API 제공
+1. Google social login
+2. User and project management
+3. Upload sessions and presigned URL issuance
+4. Image metadata management
+5. Job registration and status queries
+6. SSE progress delivery
+7. Internal worker API
 
-## 금지 사항
+## Out of Scope
 
-1. OpenCV 문서 이미지 전처리 로직을 넣지 않는다.
-2. Worker 전용 메시지 consume 로직을 넣지 않는다.
-3. 최상위 계층형 `controller/service/repository/dto` 구조를 만들지 않는다.
+1. OpenCV preprocessing logic
+2. Worker-side queue consume logic
+3. Flat top-level `controller/service/repository/dto` package layout

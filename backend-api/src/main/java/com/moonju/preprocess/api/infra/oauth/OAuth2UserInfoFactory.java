@@ -13,7 +13,6 @@ public final class OAuth2UserInfoFactory {
         String normalizedRegistrationId = registrationId.toLowerCase(Locale.ROOT);
         return switch (normalizedRegistrationId) {
             case "google" -> new GoogleOAuth2UserInfo(attributes);
-            case "kakao" -> new KakaoOAuth2UserInfo(attributes);
             default -> throw new OAuth2LoginFailedException("Unsupported OAuth2 provider: " + registrationId);
         };
     }
