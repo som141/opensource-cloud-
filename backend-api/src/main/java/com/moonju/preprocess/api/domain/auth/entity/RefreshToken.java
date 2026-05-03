@@ -51,6 +51,10 @@ public class RefreshToken extends BaseEntity {
         return revokedAt != null;
     }
 
+    public boolean isExpired(LocalDateTime now) {
+        return !expiresAt.isAfter(now);
+    }
+
     public Long getId() {
         return id;
     }

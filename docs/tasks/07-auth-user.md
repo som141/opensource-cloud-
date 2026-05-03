@@ -2,7 +2,7 @@
 
 ## 목표
 
-Google/Kakao 소셜 로그인, 사용자, 소셜 계정, 토큰 관리를 구현한다.
+Google 소셜 로그인, 사용자, 소셜 계정, 토큰 관리를 구현한다.
 
 ## 먼저 읽을 문서
 
@@ -28,21 +28,19 @@ Google/Kakao 소셜 로그인, 사용자, 소셜 계정, 토큰 관리를 구현
 4. `UserRole`, `UserStatus` enum을 만든다.
 5. repository를 만든다.
 6. Google OAuth2 user info adapter를 만든다.
-7. Kakao OAuth2 user info adapter를 만든다.
-8. OAuth2 user info factory를 만든다.
-9. `SecurityConfig`를 만든다.
-10. `JwtTokenProvider`를 만든다.
-11. `JwtAuthenticationFilter`를 만든다.
-12. OAuth2 login success handler를 만든다.
-13. 신규 사용자 자동 가입을 구현한다.
-14. 기존 소셜 계정 로그인을 구현한다.
-15. access token 발급을 구현한다.
-16. refresh token 저장과 폐기를 구현한다.
-17. `/api/v1/auth/me`를 구현한다.
-18. `/api/v1/auth/refresh`를 구현한다.
-19. `/api/v1/auth/logout`을 구현한다.
-20. 소셜 계정 연결/해제를 구현한다.
-21. 회원 탈퇴 soft delete를 구현한다.
+7. OAuth2 user info factory를 만든다.
+8. `SecurityConfig`를 만든다.
+9. `JwtTokenProvider`를 만든다.
+10. `JwtAuthenticationFilter`를 만든다.
+11. OAuth2 login success handler를 만든다.
+12. 신규 사용자 자동 가입을 구현한다.
+13. 기존 소셜 계정 로그인을 구현한다.
+14. access token 발급을 구현한다.
+15. refresh token 저장과 회전을 구현한다.
+16. `/api/v1/auth/me`를 구현한다.
+17. `/api/v1/auth/refresh`를 구현한다.
+18. `/api/v1/auth/logout`을 구현한다.
+19. 회원 탈퇴 soft delete는 별도 사용자 관리 작업에서 구현한다.
 
 ## 산출물
 
@@ -54,7 +52,7 @@ Google/Kakao 소셜 로그인, 사용자, 소셜 계정, 토큰 관리를 구현
 
 ## 완료 기준
 
-1. Google과 Kakao provider가 분리되어 있다.
+1. Google provider가 지원된다.
 2. 최초 로그인 시 사용자 row가 생성된다.
 3. provider와 provider user id로 기존 사용자를 찾는다.
 4. Refresh token은 폐기 가능하다.

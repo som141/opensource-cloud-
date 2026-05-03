@@ -4,7 +4,7 @@ Spring Boot REST API 서버 경로다.
 
 ## 책임
 
-1. Google/Kakao 소셜 로그인
+1. Google 소셜 로그인
 2. 사용자와 프로젝트 관리
 3. 업로드 세션과 presigned URL 발급
 4. 이미지 메타데이터 관리
