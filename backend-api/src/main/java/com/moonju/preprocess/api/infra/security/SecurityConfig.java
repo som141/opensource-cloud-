@@ -9,6 +9,8 @@ import org.springframework.security.config.http.SessionCreationPolicy;
 import org.springframework.security.web.SecurityFilterChain;
 import org.springframework.security.web.authentication.UsernamePasswordAuthenticationFilter;
 
+import static org.springframework.security.web.util.matcher.AntPathRequestMatcher.antMatcher;
+
 @Configuration
 @EnableWebSecurity
 public class SecurityConfig {
@@ -31,16 +33,16 @@ public class SecurityConfig {
             .sessionManagement(session -> session.sessionCreationPolicy(SessionCreationPolicy.STATELESS))
             .authorizeHttpRequests(authorize -> authorize
                 .requestMatchers(
-                    "/",
-                    "/error",
-                    "/actuator/health",
-                    "/actuator/info",
-                    "/oauth2/**",
-                    "/login/oauth2/**",
-                    "/api/v1/auth/refresh",
-                    "/api/v1/auth/logout",
-                    "/swagger-ui/**",
-                    "/v3/api-docs/**"
+                    antMatcher("/"),
+                    antMatcher("/error"),
+                    antMatcher("/actuator/health"),
+                    antMatcher("/actuator/info"),
+                    antMatcher("/oauth2/**"),
+                    antMatcher("/login/oauth2/**"),
+                    antMatcher("/api/v1/auth/refresh"),
+                    antMatcher("/api/v1/auth/logout"),
+                    antMatcher("/swagger-ui/**"),
+                    antMatcher("/v3/api-docs/**")
                 ).permitAll()
                 .anyRequest().authenticated()
             )
