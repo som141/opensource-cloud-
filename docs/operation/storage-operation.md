@@ -44,15 +44,17 @@ processed/{projectId}/{jobId}/{itemId}/debug/{step}.png
 5. Client uploads file bodies directly to object storage.
 6. Client calls upload complete.
 7. Spring API verifies object existence through `ObjectStoragePort`.
-8. Later image-domain logic creates `Image` rows from completed upload files.
+8. Image domain creates `Image` and `ORIGINAL` `ImageArtifact` rows from completed upload files.
 
 ## Local Skeleton
 
 Current skeleton classes:
 
 - `PresignedUrlGenerator`
+- `PresignedDownloadUrlGenerator`
 - `ObjectStoragePort`
 - `LocalPresignedUrlGenerator`
+- `LocalPresignedDownloadUrlGenerator`
 - `LocalObjectStorageAdapter`
 
 The local classes are placeholders so the application compiles and the domain boundary is testable. Production work

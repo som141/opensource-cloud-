@@ -1,5 +1,6 @@
 package com.moonju.preprocess.api.domain.upload.service;
 
+import com.moonju.preprocess.api.domain.image.service.ImageCreateService;
 import com.moonju.preprocess.api.domain.project.service.ProjectPermissionService;
 import com.moonju.preprocess.api.domain.upload.dto.UploadCompleteRequest;
 import com.moonju.preprocess.api.domain.upload.dto.UploadCompleteResponse;
@@ -21,17 +22,20 @@ public class UploadCompleteService {
     private final UploadSessionFileRepository uploadSessionFileRepository;
     private final ProjectPermissionService projectPermissionService;
     private final ObjectStoragePort objectStoragePort;
+    private final ImageCreateService imageCreateService;
 
     public UploadCompleteService(
         UploadSessionService uploadSessionService,
         UploadSessionFileRepository uploadSessionFileRepository,
         ProjectPermissionService projectPermissionService,
-        ObjectStoragePort objectStoragePort
+        ObjectStoragePort objectStoragePort,
+        ImageCreateService imageCreateService
     ) {
         this.uploadSessionService = uploadSessionService;
         this.uploadSessionFileRepository = uploadSessionFileRepository;
         this.projectPermissionService = projectPermissionService;
         this.objectStoragePort = objectStoragePort;
+        this.imageCreateService = imageCreateService;
     }
 
     @Transactional
@@ -47,6 +51,7 @@ public class UploadCompleteService {
 
         files.forEach(this::verifyAndMarkUploaded);
         uploadSession.complete();
+        imageCreateService.createFromCompletedUpload(uploadSession, files);
         return UploadCompleteResponse.of(uploadSession, files.size());
     }
 
