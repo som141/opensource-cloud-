@@ -1,5 +1,7 @@
 package com.moonju.preprocess.api.domain.project.service;
 
+import com.moonju.preprocess.api.domain.image.entity.ImageStatus;
+import com.moonju.preprocess.api.domain.image.repository.ImageRepository;
 import com.moonju.preprocess.api.domain.project.dto.ProjectCreateRequest;
 import com.moonju.preprocess.api.domain.project.dto.ProjectResponse;
 import com.moonju.preprocess.api.domain.project.dto.ProjectSummaryResponse;
@@ -26,17 +28,20 @@ public class ProjectService {
     private final ProjectMemberRepository projectMemberRepository;
     private final UserRepository userRepository;
     private final ProjectPermissionService projectPermissionService;
+    private final ImageRepository imageRepository;
 
     public ProjectService(
         ProjectRepository projectRepository,
         ProjectMemberRepository projectMemberRepository,
         UserRepository userRepository,
-        ProjectPermissionService projectPermissionService
+        ProjectPermissionService projectPermissionService,
+        ImageRepository imageRepository
     ) {
         this.projectRepository = projectRepository;
         this.projectMemberRepository = projectMemberRepository;
         this.userRepository = userRepository;
         this.projectPermissionService = projectPermissionService;
+        this.imageRepository = imageRepository;
     }
 
     @Transactional
@@ -86,11 +91,12 @@ public class ProjectService {
     public ProjectSummaryResponse summary(Long currentUserId, Long projectId) {
         ProjectMember member = projectPermissionService.validateReadable(projectId, currentUserId);
         long memberCount = projectMemberRepository.countByProject_IdAndProject_Status(projectId, ProjectStatus.ACTIVE);
+        long imageCount = imageRepository.countByProjectIdAndStatusNot(projectId, ImageStatus.DELETED);
         return new ProjectSummaryResponse(
             member.getProject().getId(),
             member.getProject().getName(),
             memberCount,
-            0,
+            imageCount,
             0
         );
     }
