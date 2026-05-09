@@ -5,6 +5,9 @@
 Auth API supports Google OAuth login, short-lived JWT access tokens, HttpOnly refresh-token cookies, and current-user
 lookup for protected APIs.
 
+For the full implementation flow, token lifecycle, refresh rotation, and logout behavior, see
+`docs/api/auth-token-flow.md`.
+
 ## Environment Injection
 
 Runtime values are injected through environment variables. Use `backend-api/.env.example` as the committed template and
