@@ -141,6 +141,5 @@ Response:
 ## Next Work
 
 - Replace the local presigned URL generator with a MinIO/S3 adapter.
-- Create image metadata rows after upload completion.
 - Add image magic number validation after object download or metadata extraction.
 - Add ZIP upload as a separate expansion task.

@@ -2,8 +2,10 @@ package com.moonju.preprocess.api.domain.upload.service;
 
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
+import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 
+import com.moonju.preprocess.api.domain.image.service.ImageCreateService;
 import com.moonju.preprocess.api.domain.project.service.ProjectPermissionService;
 import com.moonju.preprocess.api.domain.upload.dto.UploadCompleteRequest;
 import com.moonju.preprocess.api.domain.upload.dto.UploadCompleteResponse;
@@ -37,6 +39,9 @@ class UploadCompleteServiceTests {
     @Mock
     private ObjectStoragePort objectStoragePort;
 
+    @Mock
+    private ImageCreateService imageCreateService;
+
     @InjectMocks
     private UploadCompleteService service;
 
@@ -57,6 +62,7 @@ class UploadCompleteServiceTests {
         assertThat(response.uploadedFileCount()).isEqualTo(1);
         assertThat(uploadSession.getStatus()).isEqualTo(UploadSessionStatus.COMPLETED);
         assertThat(file.getStatus()).isEqualTo(UploadFileStatus.UPLOADED);
+        verify(imageCreateService).createFromCompletedUpload(uploadSession, List.of(file));
     }
 
     @Test
