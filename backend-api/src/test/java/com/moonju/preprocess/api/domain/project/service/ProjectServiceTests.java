@@ -5,12 +5,16 @@ import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 
+import com.moonju.preprocess.api.domain.image.entity.ImageStatus;
+import com.moonju.preprocess.api.domain.image.repository.ImageRepository;
 import com.moonju.preprocess.api.domain.project.dto.ProjectCreateRequest;
 import com.moonju.preprocess.api.domain.project.dto.ProjectResponse;
+import com.moonju.preprocess.api.domain.project.dto.ProjectSummaryResponse;
 import com.moonju.preprocess.api.domain.project.dto.ProjectUpdateRequest;
 import com.moonju.preprocess.api.domain.project.entity.Project;
 import com.moonju.preprocess.api.domain.project.entity.ProjectMember;
 import com.moonju.preprocess.api.domain.project.entity.ProjectRole;
+import com.moonju.preprocess.api.domain.project.entity.ProjectStatus;
 import com.moonju.preprocess.api.domain.project.repository.ProjectMemberRepository;
 import com.moonju.preprocess.api.domain.project.repository.ProjectRepository;
 import com.moonju.preprocess.api.domain.user.entity.User;
@@ -36,6 +40,9 @@ class ProjectServiceTests {
 
     @Mock
     private ProjectPermissionService projectPermissionService;
+
+    @Mock
+    private ImageRepository imageRepository;
 
     @Test
     void createsProjectAndOwnerMember() {
@@ -80,8 +87,32 @@ class ProjectServiceTests {
         assertThat(response.myRole()).isEqualTo(ProjectRole.EDITOR);
     }
 
+    @Test
+    void summarizesProjectWithImageCount() {
+        ProjectService projectService = projectService();
+        User owner = user(1L, "owner@example.com");
+        Project project = Project.create(owner, "Project", null, null);
+        ReflectionTestUtils.setField(project, "id", 10L);
+        when(projectPermissionService.validateReadable(10L, 1L))
+            .thenReturn(new ProjectMember(project, owner, ProjectRole.OWNER));
+        when(projectMemberRepository.countByProject_IdAndProject_Status(10L, ProjectStatus.ACTIVE)).thenReturn(2L);
+        when(imageRepository.countByProjectIdAndStatusNot(10L, ImageStatus.DELETED)).thenReturn(5L);
+
+        ProjectSummaryResponse response = projectService.summary(1L, 10L);
+
+        assertThat(response.memberCount()).isEqualTo(2L);
+        assertThat(response.imageCount()).isEqualTo(5L);
+        assertThat(response.jobCount()).isZero();
+    }
+
     private ProjectService projectService() {
-        return new ProjectService(projectRepository, projectMemberRepository, userRepository, projectPermissionService);
+        return new ProjectService(
+            projectRepository,
+            projectMemberRepository,
+            userRepository,
+            projectPermissionService,
+            imageRepository
+        );
     }
 
     private User user(Long id, String email) {

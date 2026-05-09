@@ -117,10 +117,10 @@ Response:
     "projectId": 1,
     "name": "Library Scan Batch",
     "memberCount": 2,
-    "imageCount": 0,
+    "imageCount": 15,
     "jobCount": 0
   }
 }
 ```
 
-`imageCount` and `jobCount` are placeholders until Image and Job domains are implemented.
+`imageCount` counts non-deleted `Image` rows. `jobCount` remains a placeholder until the Job domain is implemented.
