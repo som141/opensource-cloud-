@@ -1,10 +1,15 @@
 # 14. Internal Worker API
 
-## 목표
+## Goal
 
-Worker가 처리 상태와 artifact를 API 서버에 보고할 수 있는 내부 API를 구현한다.
+Implement internal-only APIs that allow the preprocessing Worker to report image-level execution state and artifact
+metadata back to the Spring API server.
 
-## 먼저 읽을 문서
+The API server still does not execute OpenCV preprocessing. The Worker consumes RabbitMQ messages, downloads original
+objects, runs the document preprocessing pipeline, uploads artifacts, and calls these internal endpoints only to update
+state.
+
+## Read First
 
 1. `README.md`
 2. `docs/implementation-plan.md`
@@ -12,46 +17,62 @@ Worker가 처리 상태와 artifact를 API 서버에 보고할 수 있는 내부
 4. `docs/tasks/13-sse-progress.md`
 5. `docs/api/job-api.md`
 
-## 작업 범위
+## Scope
 
-1. Worker token 검증
-2. item started
-3. item heartbeat
-4. item succeeded
-5. item failed
-6. artifact 등록
-7. Worker preset 조회
+1. Add Worker service-token validation with `X-Worker-Token`.
+2. Add item started report API.
+3. Add item heartbeat report API.
+4. Add item succeeded report API.
+5. Add item failed report API.
+6. Add artifact metadata registration API.
+7. Add Worker preset lookup API.
+8. Refresh Job progress counters after Worker state reports.
+9. Publish SSE progress/completed/failed events after Worker state reports.
 
-## 작업 순서
+## Order
 
-1. Worker service token 검증 필터를 만든다.
-2. internal API controller를 만든다.
-3. item started API를 구현한다.
-4. item heartbeat API를 구현한다.
-5. item succeeded API를 구현한다.
-6. item failed API를 구현한다.
-7. artifact 등록 API를 구현한다.
-8. Worker용 preset 조회 API를 구현한다.
-9. 실패 코드 저장을 구현한다.
-10. 상태 전이 검증을 구현한다.
-11. SSE progress 갱신과 연결한다.
-12. audit 필요 항목을 연결한다.
+1. Add Worker token configuration to `application.yml` and local env examples.
+2. Add `WorkerAuthenticationFilter` for `/internal/**`.
+3. Restrict `/internal/**` to `ROLE_WORKER` in Spring Security.
+4. Extend `JobItem` with processing, heartbeat, success, failure, and artifact registration methods.
+5. Extend `Job` with counter refresh logic from item statuses.
+6. Add request/response DTOs under `domain.job.dto`.
+7. Add `InternalWorkerJobService`.
+8. Add `InternalWorkerJobController`.
+9. Add `InternalWorkerPresetController`.
+10. Add unit tests for entity state transitions, service logic, controllers, and Worker token filter.
+11. Update `docs/api/job-api.md`.
+12. Add `docs/feature-specs/issue-55-internal-worker-api.md`.
 
-## 산출물
+## Endpoints
 
-1. Internal Worker API
-2. Worker token 검증 구조
-3. JobItem 상태 보고 로직
-4. Artifact 등록 로직
+All endpoints require:
 
-## 완료 기준
+```http
+X-Worker-Token: <WORKER_INTERNAL_TOKEN>
+```
 
-1. Worker가 DB에 직접 접속하지 않는다.
-2. 외부 사용자가 internal API를 호출할 수 없다.
-3. item 상태 전이가 일관된다.
+| Method | Path | Purpose |
+| --- | --- | --- |
+| `POST` | `/internal/v1/jobs/{jobId}/items/{itemId}/started` | Mark item as `PROCESSING` |
+| `POST` | `/internal/v1/jobs/{jobId}/items/{itemId}/heartbeat` | Update processing heartbeat |
+| `POST` | `/internal/v1/jobs/{jobId}/items/{itemId}/succeeded` | Mark item as `SUCCEEDED` and store result keys |
+| `POST` | `/internal/v1/jobs/{jobId}/items/{itemId}/failed` | Mark item as `FAILED` and store failure code |
+| `POST` | `/internal/v1/jobs/{jobId}/items/{itemId}/artifacts` | Register artifact keys separately |
+| `GET` | `/internal/v1/preprocess/presets` | Return built-in preprocessing presets for Worker |
 
-## 금지 사항
+## Done Criteria
 
-1. Internal API를 공개 API 문서와 같은 성격으로 노출하지 않는다.
-2. 사용자 access token으로 Worker API를 호출하지 않는다.
-3. Worker 실패를 성공 상태로 덮어쓰지 않는다.
+1. Normal user access tokens cannot call `/internal/**`.
+2. Missing or invalid `X-Worker-Token` returns `WORKER401`.
+3. Worker state reports validate current `JobItem` state.
+4. Job counters update after started, heartbeat, succeeded, and failed reports.
+5. SSE progress is published after Worker state changes.
+6. Worker still does not connect directly to the API database.
+
+## Forbidden
+
+1. Do not expose internal Worker APIs as user-facing APIs.
+2. Do not authorize Worker APIs with user access tokens.
+3. Do not mark Worker failure as success.
+4. Do not add image preprocessing logic to the API server.

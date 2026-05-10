@@ -56,6 +56,9 @@ All endpoints require `Authorization: Bearer <access-token>`.
 | `GET` | `/api/v1/jobs/{jobId}/artifacts` | Read artifact listing placeholder |
 | `GET` | `/api/v1/jobs/{jobId}/download.zip` | Read ZIP download placeholder |
 
+Internal Worker endpoints are not user-facing APIs. They require `X-Worker-Token` and are mounted under
+`/internal/v1/**`.
+
 ## Create Job
 
 Request:
@@ -206,8 +209,62 @@ Example payload:
 }
 ```
 
-Current limitation: Worker callbacks are not connected yet, so automatic progress publishing on every Worker state
-change is deferred to the Internal Worker API task.
+Worker state reports now refresh Job counters and publish SSE progress events through the Internal Worker API.
+
+## Internal Worker API
+
+Authentication:
+
+```http
+X-Worker-Token: <WORKER_INTERNAL_TOKEN>
+```
+
+| Method | Path | Purpose |
+| --- | --- | --- |
+| `POST` | `/internal/v1/jobs/{jobId}/items/{itemId}/started` | Mark item as `PROCESSING` |
+| `POST` | `/internal/v1/jobs/{jobId}/items/{itemId}/heartbeat` | Update processing heartbeat |
+| `POST` | `/internal/v1/jobs/{jobId}/items/{itemId}/succeeded` | Mark item as `SUCCEEDED` and store result keys |
+| `POST` | `/internal/v1/jobs/{jobId}/items/{itemId}/failed` | Mark item as `FAILED` and store error metadata |
+| `POST` | `/internal/v1/jobs/{jobId}/items/{itemId}/artifacts` | Register artifact object keys |
+| `GET` | `/internal/v1/preprocess/presets` | Return built-in presets for Worker |
+
+Started request:
+
+```json
+{
+  "workerId": "local-worker-1",
+  "attempt": 1
+}
+```
+
+Succeeded request:
+
+```json
+{
+  "workerId": "local-worker-1",
+  "processedObjectKey": "processed/1/1/10/processed.png",
+  "previewObjectKey": "processed/1/1/10/preview.png",
+  "reportObjectKey": "processed/1/1/10/processing-report.json"
+}
+```
+
+Failure request:
+
+```json
+{
+  "workerId": "local-worker-1",
+  "errorCode": "DECODE_FAILED",
+  "errorMessage": "Cannot decode image.",
+  "retryable": false
+}
+```
+
+Rules:
+
+- User access tokens do not authorize `/internal/**`.
+- Missing or invalid `X-Worker-Token` returns `WORKER401`.
+- Invalid item state transitions return `WORKER409`.
+- The API updates DB state only; actual OpenCV preprocessing stays in `preprocess-worker`.
 
 ## Cancel
 
@@ -232,6 +289,5 @@ POST /api/v1/jobs/{jobId}/rerun
 
 ## Current Limitations
 
-- SSE progress streaming currently provides the endpoint and initial summary snapshot.
-- Worker success/failure callback API is not implemented in this issue.
 - Artifact listing and ZIP download currently return placeholders.
+- Detailed debug artifact row expansion is deferred to a later artifact domain task.
