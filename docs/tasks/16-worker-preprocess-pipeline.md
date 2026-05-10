@@ -121,6 +121,17 @@ Issue 69 implements the first downstream OpenCV preprocessing step:
 6. Unsupported channel layouts fail the step.
 7. Downstream orientation, deskew, crop, denoise, contrast, binarization, morphology, DPI, and sharpen steps remain out of scope.
 
+## Current Issue 71 Scope
+
+Issue 71 implements Geometry 1:
+
+1. `OrientationNormalizeStep` rotates landscape inputs to portrait orientation.
+2. Portrait or square inputs remain no-op.
+3. `DeskewStep` estimates correction angle using grayscale, Otsu inverse threshold, foreground points, and `minAreaRect`.
+4. `DeskewStep` applies `warpAffine` only when angle is within `maxDeskewAngle`.
+5. Low foreground or excessive angle cases record fallback notes and skip.
+6. Crop, DPI normalization, quality steps, artifact upload, and success callback remain out of scope.
+
 ## Done Criteria
 
 1. A simple resize-only step does not exist.

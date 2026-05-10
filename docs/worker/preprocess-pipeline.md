@@ -82,6 +82,14 @@ Issue 69 implements `ColorNormalizeStep`:
 The step replaces the context-owned Mat only when conversion is needed. The remaining downstream steps still remain
 skeleton implementations.
 
+Issue 71 implements Geometry 1:
+
+- `OrientationNormalizeStep`
+- `DeskewStep`
+
+Orientation normalization rotates landscape input to portrait orientation. Deskew estimates a correction angle from
+foreground pixels and applies `warpAffine` when the angle is within the configured safety bound.
+
 ## Required Execution Order
 
 Every built-in document preset executes the following order:
@@ -134,8 +142,8 @@ that to `PIPELINE_EXECUTION_FAILED` and reports it to the backend Internal Worke
 
 ## Next Implementation Steps
 
-1. Implement orientation normalization with unit tests.
-2. Implement downstream steps one by one with unit tests.
+1. Implement Geometry 2: crop and DPI normalization.
+2. Implement quality steps: denoise, contrast, binarization, morphology cleanup.
 3. Add report generation per step.
 4. Add artifact save service.
 5. Keep OCR text extraction out of the Worker runtime scope.
