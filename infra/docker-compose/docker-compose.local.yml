@@ -1,0 +1,155 @@
+name: ${COMPOSE_PROJECT_NAME:-image-preprocess-local}
+
+services:
+  postgres:
+    image: postgres:16-alpine
+    container_name: image-preprocess-postgres
+    environment:
+      POSTGRES_DB: ${POSTGRES_DB:-image_preprocess}
+      POSTGRES_USER: ${POSTGRES_USER:-postgres}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:-postgres}
+      TZ: Asia/Seoul
+    ports:
+      - "${POSTGRES_PORT:-5432}:5432"
+    volumes:
+      - postgres-data:/var/lib/postgresql/data
+      - ../postgres/init.sql:/docker-entrypoint-initdb.d/01-init.sql:ro
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U $${POSTGRES_USER} -d $${POSTGRES_DB}"]
+      interval: 10s
+      timeout: 5s
+      retries: 10
+    networks:
+      - image-preprocess
+
+  rabbitmq:
+    image: rabbitmq:3.13-management
+    container_name: image-preprocess-rabbitmq
+    environment:
+      RABBITMQ_DEFAULT_USER: ${RABBITMQ_DEFAULT_USER:-local}
+      RABBITMQ_DEFAULT_PASS: ${RABBITMQ_DEFAULT_PASS:-local}
+    ports:
+      - "${RABBITMQ_AMQP_PORT:-5672}:5672"
+      - "${RABBITMQ_MANAGEMENT_PORT:-15672}:15672"
+    volumes:
+      - rabbitmq-data:/var/lib/rabbitmq
+      - ../rabbitmq/rabbitmq.conf:/etc/rabbitmq/rabbitmq.conf:ro
+      - ../rabbitmq/definitions.json:/etc/rabbitmq/definitions.json:ro
+    healthcheck:
+      test: ["CMD", "rabbitmq-diagnostics", "-q", "ping"]
+      interval: 10s
+      timeout: 5s
+      retries: 10
+    networks:
+      - image-preprocess
+
+  minio:
+    image: minio/minio:latest
+    container_name: image-preprocess-minio
+    command: server /data --console-address ":9001"
+    environment:
+      MINIO_ROOT_USER: ${MINIO_ROOT_USER:-minioadmin}
+      MINIO_ROOT_PASSWORD: ${MINIO_ROOT_PASSWORD:-minioadmin}
+    ports:
+      - "${MINIO_API_PORT:-9000}:9000"
+      - "${MINIO_CONSOLE_PORT:-9001}:9001"
+    volumes:
+      - minio-data:/data
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:9000/minio/health/live"]
+      interval: 10s
+      timeout: 5s
+      retries: 10
+    networks:
+      - image-preprocess
+
+  minio-bucket-init:
+    image: minio/mc:latest
+    container_name: image-preprocess-minio-init
+    depends_on:
+      minio:
+        condition: service_healthy
+    environment:
+      MINIO_ENDPOINT: http://minio:9000
+      MINIO_ROOT_USER: ${MINIO_ROOT_USER:-minioadmin}
+      MINIO_ROOT_PASSWORD: ${MINIO_ROOT_PASSWORD:-minioadmin}
+      MINIO_BUCKET: ${MINIO_BUCKET:-image-preprocess-local}
+    volumes:
+      - ../minio/bucket-init.sh:/scripts/bucket-init.sh:ro
+    entrypoint: ["/bin/sh", "/scripts/bucket-init.sh"]
+    networks:
+      - image-preprocess
+
+  backend-api:
+    build:
+      context: ../../backend-api
+      dockerfile: Dockerfile
+    container_name: image-preprocess-backend-api
+    depends_on:
+      postgres:
+        condition: service_healthy
+      rabbitmq:
+        condition: service_healthy
+      minio-bucket-init:
+        condition: service_completed_successfully
+    environment:
+      DB_URL: jdbc:postgresql://postgres:5432/${POSTGRES_DB:-image_preprocess}
+      DB_USERNAME: ${POSTGRES_USER:-postgres}
+      DB_PASSWORD: ${POSTGRES_PASSWORD:-postgres}
+      JPA_DDL_AUTO: ${JPA_DDL_AUTO:-update}
+      SPRING_RABBITMQ_HOST: rabbitmq
+      SPRING_RABBITMQ_PORT: 5672
+      SPRING_RABBITMQ_USERNAME: ${RABBITMQ_DEFAULT_USER:-local}
+      SPRING_RABBITMQ_PASSWORD: ${RABBITMQ_DEFAULT_PASS:-local}
+      GOOGLE_CLIENT_ID: ${GOOGLE_CLIENT_ID:-local-google-client-id}
+      GOOGLE_CLIENT_SECRET: ${GOOGLE_CLIENT_SECRET:-local-google-client-secret}
+      JWT_SECRET: ${JWT_SECRET:-local-development-secret-key-at-least-32-bytes}
+      OAUTH2_SUCCESS_REDIRECT_URI: ${OAUTH2_SUCCESS_REDIRECT_URI:-http://localhost:5173/oauth2/success}
+      CORS_ALLOWED_ORIGINS: ${CORS_ALLOWED_ORIGINS:-http://localhost:5173}
+      MINIO_ENDPOINT: http://minio:9000
+      MINIO_ACCESS_KEY: ${MINIO_ROOT_USER:-minioadmin}
+      MINIO_SECRET_KEY: ${MINIO_ROOT_PASSWORD:-minioadmin}
+      MINIO_BUCKET: ${MINIO_BUCKET:-image-preprocess-local}
+      RABBIT_HEALTH_ENABLED: "true"
+    ports:
+      - "${BACKEND_API_PORT:-8080}:8080"
+    networks:
+      - image-preprocess
+
+  preprocess-worker:
+    build:
+      context: ../../preprocess-worker
+      dockerfile: Dockerfile
+    container_name: image-preprocess-worker
+    depends_on:
+      backend-api:
+        condition: service_started
+      rabbitmq:
+        condition: service_healthy
+      minio-bucket-init:
+        condition: service_completed_successfully
+    environment:
+      WORKER_ID: ${WORKER_ID:-local-worker-1}
+      WORKER_LISTENER_ENABLED: ${WORKER_LISTENER_ENABLED:-false}
+      SPRING_RABBITMQ_HOST: rabbitmq
+      SPRING_RABBITMQ_PORT: 5672
+      SPRING_RABBITMQ_USERNAME: ${RABBITMQ_DEFAULT_USER:-local}
+      SPRING_RABBITMQ_PASSWORD: ${RABBITMQ_DEFAULT_PASS:-local}
+      BACKEND_API_INTERNAL_URL: http://backend-api:8080
+      WORKER_INTERNAL_TOKEN: ${WORKER_INTERNAL_TOKEN:-local-worker-token}
+      MINIO_ENDPOINT: http://minio:9000
+      MINIO_ACCESS_KEY: ${MINIO_ROOT_USER:-minioadmin}
+      MINIO_SECRET_KEY: ${MINIO_ROOT_PASSWORD:-minioadmin}
+      MINIO_BUCKET: ${MINIO_BUCKET:-image-preprocess-local}
+      RABBIT_HEALTH_ENABLED: "true"
+    networks:
+      - image-preprocess
+
+volumes:
+  postgres-data:
+  rabbitmq-data:
+  minio-data:
+
+networks:
+  image-preprocess:
+    driver: bridge
