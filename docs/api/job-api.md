@@ -49,6 +49,7 @@ All endpoints require `Authorization: Bearer <access-token>`.
 | `GET` | `/api/v1/jobs/{jobId}` | Read job detail |
 | `GET` | `/api/v1/jobs/{jobId}/items` | List image-level job items |
 | `GET` | `/api/v1/jobs/{jobId}/summary` | Read progress counters |
+| `GET` | `/api/v1/jobs/{jobId}/events` | Subscribe to progress SSE stream |
 | `POST` | `/api/v1/jobs/{jobId}/cancel` | Request cancellation |
 | `POST` | `/api/v1/jobs/{jobId}/retry` | Retry failed and dead-lettered items |
 | `POST` | `/api/v1/jobs/{jobId}/rerun` | Requeue all non-processing items |
@@ -170,6 +171,44 @@ Response:
 
 `progressPercent` is calculated from `(succeeded + failed) / total * 100`.
 
+## SSE Progress Stream
+
+```text
+GET /api/v1/jobs/{jobId}/events
+Accept: text/event-stream
+```
+
+The stream validates normal Job read permission before opening the connection. On subscribe, the API sends a heartbeat
+event and a current `JOB_PROGRESS` snapshot based on `GET /api/v1/jobs/{jobId}/summary`.
+
+Event types:
+
+| Event | Purpose |
+| --- | --- |
+| `HEARTBEAT` | Keeps the stream alive and verifies the connection |
+| `JOB_PROGRESS` | Sends current progress counters |
+| `JOB_COMPLETED` | Reserved for completed Job transition |
+| `JOB_FAILED` | Reserved for failed Job transition |
+
+Example payload:
+
+```json
+{
+  "eventType": "JOB_PROGRESS",
+  "jobId": 1,
+  "total": 1000,
+  "queued": 120,
+  "processing": 20,
+  "succeeded": 850,
+  "failed": 10,
+  "progressPercent": 86.0,
+  "emittedAt": "2026-05-10T00:00:00Z"
+}
+```
+
+Current limitation: Worker callbacks are not connected yet, so automatic progress publishing on every Worker state
+change is deferred to the Internal Worker API task.
+
 ## Cancel
 
 ```text
@@ -193,6 +232,6 @@ POST /api/v1/jobs/{jobId}/rerun
 
 ## Current Limitations
 
-- SSE progress streaming is not implemented in this issue.
+- SSE progress streaming currently provides the endpoint and initial summary snapshot.
 - Worker success/failure callback API is not implemented in this issue.
 - Artifact listing and ZIP download currently return placeholders.
