@@ -64,12 +64,13 @@ WORKER_LISTENER_ENABLED=true
 
 ## Current Runtime Behavior
 
-Until the OpenCV preprocessing pipeline is implemented, a valid message follows this skeleton flow:
+Until the OpenCV preprocessing pipeline is fully implemented, a valid message follows this skeleton flow:
 
 1. Validate message identity fields.
 2. Report started through the backend API client boundary.
 3. Prepare object storage download through the storage port boundary.
-4. Report `PIPELINE_NOT_IMPLEMENTED`.
+4. Execute the preprocessing pipeline skeleton.
+5. Report `PIPELINE_NOT_IMPLEMENTED`.
 
 This prevents the skeleton Worker from pretending to process images successfully before the real pipeline exists.
 
@@ -77,5 +78,5 @@ This prevents the skeleton Worker from pretending to process images successfully
 
 1. Add Worker internal API HTTP client implementation.
 2. Add MinIO/S3 SDK adapter implementation.
-3. Add preprocessing pipeline step skeleton.
+3. Replace pipeline skeleton steps with image-test/OpenCV-backed implementations.
 4. Connect pipeline result to processed image, preview, report, and debug artifact upload.
