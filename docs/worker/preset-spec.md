@@ -65,7 +65,7 @@ implemented as a thumbnail resize shortcut.
 
 ## Future Worker Work
 
-- Implement Worker-side `PreprocessPresetRegistry`.
-- Map backend preset names to Worker pipeline step parameters.
+- Replace Worker-side `PreprocessPresetRegistry` skeleton with image-test-backed runtime behavior.
+- Map backend preset parameters to real OpenCV step parameters.
 - Add `AutoPresetSelector` based on image characteristics.
 - Add Worker tests that compare supported preset names with backend documentation.
