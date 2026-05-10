@@ -1,0 +1,137 @@
+:root {
+  color: #182018;
+  background: #f2eadc;
+  --ink: #182018;
+  --muted: #687063;
+  --paper: #fffaf0;
+  --line: #d9cab0;
+  --moss: #315c45;
+  --clay: #b9623c;
+}
+
+body {
+  background:
+    radial-gradient(circle at top left, rgba(185, 98, 60, 0.18), transparent 28rem),
+    linear-gradient(135deg, #f7efdF 0%, #e9dfc9 100%);
+}
+
+.shell {
+  display: grid;
+  grid-template-columns: 18rem 1fr;
+  min-height: 100vh;
+}
+
+.sidebar {
+  border-right: 1px solid var(--line);
+  background: rgba(255, 250, 240, 0.84);
+  padding: 2rem;
+}
+
+.brand {
+  display: flex;
+  gap: 0.85rem;
+  align-items: center;
+  margin-bottom: 2rem;
+}
+
+.brand-mark {
+  display: grid;
+  width: 3rem;
+  height: 3rem;
+  place-items: center;
+  border-radius: 1rem;
+  background: var(--moss);
+  color: #fffaf0;
+  font-weight: 700;
+}
+
+.brand small,
+.eyebrow,
+.page-section p,
+.status-card span {
+  color: var(--muted);
+}
+
+.nav-list {
+  display: grid;
+  gap: 0.4rem;
+}
+
+.nav-list a {
+  border-radius: 999px;
+  padding: 0.7rem 0.9rem;
+}
+
+.nav-list a.active,
+.nav-list a:hover {
+  background: var(--ink);
+  color: var(--paper);
+}
+
+.content {
+  padding: 3rem;
+}
+
+.page-header {
+  max-width: 52rem;
+  margin-bottom: 2rem;
+}
+
+.page-header h1 {
+  margin: 0.25rem 0 0;
+  font-size: clamp(2.25rem, 6vw, 5.5rem);
+  line-height: 0.95;
+}
+
+.page-section {
+  display: grid;
+  gap: 1.5rem;
+  max-width: 54rem;
+  border: 1px solid var(--line);
+  border-radius: 1.5rem;
+  background: rgba(255, 250, 240, 0.76);
+  padding: 2rem;
+  box-shadow: 0 1.5rem 4rem rgba(49, 92, 69, 0.12);
+}
+
+.page-section h2 {
+  margin: 0 0 0.5rem;
+  font-size: 1.5rem;
+}
+
+.page-section p {
+  margin: 0;
+  line-height: 1.7;
+}
+
+.primary-action {
+  width: fit-content;
+  border-radius: 999px;
+  background: var(--clay);
+  color: #fffaf0;
+  padding: 0.9rem 1.2rem;
+  font-weight: 700;
+}
+
+.status-card {
+  display: grid;
+  gap: 0.35rem;
+  border-left: 4px solid var(--moss);
+  padding: 1rem;
+  background: #f6ecd8;
+}
+
+@media (max-width: 780px) {
+  .shell {
+    grid-template-columns: 1fr;
+  }
+
+  .sidebar {
+    border-right: 0;
+    border-bottom: 1px solid var(--line);
+  }
+
+  .content {
+    padding: 2rem 1.25rem;
+  }
+}

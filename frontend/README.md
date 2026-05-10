@@ -1,18 +1,26 @@
 # frontend
 
-웹 프론트엔드 경로다. 정적 파일은 NGINX를 통해 제공한다.
+React + Vite frontend skeleton for the document image preprocessing platform.
 
-## 책임
+## Responsibility
 
-1. Google 로그인 진입 화면
-2. 프로젝트 목록과 상세 화면
-3. 이미지 업로드 화면
-4. Job 생성과 진행률 화면
-5. 원본/처리 결과 비교 화면
-6. 처리 리포트와 실패 항목 표시
+1. Start Google OAuth login through `/oauth2/authorization/google`.
+2. Render project, upload, job, image, preprocessing quality, and admin placeholders.
+3. Call backend APIs through the root NGINX `/api` reverse proxy.
+4. Connect to Job progress SSE through `/api/v1/jobs/{jobId}/events`.
+5. Display original/processed/report data later, after the API and Worker artifact flows are implemented.
 
-## 금지 사항
+## Local Commands
 
-1. Bootstrap, jQuery, AdminLTE를 임의로 추가하지 않는다.
-2. 이미지 전처리 비즈니스 로직을 넣지 않는다.
-3. Object Storage secret을 노출하지 않는다.
+```bash
+npm install
+npm run build
+npm run dev
+```
+
+## Boundaries
+
+1. Do not add Bootstrap, jQuery, or AdminLTE.
+2. Do not put image preprocessing business logic in the frontend.
+3. Do not expose Object Storage secrets.
+4. Do not implement OCR text extraction as a frontend product workflow.
