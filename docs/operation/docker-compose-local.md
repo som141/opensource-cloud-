@@ -9,10 +9,11 @@ This document explains how to run the local backend stack for development.
 - PostgreSQL
 - RabbitMQ with management UI
 - MinIO
+- NGINX
 - backend-api
 - preprocess-worker
 
-Frontend and NGINX are intentionally excluded from this Compose file. They are handled in the next routing task.
+NGINX serves a minimal frontend placeholder from `frontend/public`. The real React/Vite app is still a later task.
 
 ## First Run
 
@@ -28,7 +29,9 @@ docker compose -f docker-compose.local.yml --env-file .env up -d --build
 
 | Component | URL |
 | --- | --- |
+| NGINX entry point | `http://localhost` |
 | backend-api | `http://localhost:8080` |
+| Swagger through NGINX | `http://localhost/swagger-ui/index.html` |
 | Swagger UI | `http://localhost:8080/swagger-ui/index.html` |
 | RabbitMQ Management | `http://localhost:15672` |
 | MinIO Console | `http://localhost:9001` |
@@ -53,6 +56,20 @@ WORKER_LISTENER_ENABLED=false
 
 This prevents the skeleton Worker from consuming queue messages unintentionally while the OpenCV implementation is not
 complete. Set it to `true` only when testing queue consumption explicitly.
+
+## Google OAuth Redirect URI
+
+When testing through NGINX, add this redirect URI in Google Console:
+
+```text
+http://localhost/login/oauth2/code/google
+```
+
+When bypassing NGINX and using backend-api directly, keep this URI too:
+
+```text
+http://localhost:8080/login/oauth2/code/google
+```
 
 ## Stop
 
