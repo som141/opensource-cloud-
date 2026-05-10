@@ -1,6 +1,8 @@
 package com.moonju.preprocess.worker.domain.preprocess.step;
 
 import com.moonju.preprocess.worker.domain.preprocess.exception.PreprocessStepNotFoundException;
+import com.moonju.preprocess.worker.domain.preprocess.model.ImageMatHolder;
+import com.moonju.preprocess.worker.domain.preprocess.service.ImageDecodePort;
 import java.util.EnumMap;
 import java.util.List;
 import java.util.Map;
@@ -19,8 +21,12 @@ public class PreprocessStepCatalog {
     }
 
     public static PreprocessStepCatalog builtIn() {
+        return builtIn((objectKey, imageBytes) -> ImageMatHolder.placeholder(objectKey));
+    }
+
+    public static PreprocessStepCatalog builtIn(ImageDecodePort imageDecodePort) {
         return new PreprocessStepCatalog(List.of(
-            new DecodeStep(),
+            new DecodeStep(imageDecodePort),
             new ColorNormalizeStep(),
             new OrientationNormalizeStep(),
             new DeskewStep(),

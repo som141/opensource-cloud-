@@ -51,9 +51,12 @@ Issue 63 adds the first real OpenCV runtime boundary:
 This still does not replace the pipeline `DecodeStep`. The next task should connect Object Storage download bytes to
 `DecodeStep` and store the decoded holder in the preprocessing context.
 
+Issue 65 connects the `DecodeStep` to the codec boundary when source bytes are available. The pipeline context now owns
+the decoded holder during execution and releases it when the runner finishes.
+
 ## Future Implementation Points
 
-1. `domain/preprocess/step/DecodeStep` uses the codec adapter.
+1. Object Storage download supplies source bytes to the context.
 2. Each step updates the processing context with reportable facts.
 3. `domain/artifact` saves processed, preview, report, and debug files to Object Storage.
 4. `domain/report` produces `processing-report.json`.
