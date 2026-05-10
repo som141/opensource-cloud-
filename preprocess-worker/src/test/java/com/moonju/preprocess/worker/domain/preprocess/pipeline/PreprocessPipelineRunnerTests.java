@@ -3,6 +3,7 @@ package com.moonju.preprocess.worker.domain.preprocess.pipeline;
 import static org.assertj.core.api.Assertions.assertThat;
 
 import com.moonju.preprocess.worker.domain.preprocess.preset.PreprocessPresetRegistry;
+import com.moonju.preprocess.worker.domain.preprocess.step.PreprocessStep;
 import com.moonju.preprocess.worker.domain.preprocess.step.PreprocessStepCatalog;
 import com.moonju.preprocess.worker.domain.preprocess.step.PreprocessStepName;
 import java.util.Map;
@@ -29,6 +30,9 @@ class PreprocessPipelineRunnerTests {
         PreprocessResult result = runner.run(context);
 
         assertThat(result.skeletonOnly()).isTrue();
+        assertThat(result.success()).isTrue();
+        assertThat(result.errorMessage()).isNull();
+        assertThat(result.wallTime()).isNotNull();
         assertThat(result.executedStepNames()).containsExactly(
             PreprocessStepName.DECODE,
             PreprocessStepName.COLOR_NORMALIZE,
@@ -42,5 +46,81 @@ class PreprocessPipelineRunnerTests {
             PreprocessStepName.DPI_NORMALIZE,
             PreprocessStepName.OPTIONAL_SHARPEN
         );
+        assertThat(result.stepExecutions())
+            .allSatisfy(execution -> {
+                assertThat(execution.startedAt()).isNotNull();
+                assertThat(execution.endedAt()).isNotNull();
+                assertThat(execution.wallTime()).isNotNull();
+                assertThat(execution.success()).isTrue();
+                assertThat(execution.errorMessage()).isNull();
+            });
+    }
+
+    @Test
+    void recordsFailedStepAndStopsPipeline() {
+        PreprocessStep failingDecodeStep = new PreprocessStep() {
+
+            @Override
+            public PreprocessStepName name() {
+                return PreprocessStepName.DECODE;
+            }
+
+            @Override
+            public void execute(PreprocessContext context) {
+                context.recordStep(name(), "Decode failed before OpenCV mat creation.");
+                throw new IllegalStateException("decode failed");
+            }
+        };
+        PreprocessPipelineRunner failingRunner = new PreprocessPipelineRunner(
+            PreprocessPresetRegistry.builtIn(),
+            new PreprocessStepCatalog(java.util.List.of(
+                failingDecodeStep,
+                new com.moonju.preprocess.worker.domain.preprocess.step.ColorNormalizeStep(),
+                new com.moonju.preprocess.worker.domain.preprocess.step.OrientationNormalizeStep(),
+                new com.moonju.preprocess.worker.domain.preprocess.step.DeskewStep(),
+                new com.moonju.preprocess.worker.domain.preprocess.step.CropStep(),
+                new com.moonju.preprocess.worker.domain.preprocess.step.DenoiseStep(),
+                new com.moonju.preprocess.worker.domain.preprocess.step.ContrastNormalizeStep(),
+                new com.moonju.preprocess.worker.domain.preprocess.step.BinarizationStep(),
+                new com.moonju.preprocess.worker.domain.preprocess.step.MorphologyCleanupStep(),
+                new com.moonju.preprocess.worker.domain.preprocess.step.DpiNormalizeStep(),
+                new com.moonju.preprocess.worker.domain.preprocess.step.SharpenStep()
+            ))
+        );
+        PreprocessContext context = new PreprocessContext(
+            1L,
+            10L,
+            "originals/project/scan.png",
+            "LOW_CONTRAST_SCAN",
+            Map.of(),
+            false
+        );
+
+        PreprocessResult result = failingRunner.run(context);
+
+        assertThat(result.success()).isFalse();
+        assertThat(result.errorMessage()).isEqualTo("decode failed");
+        assertThat(result.stepExecutions()).hasSize(1);
+        assertThat(result.stepExecutions().getFirst().stepName()).isEqualTo(PreprocessStepName.DECODE);
+        assertThat(result.stepExecutions().getFirst().success()).isFalse();
+        assertThat(result.stepExecutions().getFirst().note()).isEqualTo("Decode failed before OpenCV mat creation.");
+    }
+
+    @Test
+    void collectsFallbackNotesInContext() {
+        PreprocessContext context = new PreprocessContext(
+            1L,
+            10L,
+            "originals/project/scan.png",
+            "LOW_CONTRAST_SCAN",
+            Map.of(),
+            false
+        );
+
+        context.recordFallback(PreprocessStepName.DESKEW, "No reliable hough lines.", "minAreaRect");
+
+        assertThat(context.fallbackNotes()).hasSize(1);
+        assertThat(context.fallbackNotes().getFirst().stepName()).isEqualTo("DESKEW");
+        assertThat(context.fallbackNotes().getFirst().selectedStrategy()).isEqualTo("minAreaRect");
     }
 }

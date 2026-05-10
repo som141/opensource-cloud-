@@ -14,18 +14,25 @@ public class ProcessingReportFactory {
 
     public ProcessingReport createSkeletonReport(PreprocessResult result) {
         List<ProcessingStepReport> steps = result.stepExecutions().stream()
-            .map(step -> new ProcessingStepReport(step.stepName(), step.note(), ProcessingTiming.skeleton()))
+            .map(step -> new ProcessingStepReport(step.stepName(), step.note(), ProcessingTiming.wallOnly(step.wallTime())))
             .toList();
         return new ProcessingReport(
             result.jobId(),
             result.itemId(),
             result.presetName(),
             steps,
-            ProcessingTiming.skeleton(),
+            ProcessingTiming.wallOnly(result.wallTime()),
             ProcessingMemoryUsage.notSampled(),
-            ProcessingFallbackSummary.empty(),
-            !result.skeletonOnly(),
-            result.skeletonOnly() ? "PIPELINE_NOT_IMPLEMENTED" : null
+            new ProcessingFallbackSummary(result.fallbackNotes()),
+            result.success() && !result.skeletonOnly(),
+            reportErrorMessage(result)
         );
+    }
+
+    private String reportErrorMessage(PreprocessResult result) {
+        if (!result.success()) {
+            return result.errorMessage();
+        }
+        return result.skeletonOnly() ? "PIPELINE_NOT_IMPLEMENTED" : null;
     }
 }

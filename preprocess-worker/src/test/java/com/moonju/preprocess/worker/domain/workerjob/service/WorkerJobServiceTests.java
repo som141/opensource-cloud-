@@ -1,20 +1,26 @@
 package com.moonju.preprocess.worker.domain.workerjob.service;
 
 import static org.assertj.core.api.Assertions.assertThat;
+import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.Mockito.doThrow;
+import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.verifyNoInteractions;
+import static org.mockito.Mockito.when;
 
+import com.moonju.preprocess.worker.domain.preprocess.pipeline.PreprocessContext;
 import com.moonju.preprocess.worker.domain.workerjob.dto.JobPriority;
 import com.moonju.preprocess.worker.domain.workerjob.dto.PreprocessJobMessage;
 import com.moonju.preprocess.worker.domain.workerjob.dto.WorkerJobResult;
 import com.moonju.preprocess.worker.domain.preprocess.pipeline.PreprocessPipelineRunner;
+import com.moonju.preprocess.worker.domain.preprocess.pipeline.PreprocessResult;
 import com.moonju.preprocess.worker.domain.preprocess.preset.PreprocessPresetRegistry;
 import com.moonju.preprocess.worker.domain.preprocess.step.PreprocessStepCatalog;
 import com.moonju.preprocess.worker.domain.workerjob.status.WorkerFailureCode;
 import com.moonju.preprocess.worker.domain.workerjob.status.WorkerJobStatus;
 import com.moonju.preprocess.worker.infra.api.BackendApiClient;
 import com.moonju.preprocess.worker.infra.storage.ObjectStoragePort;
+import java.time.Duration;
 import java.time.Instant;
 import java.util.Map;
 import org.junit.jupiter.api.Test;
@@ -107,6 +113,27 @@ class WorkerJobServiceTests {
             message,
             WorkerFailureCode.STORAGE_DOWNLOAD_FAILED,
             "storage unavailable",
+            true
+        );
+    }
+
+    @Test
+    void reportsPipelineExecutionFailureAsRetryable() {
+        PreprocessJobMessage message = validMessage();
+        PreprocessPipelineRunner failingRunner = mock(PreprocessPipelineRunner.class);
+        WorkerJobService failingService = new WorkerJobService(backendApiClient, objectStoragePort, failingRunner);
+        PreprocessContext context = PreprocessContext.fromMessage(message);
+        when(failingRunner.run(any(PreprocessContext.class)))
+            .thenReturn(PreprocessResult.from(context, true, Duration.ofMillis(3), false, "decode failed"));
+
+        WorkerJobResult result = failingService.process(message);
+
+        assertThat(result.failureCode()).isEqualTo(WorkerFailureCode.PIPELINE_EXECUTION_FAILED);
+        assertThat(result.retryable()).isTrue();
+        verify(backendApiClient).reportFailed(
+            message,
+            WorkerFailureCode.PIPELINE_EXECUTION_FAILED,
+            "decode failed",
             true
         );
     }
