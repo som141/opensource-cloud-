@@ -57,9 +57,13 @@ the decoded holder during execution and releases it when the runner finishes.
 Issue 67 connects Object Storage download bytes to the context before pipeline execution. A valid Worker message can now
 fetch the original object and feed those bytes into `DecodeStep`.
 
+Issue 69 normalizes decoded image color layout to BGR. This keeps downstream OpenCV document preprocessing steps from
+handling multiple input channel layouts.
+
 ## Future Implementation Points
 
-1. Each step updates the processing context with reportable facts.
-2. `domain/artifact` saves processed, preview, report, and debug files to Object Storage.
-3. `domain/report` produces `processing-report.json`.
-4. Worker reports artifact metadata back through Backend internal API.
+1. Orientation normalization updates the processing context with reportable facts.
+2. Each downstream step updates the processing context with reportable facts.
+3. `domain/artifact` saves processed, preview, report, and debug files to Object Storage.
+4. `domain/report` produces `processing-report.json`.
+5. Worker reports artifact metadata back through Backend internal API.

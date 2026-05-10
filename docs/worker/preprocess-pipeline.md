@@ -73,6 +73,15 @@ Issue 67 connects Object Storage download to the context:
 
 The Worker can now decode real downloaded source bytes. Later steps after decode still remain skeleton implementations.
 
+Issue 69 implements `ColorNormalizeStep`:
+
+- `GRAY -> BGR`
+- `BGRA -> BGR`
+- `BGR` no-op
+
+The step replaces the context-owned Mat only when conversion is needed. The remaining downstream steps still remain
+skeleton implementations.
+
 ## Required Execution Order
 
 Every built-in document preset executes the following order:
@@ -125,7 +134,7 @@ that to `PIPELINE_EXECUTION_FAILED` and reports it to the backend Internal Worke
 
 ## Next Implementation Steps
 
-1. Implement color normalization with unit tests.
+1. Implement orientation normalization with unit tests.
 2. Implement downstream steps one by one with unit tests.
 3. Add report generation per step.
 4. Add artifact save service.
