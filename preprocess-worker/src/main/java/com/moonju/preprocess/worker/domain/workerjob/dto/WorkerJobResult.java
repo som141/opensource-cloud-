@@ -9,13 +9,27 @@ public record WorkerJobResult(
     Long itemId,
     WorkerJobStatus status,
     WorkerFailureCode failureCode,
-    String message
+    String message,
+    boolean retryable
 ) {
+
+    public static WorkerJobResult succeeded(PreprocessJobMessage source, String message) {
+        return new WorkerJobResult(
+            source.messageId(),
+            source.jobId(),
+            source.itemId(),
+            WorkerJobStatus.SUCCEEDED,
+            null,
+            message,
+            false
+        );
+    }
 
     public static WorkerJobResult failed(
         PreprocessJobMessage source,
         WorkerFailureCode failureCode,
-        String message
+        String message,
+        boolean retryable
     ) {
         return new WorkerJobResult(
             source.messageId(),
@@ -23,7 +37,8 @@ public record WorkerJobResult(
             source.itemId(),
             WorkerJobStatus.FAILED,
             failureCode,
-            message
+            message,
+            retryable
         );
     }
 
@@ -34,7 +49,8 @@ public record WorkerJobResult(
             null,
             WorkerJobStatus.FAILED,
             WorkerFailureCode.INVALID_MESSAGE,
-            message
+            message,
+            false
         );
     }
 }

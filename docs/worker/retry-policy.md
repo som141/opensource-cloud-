@@ -41,21 +41,22 @@ The following failures should fail the item without repeated retry unless the us
 - Retried item `attempt` is incremented.
 - Retry messages are published to `image.preprocess.retry`.
 
-## Future Worker Behavior
+## Worker Behavior Implemented In Issue 57
 
 1. Consume a message from the selected queue.
 2. Report item started through the internal Worker API.
-3. Download the original image from Object Storage.
-4. Execute the OpenCV preprocessing pipeline.
-5. Upload processed image, preview, processing report, and optional debug artifacts.
-6. Report success or failure through the internal Worker API.
-7. Acknowledge RabbitMQ only after the item result is safely reported.
+3. Prepare original image download through the Object Storage port.
+4. Report heartbeat through the internal Worker API.
+5. Execute the preprocessing pipeline skeleton.
+6. Report non-retryable `PIPELINE_NOT_IMPLEMENTED` until the actual pipeline is implemented.
+7. Let the listener requeue retryable failures and reject non-retryable failures.
 
 ## DLQ Rules
 
-The exact automatic retry count is deferred to the Worker listener task. The target policy is:
+The exact automatic retry count is still deferred to queue-level RabbitMQ configuration. The current listener policy is:
 
-- Retry transient failures up to 3 attempts.
-- Send messages to `image.preprocess.dlq` after retry exhaustion.
+- Throw `ImmediateRequeueAmqpException` for retryable failures.
+- Throw `AmqpRejectAndDontRequeueException` for non-retryable failures.
+- Send messages to `image.preprocess.dlq` when RabbitMQ DLQ bindings are configured.
 - Preserve `jobId`, `itemId`, `imageId`, `attempt`, `traceId`, and failure reason.
 - Allow backend manual retry to publish a new message to `image.preprocess.retry`.

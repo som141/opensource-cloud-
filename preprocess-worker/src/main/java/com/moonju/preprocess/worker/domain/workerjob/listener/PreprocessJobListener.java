@@ -1,7 +1,11 @@
 package com.moonju.preprocess.worker.domain.workerjob.listener;
 
 import com.moonju.preprocess.worker.domain.workerjob.dto.PreprocessJobMessage;
+import com.moonju.preprocess.worker.domain.workerjob.dto.WorkerJobResult;
 import com.moonju.preprocess.worker.domain.workerjob.service.WorkerJobService;
+import com.moonju.preprocess.worker.domain.workerjob.status.WorkerJobStatus;
+import org.springframework.amqp.AmqpRejectAndDontRequeueException;
+import org.springframework.amqp.ImmediateRequeueAmqpException;
 import org.springframework.amqp.rabbit.annotation.RabbitListener;
 import org.springframework.boot.autoconfigure.condition.ConditionalOnProperty;
 import org.springframework.stereotype.Component;
@@ -22,6 +26,13 @@ public class PreprocessJobListener {
         "${rabbitmq.queues.preprocess-retry}"
     })
     public void handle(PreprocessJobMessage message) {
-        workerJobService.process(message);
+        WorkerJobResult result = workerJobService.process(message);
+        if (result.status() != WorkerJobStatus.FAILED) {
+            return;
+        }
+        if (result.retryable()) {
+            throw new ImmediateRequeueAmqpException(result.message());
+        }
+        throw new AmqpRejectAndDontRequeueException(result.message());
     }
 }
