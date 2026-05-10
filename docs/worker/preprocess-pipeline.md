@@ -5,6 +5,9 @@
 The Worker preprocessing pipeline models the OCR-oriented document image preprocessing mechanism that will be backed by
 OpenCV and the `image-test` repository logic. It is not a thumbnail or resize-only pipeline.
 
+This platform does not provide an OCR text extraction service. The Worker prepares document images before OCR by
+normalizing scan quality, geometry, contrast, binarization, morphology, and DPI.
+
 ## Current Implementation
 
 Issue 43 adds the pipeline skeleton:
@@ -75,3 +78,4 @@ This is intentional. A successful Worker result requires all of the following fu
 4. Implement steps one by one with unit tests.
 5. Add report generation per step.
 6. Add artifact save service.
+7. Keep OCR text extraction out of the Worker runtime scope.
