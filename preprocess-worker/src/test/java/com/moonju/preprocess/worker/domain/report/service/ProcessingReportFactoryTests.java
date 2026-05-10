@@ -7,6 +7,7 @@ import com.moonju.preprocess.worker.domain.preprocess.pipeline.PreprocessPipelin
 import com.moonju.preprocess.worker.domain.preprocess.pipeline.PreprocessResult;
 import com.moonju.preprocess.worker.domain.preprocess.preset.PreprocessPresetRegistry;
 import com.moonju.preprocess.worker.domain.preprocess.step.PreprocessStepCatalog;
+import com.moonju.preprocess.worker.domain.preprocess.step.PreprocessStepName;
 import com.moonju.preprocess.worker.domain.report.dto.ProcessingReport;
 import com.moonju.preprocess.worker.domain.report.dto.ProcessingReportJson;
 import java.util.Map;
@@ -43,9 +44,36 @@ class ProcessingReportFactoryTests {
         assertThat(report.steps().getFirst().timing().wallTime()).isNotNull();
         assertThat(report.timing().wallTime()).isNotNull();
         assertThat(report.fallbackSummary().fallbackNotes()).isEmpty();
+        assertThat(report.debugArtifacts()).isEmpty();
         assertThat(report.success()).isFalse();
         assertThat(report.errorMessage()).isEqualTo("PIPELINE_NOT_IMPLEMENTED");
         assertThat(reportJson.fileName()).isEqualTo("processing-report.json");
         assertThat(reportJson.schemaVersion()).isEqualTo("1.0");
+    }
+
+    @Test
+    void carriesDebugArtifactMetadataIntoReport() {
+        PreprocessContext context = new PreprocessContext(
+            3L,
+            1L,
+            2L,
+            "originals/scan.png",
+            "LOW_CONTRAST_SCAN",
+            Map.of(),
+            true
+        );
+        context.recordDebugArtifact(PreprocessStepName.CROP, "03_crop.png");
+        PreprocessResult result = PreprocessResult.from(
+            context,
+            true,
+            java.time.Duration.ofMillis(1),
+            true,
+            null
+        );
+
+        ProcessingReport report = factory.createSkeletonReport(result);
+
+        assertThat(report.debugArtifacts()).hasSize(1);
+        assertThat(report.debugArtifacts().getFirst().objectKey()).isEqualTo("processed/3/1/2/debug/03_crop.png");
     }
 }

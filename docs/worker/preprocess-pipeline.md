@@ -35,6 +35,15 @@ Issue 59 adds runtime metadata hooks:
 These hooks are required before implementing the OpenCV-backed steps because reports and debug artifacts need stable
 metadata regardless of which step succeeds or fails.
 
+Issue 61 adds the debug artifact metadata hook:
+
+- `DebugArtifactDescriptor`
+- `PreprocessContext.recordDebugArtifact`
+- `PreprocessResult.debugArtifacts`
+- `ProcessingReport.debugArtifacts`
+
+The hook is metadata-only. Actual debug image generation and upload are deferred to later OpenCV and artifact tasks.
+
 ## Required Execution Order
 
 Every built-in document preset executes the following order:
@@ -88,11 +97,10 @@ that to `PIPELINE_EXECUTION_FAILED` and reports it to the backend Internal Worke
 
 ## Next Implementation Steps
 
-1. Add debug artifact hook contract.
-2. Add image codec adapter and OpenCV loader.
-3. Replace `DecodeStep` skeleton with actual image decode.
-4. Add `ImageMatHolder` and resource cleanup.
-5. Implement steps one by one with unit tests.
-6. Add report generation per step.
-7. Add artifact save service.
-8. Keep OCR text extraction out of the Worker runtime scope.
+1. Add image codec adapter and OpenCV loader.
+2. Replace `DecodeStep` skeleton with actual image decode.
+3. Add `ImageMatHolder` and resource cleanup.
+4. Implement steps one by one with unit tests.
+5. Add report generation per step.
+6. Add artifact save service.
+7. Keep OCR text extraction out of the Worker runtime scope.

@@ -1,5 +1,6 @@
 package com.moonju.preprocess.worker.domain.preprocess.pipeline;
 
+import com.moonju.preprocess.worker.domain.preprocess.model.DebugArtifactDescriptor;
 import com.moonju.preprocess.worker.domain.preprocess.model.FallbackNote;
 import com.moonju.preprocess.worker.domain.preprocess.step.PreprocessStepName;
 import com.moonju.preprocess.worker.domain.workerjob.dto.PreprocessJobMessage;
@@ -12,6 +13,7 @@ import java.util.Map;
 public class PreprocessContext {
 
     private final Long jobId;
+    private final Long projectId;
     private final Long itemId;
     private final String originalObjectKey;
     private final String presetName;
@@ -19,6 +21,7 @@ public class PreprocessContext {
     private final boolean debug;
     private final List<PreprocessStepExecution> stepExecutions = new ArrayList<>();
     private final List<FallbackNote> fallbackNotes = new ArrayList<>();
+    private final List<DebugArtifactDescriptor> debugArtifacts = new ArrayList<>();
     private final Map<PreprocessStepName, String> stepNotes = new EnumMap<>(PreprocessStepName.class);
 
     public PreprocessContext(
@@ -29,6 +32,19 @@ public class PreprocessContext {
         Map<String, String> parameters,
         boolean debug
     ) {
+        this(null, jobId, itemId, originalObjectKey, presetName, parameters, debug);
+    }
+
+    public PreprocessContext(
+        Long projectId,
+        Long jobId,
+        Long itemId,
+        String originalObjectKey,
+        String presetName,
+        Map<String, String> parameters,
+        boolean debug
+    ) {
+        this.projectId = projectId;
         this.jobId = jobId;
         this.itemId = itemId;
         this.originalObjectKey = originalObjectKey;
@@ -39,6 +55,7 @@ public class PreprocessContext {
 
     public static PreprocessContext fromMessage(PreprocessJobMessage message) {
         return new PreprocessContext(
+            message.projectId(),
             message.jobId(),
             message.itemId(),
             message.originalObjectKey(),
@@ -65,8 +82,19 @@ public class PreprocessContext {
         fallbackNotes.add(new FallbackNote(stepName.name(), reason, selectedStrategy));
     }
 
+    public void recordDebugArtifact(PreprocessStepName stepName, String fileName) {
+        if (!debug) {
+            return;
+        }
+        debugArtifacts.add(DebugArtifactDescriptor.image(stepName, projectId, jobId, itemId, fileName));
+    }
+
     public Long jobId() {
         return jobId;
+    }
+
+    public Long projectId() {
+        return projectId;
     }
 
     public Long itemId() {
@@ -95,5 +123,9 @@ public class PreprocessContext {
 
     public List<FallbackNote> fallbackNotes() {
         return List.copyOf(fallbackNotes);
+    }
+
+    public List<DebugArtifactDescriptor> debugArtifacts() {
+        return List.copyOf(debugArtifacts);
     }
 }
