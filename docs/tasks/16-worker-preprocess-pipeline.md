@@ -109,6 +109,18 @@ Issue 67 connects Object Storage download bytes to the pipeline:
 5. Decode or later pipeline failures still report `PIPELINE_EXECUTION_FAILED`.
 6. Artifact upload and success callback remain out of scope.
 
+## Current Issue 69 Scope
+
+Issue 69 implements the first downstream OpenCV preprocessing step:
+
+1. `ColorNormalizeStep` converts `GRAY` input to `BGR`.
+2. `ColorNormalizeStep` converts `BGRA` input to `BGR`.
+3. `BGR` input is treated as normalized and remains no-op.
+4. `PreprocessContext` replaces the decoded holder after conversion and releases the previous Mat.
+5. Missing decoded image data is deferred for skeleton compatibility.
+6. Unsupported channel layouts fail the step.
+7. Downstream orientation, deskew, crop, denoise, contrast, binarization, morphology, DPI, and sharpen steps remain out of scope.
+
 ## Done Criteria
 
 1. A simple resize-only step does not exist.
