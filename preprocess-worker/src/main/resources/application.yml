@@ -1,0 +1,41 @@
+spring:
+  application:
+    name: preprocess-worker
+  main:
+    web-application-type: none
+  rabbitmq:
+    host: ${SPRING_RABBITMQ_HOST:localhost}
+    port: ${SPRING_RABBITMQ_PORT:5672}
+    username: ${SPRING_RABBITMQ_USERNAME:guest}
+    password: ${SPRING_RABBITMQ_PASSWORD:guest}
+
+management:
+  health:
+    rabbit:
+      enabled: ${RABBIT_HEALTH_ENABLED:false}
+  endpoints:
+    web:
+      exposure:
+        include: health,info
+
+rabbitmq:
+  queues:
+    preprocess-high: ${RABBITMQ_PREPROCESS_HIGH_QUEUE:image.preprocess.high}
+    preprocess-normal: ${RABBITMQ_PREPROCESS_NORMAL_QUEUE:image.preprocess.normal}
+    preprocess-retry: ${RABBITMQ_PREPROCESS_RETRY_QUEUE:image.preprocess.retry}
+    benchmark-normal: ${RABBITMQ_BENCHMARK_NORMAL_QUEUE:image.benchmark.normal}
+
+worker:
+  id: ${WORKER_ID:local-worker-1}
+  listener:
+    enabled: ${WORKER_LISTENER_ENABLED:false}
+
+backend-api:
+  base-url: ${BACKEND_API_INTERNAL_URL:http://localhost:8080}
+  worker-token: ${WORKER_INTERNAL_TOKEN:local-worker-token}
+
+storage:
+  endpoint: ${MINIO_ENDPOINT:http://localhost:9000}
+  access-key: ${MINIO_ACCESS_KEY:minioadmin}
+  secret-key: ${MINIO_SECRET_KEY:minioadmin}
+  bucket: ${MINIO_BUCKET:image-preprocess-local}
