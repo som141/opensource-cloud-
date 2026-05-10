@@ -7,5 +7,26 @@ public interface BackendApiClient {
 
     void reportStarted(PreprocessJobMessage message);
 
-    void reportFailed(PreprocessJobMessage message, WorkerFailureCode failureCode, String failureMessage);
+    void reportHeartbeat(PreprocessJobMessage message);
+
+    void reportSucceeded(
+        PreprocessJobMessage message,
+        String processedObjectKey,
+        String previewObjectKey,
+        String reportObjectKey
+    );
+
+    void reportFailed(
+        PreprocessJobMessage message,
+        WorkerFailureCode failureCode,
+        String failureMessage,
+        boolean retryable
+    );
+
+    void registerArtifacts(
+        PreprocessJobMessage message,
+        String processedObjectKey,
+        String previewObjectKey,
+        String reportObjectKey
+    );
 }

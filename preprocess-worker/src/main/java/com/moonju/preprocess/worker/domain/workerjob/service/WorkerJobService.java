@@ -31,24 +31,64 @@ public class WorkerJobService {
     public WorkerJobResult process(PreprocessJobMessage message) {
         try {
             message.validateRequiredFields();
+        } catch (InvalidWorkerMessageException exception) {
+            return WorkerJobResult.invalid(exception.getMessage());
+        }
+
+        try {
             backendApiClient.reportStarted(message);
+        } catch (RuntimeException exception) {
+            return backendReportFailed(message, exception);
+        }
+
+        try {
             objectStoragePort.prepareDownload(message.originalObjectKey());
+        } catch (RuntimeException exception) {
+            return reportFailure(message, WorkerFailureCode.STORAGE_DOWNLOAD_FAILED, exception.getMessage(), true);
+        }
+
+        try {
+            backendApiClient.reportHeartbeat(message);
+        } catch (RuntimeException exception) {
+            return backendReportFailed(message, exception);
+        }
+
+        try {
             PreprocessResult result = preprocessPipelineRunner.run(PreprocessContext.fromMessage(message));
             String failureMessage = "Preprocess pipeline skeleton executed "
                 + result.executedStepNames().size()
                 + " steps; OpenCV and artifact integration are not implemented yet.";
-            backendApiClient.reportFailed(
-                message,
-                WorkerFailureCode.PIPELINE_NOT_IMPLEMENTED,
-                failureMessage
-            );
+            return reportFailure(message, WorkerFailureCode.PIPELINE_NOT_IMPLEMENTED, failureMessage, false);
+        } catch (RuntimeException exception) {
+            return reportFailure(message, WorkerFailureCode.PIPELINE_EXECUTION_FAILED, exception.getMessage(), true);
+        }
+    }
+
+    private WorkerJobResult reportFailure(
+        PreprocessJobMessage message,
+        WorkerFailureCode failureCode,
+        String failureMessage,
+        boolean retryable
+    ) {
+        try {
+            backendApiClient.reportFailed(message, failureCode, failureMessage, retryable);
+            return WorkerJobResult.failed(message, failureCode, failureMessage, retryable);
+        } catch (RuntimeException exception) {
             return WorkerJobResult.failed(
                 message,
-                WorkerFailureCode.PIPELINE_NOT_IMPLEMENTED,
-                failureMessage
+                WorkerFailureCode.BACKEND_REPORT_FAILED,
+                exception.getMessage(),
+                true
             );
-        } catch (InvalidWorkerMessageException exception) {
-            return WorkerJobResult.invalid(exception.getMessage());
         }
+    }
+
+    private WorkerJobResult backendReportFailed(PreprocessJobMessage message, RuntimeException exception) {
+        return WorkerJobResult.failed(
+            message,
+            WorkerFailureCode.BACKEND_REPORT_FAILED,
+            exception.getMessage(),
+            true
+        );
     }
 }

@@ -1,6 +1,7 @@
 package com.moonju.preprocess.worker.domain.workerjob.service;
 
 import static org.assertj.core.api.Assertions.assertThat;
+import static org.mockito.Mockito.doThrow;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.verifyNoInteractions;
 
@@ -41,12 +42,15 @@ class WorkerJobServiceTests {
         assertThat(result.status()).isEqualTo(WorkerJobStatus.FAILED);
         assertThat(result.failureCode()).isEqualTo(WorkerFailureCode.PIPELINE_NOT_IMPLEMENTED);
         assertThat(result.message()).contains("skeleton executed 11 steps");
+        assertThat(result.retryable()).isFalse();
         verify(backendApiClient).reportStarted(message);
         verify(objectStoragePort).prepareDownload("originals/scan.png");
+        verify(backendApiClient).reportHeartbeat(message);
         verify(backendApiClient).reportFailed(
             message,
             WorkerFailureCode.PIPELINE_NOT_IMPLEMENTED,
-            "Preprocess pipeline skeleton executed 11 steps; OpenCV and artifact integration are not implemented yet."
+            "Preprocess pipeline skeleton executed 11 steps; OpenCV and artifact integration are not implemented yet.",
+            false
         );
     }
 
@@ -73,7 +77,38 @@ class WorkerJobServiceTests {
 
         assertThat(result.status()).isEqualTo(WorkerJobStatus.FAILED);
         assertThat(result.failureCode()).isEqualTo(WorkerFailureCode.INVALID_MESSAGE);
+        assertThat(result.retryable()).isFalse();
         verifyNoInteractions(backendApiClient, objectStoragePort);
+    }
+
+    @Test
+    void marksBackendReportFailureAsRetryable() {
+        PreprocessJobMessage message = validMessage();
+        doThrow(new RuntimeException("backend unavailable")).when(backendApiClient).reportStarted(message);
+
+        WorkerJobResult result = service.process(message);
+
+        assertThat(result.failureCode()).isEqualTo(WorkerFailureCode.BACKEND_REPORT_FAILED);
+        assertThat(result.retryable()).isTrue();
+    }
+
+    @Test
+    void reportsStorageDownloadFailureAsRetryable() {
+        PreprocessJobMessage message = validMessage();
+        doThrow(new RuntimeException("storage unavailable"))
+            .when(objectStoragePort)
+            .prepareDownload("originals/scan.png");
+
+        WorkerJobResult result = service.process(message);
+
+        assertThat(result.failureCode()).isEqualTo(WorkerFailureCode.STORAGE_DOWNLOAD_FAILED);
+        assertThat(result.retryable()).isTrue();
+        verify(backendApiClient).reportFailed(
+            message,
+            WorkerFailureCode.STORAGE_DOWNLOAD_FAILED,
+            "storage unavailable",
+            true
+        );
     }
 
     private PreprocessJobMessage validMessage() {
