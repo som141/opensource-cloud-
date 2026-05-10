@@ -41,8 +41,9 @@ public class WorkerJobService {
             return backendReportFailed(message, exception);
         }
 
+        byte[] sourceImageBytes;
         try {
-            objectStoragePort.prepareDownload(message.originalObjectKey());
+            sourceImageBytes = objectStoragePort.downloadBytes(message.originalObjectKey());
         } catch (RuntimeException exception) {
             return reportFailure(message, WorkerFailureCode.STORAGE_DOWNLOAD_FAILED, exception.getMessage(), true);
         }
@@ -54,7 +55,9 @@ public class WorkerJobService {
         }
 
         try {
-            PreprocessResult result = preprocessPipelineRunner.run(PreprocessContext.fromMessage(message));
+            PreprocessContext context = PreprocessContext.fromMessage(message)
+                .withSourceImageBytes(sourceImageBytes);
+            PreprocessResult result = preprocessPipelineRunner.run(context);
             if (!result.success()) {
                 return reportFailure(
                     message,

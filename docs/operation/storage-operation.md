@@ -72,6 +72,20 @@ MINIO_BUCKET
 For S3-compatible production storage, equivalent endpoint, region, access key, secret key, and bucket values are
 required.
 
+## Worker Download Flow
+
+The Worker uses `ObjectStoragePort.downloadBytes` to read the original object before running the preprocessing pipeline:
+
+```text
+originalObjectKey
+  -> ObjectStoragePort.downloadBytes
+  -> PreprocessContext.withSourceImageBytes
+  -> DecodeStep
+```
+
+Download failures are reported as `STORAGE_DOWNLOAD_FAILED` and remain retryable. Decode failures after a successful
+download are reported as `PIPELINE_EXECUTION_FAILED`.
+
 ## Operational Checks
 
 - Presigned URL expiration should be short, usually 10 to 30 minutes.

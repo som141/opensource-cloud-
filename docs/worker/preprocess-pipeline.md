@@ -65,6 +65,14 @@ Issue 65 connects `DecodeStep` to the codec boundary:
 The actual Object Storage download remains a later task. Until source bytes are attached, `DecodeStep` records a
 deferred note and lets the skeleton pipeline continue.
 
+Issue 67 connects Object Storage download to the context:
+
+- `ObjectStoragePort.downloadBytes`
+- `MinioObjectStorageClient.downloadBytes`
+- `WorkerJobService` attaches downloaded bytes through `PreprocessContext.withSourceImageBytes`
+
+The Worker can now decode real downloaded source bytes. Later steps after decode still remain skeleton implementations.
+
 ## Required Execution Order
 
 Every built-in document preset executes the following order:
@@ -105,8 +113,7 @@ PIPELINE_NOT_IMPLEMENTED
 
 This is intentional. A successful Worker result requires all of the following future integrations:
 
-- Actual OpenCV processing.
-- Object Storage download.
+- Actual OpenCV processing after decode.
 - Processed image upload.
 - Preview upload.
 - Processing report upload.
@@ -118,9 +125,8 @@ that to `PIPELINE_EXECUTION_FAILED` and reports it to the backend Internal Worke
 
 ## Next Implementation Steps
 
-1. Connect Object Storage download bytes to `PreprocessContext.withSourceImageBytes`.
-2. Implement color normalization with unit tests.
-3. Implement downstream steps one by one with unit tests.
-4. Add report generation per step.
-5. Add artifact save service.
-6. Keep OCR text extraction out of the Worker runtime scope.
+1. Implement color normalization with unit tests.
+2. Implement downstream steps one by one with unit tests.
+3. Add report generation per step.
+4. Add artifact save service.
+5. Keep OCR text extraction out of the Worker runtime scope.

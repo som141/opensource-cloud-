@@ -98,6 +98,17 @@ Issue 65 connects `DecodeStep` to the codec boundary:
 7. Missing source bytes are deferred until the Object Storage download task.
 8. Invalid attached bytes fail the decode step.
 
+## Current Issue 67 Scope
+
+Issue 67 connects Object Storage download bytes to the pipeline:
+
+1. `ObjectStoragePort.downloadBytes` returns original object bytes.
+2. `MinioObjectStorageClient` downloads bytes from the configured bucket.
+3. `WorkerJobService` passes downloaded bytes to `PreprocessContext.withSourceImageBytes`.
+4. Storage download failures still report `STORAGE_DOWNLOAD_FAILED`.
+5. Decode or later pipeline failures still report `PIPELINE_EXECUTION_FAILED`.
+6. Artifact upload and success callback remain out of scope.
+
 ## Done Criteria
 
 1. A simple resize-only step does not exist.
