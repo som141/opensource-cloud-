@@ -31,22 +31,26 @@ public class PreprocessPipelineRunner {
     }
 
     public PreprocessResult run(PreprocessContext context) {
-        PreprocessPreset preset = presetRegistry.findByName(context.presetName());
-        PreprocessPipeline pipeline = PreprocessPipeline.from(preset, stepCatalog);
         long pipelineStartNanos = System.nanoTime();
         boolean success = true;
         String errorMessage = null;
-        for (PreprocessStep step : pipeline.steps()) {
-            PreprocessStepExecution execution = executeStep(context, step);
-            context.recordStepExecution(execution);
-            if (!execution.success()) {
-                success = false;
-                errorMessage = execution.errorMessage();
-                break;
+        try {
+            PreprocessPreset preset = presetRegistry.findByName(context.presetName());
+            PreprocessPipeline pipeline = PreprocessPipeline.from(preset, stepCatalog);
+            for (PreprocessStep step : pipeline.steps()) {
+                PreprocessStepExecution execution = executeStep(context, step);
+                context.recordStepExecution(execution);
+                if (!execution.success()) {
+                    success = false;
+                    errorMessage = execution.errorMessage();
+                    break;
+                }
             }
+            Duration wallTime = Duration.ofNanos(System.nanoTime() - pipelineStartNanos);
+            return PreprocessResult.from(context, true, wallTime, success, errorMessage);
+        } finally {
+            context.releaseDecodedImage();
         }
-        Duration wallTime = Duration.ofNanos(System.nanoTime() - pipelineStartNanos);
-        return PreprocessResult.from(context, true, wallTime, success, errorMessage);
     }
 
     private PreprocessStepExecution executeStep(PreprocessContext context, PreprocessStep step) {

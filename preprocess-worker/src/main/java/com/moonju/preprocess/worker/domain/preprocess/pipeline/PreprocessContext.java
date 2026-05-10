@@ -2,13 +2,16 @@ package com.moonju.preprocess.worker.domain.preprocess.pipeline;
 
 import com.moonju.preprocess.worker.domain.preprocess.model.DebugArtifactDescriptor;
 import com.moonju.preprocess.worker.domain.preprocess.model.FallbackNote;
+import com.moonju.preprocess.worker.domain.preprocess.model.ImageMatHolder;
 import com.moonju.preprocess.worker.domain.preprocess.step.PreprocessStepName;
 import com.moonju.preprocess.worker.domain.workerjob.dto.PreprocessJobMessage;
 import java.util.ArrayList;
+import java.util.Arrays;
 import java.util.EnumMap;
 import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
+import java.util.Optional;
 
 public class PreprocessContext {
 
@@ -23,6 +26,8 @@ public class PreprocessContext {
     private final List<FallbackNote> fallbackNotes = new ArrayList<>();
     private final List<DebugArtifactDescriptor> debugArtifacts = new ArrayList<>();
     private final Map<PreprocessStepName, String> stepNotes = new EnumMap<>(PreprocessStepName.class);
+    private byte[] sourceImageBytes;
+    private ImageMatHolder decodedImage;
 
     public PreprocessContext(
         Long jobId,
@@ -87,6 +92,41 @@ public class PreprocessContext {
             return;
         }
         debugArtifacts.add(DebugArtifactDescriptor.image(stepName, projectId, jobId, itemId, fileName));
+    }
+
+    public PreprocessContext withSourceImageBytes(byte[] imageBytes) {
+        if (imageBytes == null) {
+            this.sourceImageBytes = null;
+            return this;
+        }
+        this.sourceImageBytes = Arrays.copyOf(imageBytes, imageBytes.length);
+        return this;
+    }
+
+    public boolean hasSourceImageBytes() {
+        return sourceImageBytes != null && sourceImageBytes.length > 0;
+    }
+
+    public byte[] sourceImageBytes() {
+        if (sourceImageBytes == null) {
+            return new byte[0];
+        }
+        return Arrays.copyOf(sourceImageBytes, sourceImageBytes.length);
+    }
+
+    public void storeDecodedImage(ImageMatHolder imageMatHolder) {
+        releaseDecodedImage();
+        this.decodedImage = imageMatHolder;
+    }
+
+    public Optional<ImageMatHolder> decodedImage() {
+        return Optional.ofNullable(decodedImage);
+    }
+
+    public void releaseDecodedImage() {
+        if (decodedImage != null) {
+            decodedImage.release();
+        }
     }
 
     public Long jobId() {

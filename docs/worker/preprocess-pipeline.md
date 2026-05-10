@@ -54,6 +54,17 @@ Issue 63 adds the OpenCV loader and image codec boundary:
 The pipeline steps still remain skeletons. The next implementation should replace `DecodeStep` with Object Storage
 download plus codec decode.
 
+Issue 65 connects `DecodeStep` to the codec boundary:
+
+- `ImageDecodePort`
+- `PreprocessContext.withSourceImageBytes`
+- `PreprocessContext.storeDecodedImage`
+- `PreprocessContext.releaseDecodedImage`
+- `DecodeStep` real decode path when bytes are attached
+
+The actual Object Storage download remains a later task. Until source bytes are attached, `DecodeStep` records a
+deferred note and lets the skeleton pipeline continue.
+
 ## Required Execution Order
 
 Every built-in document preset executes the following order:
@@ -107,9 +118,9 @@ that to `PIPELINE_EXECUTION_FAILED` and reports it to the backend Internal Worke
 
 ## Next Implementation Steps
 
-1. Replace `DecodeStep` skeleton with actual image decode.
-2. Store and release decoded `ImageMatHolder` through the pipeline context.
-3. Implement steps one by one with unit tests.
+1. Connect Object Storage download bytes to `PreprocessContext.withSourceImageBytes`.
+2. Implement color normalization with unit tests.
+3. Implement downstream steps one by one with unit tests.
 4. Add report generation per step.
 5. Add artifact save service.
 6. Keep OCR text extraction out of the Worker runtime scope.

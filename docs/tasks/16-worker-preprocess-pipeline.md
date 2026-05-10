@@ -85,6 +85,19 @@ Issue 63 implements only the OpenCV loader and codec boundary:
 6. Decode failure handling for empty or unsupported image bytes.
 7. Actual `DecodeStep` replacement and downstream image processing remain out of scope.
 
+## Current Issue 65 Scope
+
+Issue 65 connects `DecodeStep` to the codec boundary:
+
+1. `ImageDecodePort` is the domain port used by `DecodeStep`.
+2. `ImageCodecAdapter` implements the port.
+3. `PreprocessContext` can receive source image bytes.
+4. `PreprocessContext` stores the decoded `ImageMatHolder`.
+5. `PreprocessPipelineRunner` releases decoded Mat resources after pipeline completion.
+6. `DecodeStep` records decoded width, height, and color space when bytes are attached.
+7. Missing source bytes are deferred until the Object Storage download task.
+8. Invalid attached bytes fail the decode step.
+
 ## Done Criteria
 
 1. A simple resize-only step does not exist.
