@@ -1,5 +1,6 @@
 package com.moonju.preprocess.worker.domain.report.dto;
 
+import com.moonju.preprocess.worker.domain.preprocess.model.DebugArtifactDescriptor;
 import com.moonju.preprocess.worker.domain.report.model.ProcessingFallbackSummary;
 import com.moonju.preprocess.worker.domain.report.model.ProcessingMemoryUsage;
 import com.moonju.preprocess.worker.domain.report.model.ProcessingTiming;
@@ -13,6 +14,7 @@ public record ProcessingReport(
     ProcessingTiming timing,
     ProcessingMemoryUsage memoryUsage,
     ProcessingFallbackSummary fallbackSummary,
+    List<DebugArtifactDescriptor> debugArtifacts,
     boolean success,
     String errorMessage
 ) {

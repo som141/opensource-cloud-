@@ -123,4 +123,35 @@ class PreprocessPipelineRunnerTests {
         assertThat(context.fallbackNotes().getFirst().stepName()).isEqualTo("DESKEW");
         assertThat(context.fallbackNotes().getFirst().selectedStrategy()).isEqualTo("minAreaRect");
     }
+
+    @Test
+    void recordsDebugArtifactOnlyWhenDebugEnabled() {
+        PreprocessContext debugContext = new PreprocessContext(
+            3L,
+            1L,
+            10L,
+            "originals/project/scan.png",
+            "LOW_CONTRAST_SCAN",
+            Map.of(),
+            true
+        );
+        PreprocessContext normalContext = new PreprocessContext(
+            3L,
+            1L,
+            10L,
+            "originals/project/scan.png",
+            "LOW_CONTRAST_SCAN",
+            Map.of(),
+            false
+        );
+
+        debugContext.recordDebugArtifact(PreprocessStepName.DESKEW, "02_deskew.png");
+        normalContext.recordDebugArtifact(PreprocessStepName.DESKEW, "02_deskew.png");
+
+        assertThat(debugContext.debugArtifacts()).hasSize(1);
+        assertThat(debugContext.debugArtifacts().getFirst().objectKey())
+            .isEqualTo("processed/3/1/10/debug/02_deskew.png");
+        assertThat(debugContext.debugArtifacts().getFirst().contentType()).isEqualTo("image/png");
+        assertThat(normalContext.debugArtifacts()).isEmpty();
+    }
 }

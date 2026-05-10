@@ -24,6 +24,7 @@ public class ProcessingReportFactory {
             ProcessingTiming.wallOnly(result.wallTime()),
             ProcessingMemoryUsage.notSampled(),
             new ProcessingFallbackSummary(result.fallbackNotes()),
+            result.debugArtifacts(),
             result.success() && !result.skeletonOnly(),
             reportErrorMessage(result)
         );

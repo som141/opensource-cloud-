@@ -61,6 +61,18 @@ Issue 59 implements only the timing and failure-report hook:
 5. `ProcessingReportFactory` maps pipeline timing/fallback data into report DTOs.
 6. `WorkerJobService` maps failed pipeline results to `PIPELINE_EXECUTION_FAILED`.
 
+## Current Issue 61 Scope
+
+Issue 61 implements only the debug artifact hook contract:
+
+1. `DebugArtifactDescriptor` records step name, file name, object key, and content type.
+2. `PreprocessContext` exposes `recordDebugArtifact`.
+3. `debug=false` ignores debug artifact records.
+4. `debug=true` records deterministic object keys under `processed/{projectId}/{jobId}/{itemId}/debug/`.
+5. `PreprocessResult` exposes debug artifact descriptors.
+6. `ProcessingReportFactory` carries debug artifact metadata into report DTOs.
+7. Actual debug image generation and upload remain out of scope.
+
 ## Done Criteria
 
 1. A simple resize-only step does not exist.
