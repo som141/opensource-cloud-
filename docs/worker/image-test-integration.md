@@ -41,12 +41,20 @@ Issue 49 completes the missing Worker skeleton boundaries:
 These classes are intentionally lightweight. They define integration seams for later OpenCV work without adding native
 OpenCV dependencies or OCR runtime behavior in the skeleton PR.
 
+Issue 63 adds the first real OpenCV runtime boundary:
+
+- `OpenCvLoader` loads the native OpenCV library through the Worker runtime.
+- `ImageCodecAdapter` decodes image bytes into an OpenCV `Mat`.
+- `ImageMatHolder` exposes source key, dimensions, color space, loaded/released state, and the owned `Mat`.
+- `MatResourceCleaner` releases holder-owned Mat resources.
+
+This still does not replace the pipeline `DecodeStep`. The next task should connect Object Storage download bytes to
+`DecodeStep` and store the decoded holder in the preprocessing context.
+
 ## Future Implementation Points
 
-1. `infra/opencv/OpenCvLoader` loads the OpenCV native library.
-2. `infra/opencv/ImageCodecAdapter` decodes source bytes into `ImageMatHolder`.
-3. `domain/preprocess/step/DecodeStep` uses the codec adapter.
-4. Each step updates the processing context with reportable facts.
-5. `domain/artifact` saves processed, preview, report, and debug files to Object Storage.
-6. `domain/report` produces `processing-report.json`.
-7. Worker reports artifact metadata back through Backend internal API.
+1. `domain/preprocess/step/DecodeStep` uses the codec adapter.
+2. Each step updates the processing context with reportable facts.
+3. `domain/artifact` saves processed, preview, report, and debug files to Object Storage.
+4. `domain/report` produces `processing-report.json`.
+5. Worker reports artifact metadata back through Backend internal API.
