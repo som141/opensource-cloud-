@@ -2,6 +2,7 @@ package com.moonju.preprocess.worker.domain.workerjob.service;
 
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.mockito.ArgumentMatchers.any;
+import static org.mockito.ArgumentMatchers.argThat;
 import static org.mockito.Mockito.doThrow;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.verify;
@@ -42,6 +43,7 @@ class WorkerJobServiceTests {
     @Test
     void executesPipelineSkeletonAndReportsNotImplementedBoundary() {
         PreprocessJobMessage message = validMessage();
+        when(objectStoragePort.downloadBytes("originals/scan.png")).thenReturn(new byte[] {1, 2, 3});
 
         WorkerJobResult result = service.process(message);
 
@@ -50,7 +52,7 @@ class WorkerJobServiceTests {
         assertThat(result.message()).contains("skeleton executed 11 steps");
         assertThat(result.retryable()).isFalse();
         verify(backendApiClient).reportStarted(message);
-        verify(objectStoragePort).prepareDownload("originals/scan.png");
+        verify(objectStoragePort).downloadBytes("originals/scan.png");
         verify(backendApiClient).reportHeartbeat(message);
         verify(backendApiClient).reportFailed(
             message,
@@ -103,7 +105,7 @@ class WorkerJobServiceTests {
         PreprocessJobMessage message = validMessage();
         doThrow(new RuntimeException("storage unavailable"))
             .when(objectStoragePort)
-            .prepareDownload("originals/scan.png");
+            .downloadBytes("originals/scan.png");
 
         WorkerJobResult result = service.process(message);
 
@@ -120,6 +122,7 @@ class WorkerJobServiceTests {
     @Test
     void reportsPipelineExecutionFailureAsRetryable() {
         PreprocessJobMessage message = validMessage();
+        when(objectStoragePort.downloadBytes("originals/scan.png")).thenReturn(new byte[] {1, 2, 3});
         PreprocessPipelineRunner failingRunner = mock(PreprocessPipelineRunner.class);
         WorkerJobService failingService = new WorkerJobService(backendApiClient, objectStoragePort, failingRunner);
         PreprocessContext context = PreprocessContext.fromMessage(message);
@@ -136,6 +139,8 @@ class WorkerJobServiceTests {
             "decode failed",
             true
         );
+        verify(failingRunner).run(argThat(preprocessContext -> preprocessContext.hasSourceImageBytes()
+            && preprocessContext.sourceImageBytes().length == 3));
     }
 
     private PreprocessJobMessage validMessage() {

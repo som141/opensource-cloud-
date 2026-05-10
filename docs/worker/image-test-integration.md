@@ -54,10 +54,12 @@ This still does not replace the pipeline `DecodeStep`. The next task should conn
 Issue 65 connects the `DecodeStep` to the codec boundary when source bytes are available. The pipeline context now owns
 the decoded holder during execution and releases it when the runner finishes.
 
+Issue 67 connects Object Storage download bytes to the context before pipeline execution. A valid Worker message can now
+fetch the original object and feed those bytes into `DecodeStep`.
+
 ## Future Implementation Points
 
-1. Object Storage download supplies source bytes to the context.
-2. Each step updates the processing context with reportable facts.
-3. `domain/artifact` saves processed, preview, report, and debug files to Object Storage.
-4. `domain/report` produces `processing-report.json`.
-5. Worker reports artifact metadata back through Backend internal API.
+1. Each step updates the processing context with reportable facts.
+2. `domain/artifact` saves processed, preview, report, and debug files to Object Storage.
+3. `domain/report` produces `processing-report.json`.
+4. Worker reports artifact metadata back through Backend internal API.
