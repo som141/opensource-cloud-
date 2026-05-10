@@ -1,8 +1,10 @@
 package com.moonju.preprocess.worker.domain.preprocess.pipeline;
 
+import com.moonju.preprocess.worker.domain.preprocess.model.FallbackNote;
 import com.moonju.preprocess.worker.domain.preprocess.step.PreprocessStepName;
 import com.moonju.preprocess.worker.domain.workerjob.dto.PreprocessJobMessage;
 import java.util.ArrayList;
+import java.util.EnumMap;
 import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
@@ -16,6 +18,8 @@ public class PreprocessContext {
     private final Map<String, String> parameters;
     private final boolean debug;
     private final List<PreprocessStepExecution> stepExecutions = new ArrayList<>();
+    private final List<FallbackNote> fallbackNotes = new ArrayList<>();
+    private final Map<PreprocessStepName, String> stepNotes = new EnumMap<>(PreprocessStepName.class);
 
     public PreprocessContext(
         Long jobId,
@@ -45,7 +49,20 @@ public class PreprocessContext {
     }
 
     public void recordStep(PreprocessStepName stepName, String note) {
-        stepExecutions.add(new PreprocessStepExecution(stepName, note));
+        stepNotes.put(stepName, note);
+    }
+
+    public void recordStepExecution(PreprocessStepExecution execution) {
+        stepExecutions.add(execution);
+    }
+
+    public String consumeStepNote(PreprocessStepName stepName) {
+        String note = stepNotes.remove(stepName);
+        return note == null ? "Step executed." : note;
+    }
+
+    public void recordFallback(PreprocessStepName stepName, String reason, String selectedStrategy) {
+        fallbackNotes.add(new FallbackNote(stepName.name(), reason, selectedStrategy));
     }
 
     public Long jobId() {
@@ -74,5 +91,9 @@ public class PreprocessContext {
 
     public List<PreprocessStepExecution> stepExecutions() {
         return List.copyOf(stepExecutions);
+    }
+
+    public List<FallbackNote> fallbackNotes() {
+        return List.copyOf(fallbackNotes);
     }
 }

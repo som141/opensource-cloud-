@@ -40,6 +40,9 @@ class ProcessingReportFactoryTests {
         assertThat(report.itemId()).isEqualTo(2L);
         assertThat(report.presetName()).isEqualTo("LOW_CONTRAST_SCAN");
         assertThat(report.steps()).hasSize(11);
+        assertThat(report.steps().getFirst().timing().wallTime()).isNotNull();
+        assertThat(report.timing().wallTime()).isNotNull();
+        assertThat(report.fallbackSummary().fallbackNotes()).isEmpty();
         assertThat(report.success()).isFalse();
         assertThat(report.errorMessage()).isEqualTo("PIPELINE_NOT_IMPLEMENTED");
         assertThat(reportJson.fileName()).isEqualTo("processing-report.json");

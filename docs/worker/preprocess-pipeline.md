@@ -10,7 +10,7 @@ normalizing scan quality, geometry, contrast, binarization, morphology, and DPI.
 
 ## Current Implementation
 
-Issue 43 adds the pipeline skeleton:
+Issue 43 added the initial pipeline skeleton:
 
 - `PreprocessContext`
 - `PreprocessPipeline`
@@ -21,6 +21,19 @@ Issue 43 adds the pipeline skeleton:
 - built-in preset registry
 
 Each step currently records a skeleton execution note. Actual image mutation is deferred.
+
+Issue 59 adds runtime metadata hooks:
+
+- per-step `startedAt`
+- per-step `endedAt`
+- per-step wall time
+- per-step success/failure flag
+- failed-step error message
+- total pipeline wall time
+- fallback note collection
+
+These hooks are required before implementing the OpenCV-backed steps because reports and debug artifacts need stable
+metadata regardless of which step succeeds or fails.
 
 ## Required Execution Order
 
@@ -70,12 +83,16 @@ This is intentional. A successful Worker result requires all of the following fu
 - Optional debug artifact upload.
 - Backend success callback.
 
+If a skeleton or future OpenCV step throws an exception, the runner returns a failed `PreprocessResult`. The Worker maps
+that to `PIPELINE_EXECUTION_FAILED` and reports it to the backend Internal Worker API.
+
 ## Next Implementation Steps
 
-1. Add image codec adapter and OpenCV loader.
-2. Replace `DecodeStep` skeleton with actual image decode.
-3. Add `ImageMatHolder` and resource cleanup.
-4. Implement steps one by one with unit tests.
-5. Add report generation per step.
-6. Add artifact save service.
-7. Keep OCR text extraction out of the Worker runtime scope.
+1. Add debug artifact hook contract.
+2. Add image codec adapter and OpenCV loader.
+3. Replace `DecodeStep` skeleton with actual image decode.
+4. Add `ImageMatHolder` and resource cleanup.
+5. Implement steps one by one with unit tests.
+6. Add report generation per step.
+7. Add artifact save service.
+8. Keep OCR text extraction out of the Worker runtime scope.

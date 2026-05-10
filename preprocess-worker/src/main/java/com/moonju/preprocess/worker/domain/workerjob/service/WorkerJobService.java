@@ -55,6 +55,14 @@ public class WorkerJobService {
 
         try {
             PreprocessResult result = preprocessPipelineRunner.run(PreprocessContext.fromMessage(message));
+            if (!result.success()) {
+                return reportFailure(
+                    message,
+                    WorkerFailureCode.PIPELINE_EXECUTION_FAILED,
+                    result.errorMessage(),
+                    true
+                );
+            }
             String failureMessage = "Preprocess pipeline skeleton executed "
                 + result.executedStepNames().size()
                 + " steps; OpenCV and artifact integration are not implemented yet.";
