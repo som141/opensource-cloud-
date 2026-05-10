@@ -60,10 +60,13 @@ fetch the original object and feed those bytes into `DecodeStep`.
 Issue 69 normalizes decoded image color layout to BGR. This keeps downstream OpenCV document preprocessing steps from
 handling multiple input channel layouts.
 
+Issue 71 adds the first geometry corrections. Orientation normalization handles obvious landscape scans, and deskew
+uses foreground geometry to correct moderate scan tilt.
+
 ## Future Implementation Points
 
-1. Orientation normalization updates the processing context with reportable facts.
-2. Each downstream step updates the processing context with reportable facts.
+1. Crop and DPI normalization update the processing context with reportable facts.
+2. Quality steps update the processing context with reportable facts.
 3. `domain/artifact` saves processed, preview, report, and debug files to Object Storage.
 4. `domain/report` produces `processing-report.json`.
 5. Worker reports artifact metadata back through Backend internal API.
