@@ -5,6 +5,8 @@ services:
     image: nginx:1.27-alpine
     container_name: image-preprocess-nginx
     depends_on:
+      frontend:
+        condition: service_started
       backend-api:
         condition: service_started
     ports:
@@ -13,7 +15,14 @@ services:
       - ../nginx/nginx.conf:/etc/nginx/nginx.conf:ro
       - ../nginx/conf.d:/etc/nginx/conf.d:ro
       - ../nginx/snippets:/etc/nginx/snippets:ro
-      - ../../frontend/public:/usr/share/nginx/html:ro
+    networks:
+      - image-preprocess
+
+  frontend:
+    build:
+      context: ../../frontend
+      dockerfile: Dockerfile
+    container_name: image-preprocess-frontend
     networks:
       - image-preprocess
 

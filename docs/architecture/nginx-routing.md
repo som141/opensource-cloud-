@@ -2,15 +2,15 @@
 
 ## Purpose
 
-NGINX is the single local entry point for the browser. It serves the frontend static placeholder and reverse proxies
-API, OAuth, Swagger, and SSE traffic to `backend-api`.
+NGINX is the single local entry point for the browser. It proxies frontend traffic to the frontend NGINX container and
+reverse proxies API, OAuth, Swagger, and SSE traffic to `backend-api`.
 
 ## Local Entry Points
 
 | Path | Target |
 | --- | --- |
-| `/` | Static frontend placeholder from `frontend/public` |
-| `/assets/*` | Static frontend assets |
+| `/` | `frontend:80` |
+| `/assets/*` | `frontend:80` |
 | `/api/*` | `backend-api:8080` |
 | `/oauth2/*` | `backend-api:8080` |
 | `/login/oauth2/*` | `backend-api:8080` |

@@ -31,6 +31,12 @@ out/
 /nbproject/private/
 /nbbuild/
 /dist/
+/frontend/dist/
+node_modules/
+frontend/node_modules/
+*.tsbuildinfo
+frontend/vite.config.js
+frontend/vite.config.d.ts
 /nbdist/
 /.nb-gradle/
 
