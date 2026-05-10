@@ -17,13 +17,16 @@ public class SecurityConfig {
 
     private final OAuth2LoginSuccessHandler oauth2LoginSuccessHandler;
     private final JwtAuthenticationFilter jwtAuthenticationFilter;
+    private final WorkerAuthenticationFilter workerAuthenticationFilter;
 
     public SecurityConfig(
         OAuth2LoginSuccessHandler oauth2LoginSuccessHandler,
-        JwtAuthenticationFilter jwtAuthenticationFilter
+        JwtAuthenticationFilter jwtAuthenticationFilter,
+        WorkerAuthenticationFilter workerAuthenticationFilter
     ) {
         this.oauth2LoginSuccessHandler = oauth2LoginSuccessHandler;
         this.jwtAuthenticationFilter = jwtAuthenticationFilter;
+        this.workerAuthenticationFilter = workerAuthenticationFilter;
     }
 
     @Bean
@@ -44,11 +47,13 @@ public class SecurityConfig {
                     antMatcher("/swagger-ui/**"),
                     antMatcher("/v3/api-docs/**")
                 ).permitAll()
+                .requestMatchers(antMatcher("/internal/**")).hasRole("WORKER")
                 .anyRequest().authenticated()
             )
             .oauth2Login(oauth2 -> oauth2
                 .successHandler(oauth2LoginSuccessHandler)
             )
+            .addFilterBefore(workerAuthenticationFilter, UsernamePasswordAuthenticationFilter.class)
             .addFilterBefore(jwtAuthenticationFilter, UsernamePasswordAuthenticationFilter.class);
 
         return http.build();

@@ -52,6 +52,8 @@ public class JobItem extends BaseEntity {
 
     private LocalDateTime startedAt;
 
+    private LocalDateTime lastHeartbeatAt;
+
     private LocalDateTime completedAt;
 
     protected JobItem() {
@@ -90,6 +92,69 @@ public class JobItem extends BaseEntity {
         }
     }
 
+    public boolean canStartProcessing() {
+        return status == JobItemStatus.QUEUED || status == JobItemStatus.PENDING || status == JobItemStatus.RETRYING;
+    }
+
+    public boolean isProcessing() {
+        return status == JobItemStatus.PROCESSING;
+    }
+
+    public boolean canRegisterArtifacts() {
+        return status == JobItemStatus.PROCESSING || status == JobItemStatus.SUCCEEDED;
+    }
+
+    public void markProcessing(String workerId, Integer reportedAttempt, LocalDateTime startedAt) {
+        if (reportedAttempt != null && reportedAttempt > attempt) {
+            attempt = reportedAttempt;
+        }
+        status = JobItemStatus.PROCESSING;
+        this.workerId = workerId;
+        this.startedAt = startedAt;
+        this.lastHeartbeatAt = startedAt;
+        this.completedAt = null;
+        this.errorCode = null;
+        this.errorMessage = null;
+    }
+
+    public void markHeartbeat(String workerId, LocalDateTime heartbeatAt) {
+        this.workerId = workerId;
+        this.lastHeartbeatAt = heartbeatAt;
+    }
+
+    public void markSucceeded(
+        String workerId,
+        String processedObjectKey,
+        String previewObjectKey,
+        String reportObjectKey,
+        LocalDateTime completedAt
+    ) {
+        status = JobItemStatus.SUCCEEDED;
+        this.workerId = workerId;
+        this.processedObjectKey = processedObjectKey;
+        this.previewObjectKey = previewObjectKey;
+        this.reportObjectKey = reportObjectKey;
+        this.completedAt = completedAt;
+        this.lastHeartbeatAt = completedAt;
+        this.errorCode = null;
+        this.errorMessage = null;
+    }
+
+    public void markFailed(String workerId, String errorCode, String errorMessage, LocalDateTime completedAt) {
+        status = JobItemStatus.FAILED;
+        this.workerId = workerId;
+        this.errorCode = errorCode;
+        this.errorMessage = errorMessage;
+        this.completedAt = completedAt;
+        this.lastHeartbeatAt = completedAt;
+    }
+
+    public void registerArtifacts(String processedObjectKey, String previewObjectKey, String reportObjectKey) {
+        this.processedObjectKey = processedObjectKey;
+        this.previewObjectKey = previewObjectKey;
+        this.reportObjectKey = reportObjectKey;
+    }
+
     private void markRetrying() {
         status = JobItemStatus.RETRYING;
         attempt++;
@@ -97,6 +162,7 @@ public class JobItem extends BaseEntity {
         errorMessage = null;
         workerId = null;
         startedAt = null;
+        lastHeartbeatAt = null;
         completedAt = null;
     }
 
@@ -146,6 +212,10 @@ public class JobItem extends BaseEntity {
 
     public LocalDateTime getStartedAt() {
         return startedAt;
+    }
+
+    public LocalDateTime getLastHeartbeatAt() {
+        return lastHeartbeatAt;
     }
 
     public LocalDateTime getCompletedAt() {

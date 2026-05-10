@@ -39,6 +39,8 @@ app:
       same-site: ${REFRESH_TOKEN_COOKIE_SAME_SITE:Lax}
   cors:
     allowed-origins: ${CORS_ALLOWED_ORIGINS:http://localhost:5173}
+  worker:
+    internal-token: ${WORKER_INTERNAL_TOKEN:local-worker-token}
 
 springdoc:
   api-docs:

@@ -15,6 +15,7 @@ import jakarta.persistence.MapKeyColumn;
 import jakarta.persistence.Table;
 import java.time.LocalDateTime;
 import java.util.LinkedHashMap;
+import java.util.List;
 import java.util.Map;
 
 @Entity
@@ -119,6 +120,68 @@ public class Job extends BaseEntity {
     public void markRetrying(int queuedCount) {
         this.status = JobStatus.RETRYING;
         this.queuedCount = queuedCount;
+    }
+
+    public void refreshProgress(List<JobItem> items, LocalDateTime now) {
+        this.totalCount = items.size();
+        this.queuedCount = countByStatus(items, JobItemStatus.PENDING, JobItemStatus.QUEUED, JobItemStatus.RETRYING);
+        this.processingCount = countByStatus(items, JobItemStatus.PROCESSING);
+        this.succeededCount = countByStatus(items, JobItemStatus.SUCCEEDED);
+        this.failedCount = countByStatus(items, JobItemStatus.FAILED, JobItemStatus.DEAD_LETTERED);
+
+        if (processingCount > 0) {
+            status = JobStatus.RUNNING;
+            if (startedAt == null) {
+                startedAt = now;
+            }
+            completedAt = null;
+            return;
+        }
+
+        if (queuedCount > 0) {
+            if (status != JobStatus.CANCEL_REQUESTED) {
+                status = JobStatus.QUEUED;
+            }
+            completedAt = null;
+            return;
+        }
+
+        if (totalCount == 0 || succeededCount == totalCount) {
+            status = JobStatus.SUCCEEDED;
+            completedAt = now;
+            return;
+        }
+
+        if (failedCount == totalCount) {
+            status = JobStatus.FAILED;
+            completedAt = now;
+            return;
+        }
+
+        int terminalCount = succeededCount + failedCount + countByStatus(
+            items,
+            JobItemStatus.SKIPPED,
+            JobItemStatus.CANCELLED
+        );
+        if (terminalCount == totalCount) {
+            status = failedCount > 0 || succeededCount > 0 ? JobStatus.PARTIAL_SUCCEEDED : JobStatus.CANCELLED;
+            completedAt = now;
+        }
+    }
+
+    private int countByStatus(List<JobItem> items, JobItemStatus... statuses) {
+        return (int) items.stream()
+            .filter(item -> matchesAnyStatus(item, statuses))
+            .count();
+    }
+
+    private boolean matchesAnyStatus(JobItem item, JobItemStatus[] statuses) {
+        for (JobItemStatus status : statuses) {
+            if (item.getStatus() == status) {
+                return true;
+            }
+        }
+        return false;
     }
 
     public Long getId() {
