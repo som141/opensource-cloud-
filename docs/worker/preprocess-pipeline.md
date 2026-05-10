@@ -44,6 +44,16 @@ Issue 61 adds the debug artifact metadata hook:
 
 The hook is metadata-only. Actual debug image generation and upload are deferred to later OpenCV and artifact tasks.
 
+Issue 63 adds the OpenCV loader and image codec boundary:
+
+- `OpenCvLoader`
+- `ImageCodecAdapter.decode`
+- `ImageMatHolder`
+- `MatResourceCleaner`
+
+The pipeline steps still remain skeletons. The next implementation should replace `DecodeStep` with Object Storage
+download plus codec decode.
+
 ## Required Execution Order
 
 Every built-in document preset executes the following order:
@@ -97,10 +107,9 @@ that to `PIPELINE_EXECUTION_FAILED` and reports it to the backend Internal Worke
 
 ## Next Implementation Steps
 
-1. Add image codec adapter and OpenCV loader.
-2. Replace `DecodeStep` skeleton with actual image decode.
-3. Add `ImageMatHolder` and resource cleanup.
-4. Implement steps one by one with unit tests.
-5. Add report generation per step.
-6. Add artifact save service.
-7. Keep OCR text extraction out of the Worker runtime scope.
+1. Replace `DecodeStep` skeleton with actual image decode.
+2. Store and release decoded `ImageMatHolder` through the pipeline context.
+3. Implement steps one by one with unit tests.
+4. Add report generation per step.
+5. Add artifact save service.
+6. Keep OCR text extraction out of the Worker runtime scope.

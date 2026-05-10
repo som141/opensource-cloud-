@@ -73,6 +73,18 @@ Issue 61 implements only the debug artifact hook contract:
 6. `ProcessingReportFactory` carries debug artifact metadata into report DTOs.
 7. Actual debug image generation and upload remain out of scope.
 
+## Current Issue 63 Scope
+
+Issue 63 implements only the OpenCV loader and codec boundary:
+
+1. Worker-only OpenCV dependency.
+2. Idempotent native OpenCV loading through `OpenCvLoader`.
+3. Image byte decode through `ImageCodecAdapter`.
+4. `ImageMatHolder` with OpenCV `Mat`, dimensions, color space, and release state.
+5. `MatResourceCleaner` release hook.
+6. Decode failure handling for empty or unsupported image bytes.
+7. Actual `DecodeStep` replacement and downstream image processing remain out of scope.
+
 ## Done Criteria
 
 1. A simple resize-only step does not exist.
