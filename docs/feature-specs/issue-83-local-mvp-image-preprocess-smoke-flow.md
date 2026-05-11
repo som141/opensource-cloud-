@@ -18,7 +18,8 @@ The smoke flow is still OCR preprocessing only. It does not run OCR text extract
    - upload one image through the presigned URL,
    - complete the upload session,
    - create a preprocessing job,
-   - poll job summary and item status.
+   - poll job summary and item status,
+   - open presigned download URLs for processed image, preview image, and processing report.
 
 ## Local Flow
 
@@ -36,6 +37,7 @@ Browser
   -> POST /api/v1/jobs
   -> GET /api/v1/jobs/{jobId}/summary
   -> GET /api/v1/jobs/{jobId}/items
+  -> GET /api/v1/jobs/{jobId}/items/{itemId}/download?type=processed|preview|report
 ```
 
 ## Required Local Environment
@@ -69,7 +71,8 @@ After submitting one image from `/upload`:
    - `processedObjectKey`
    - `previewObjectKey`
    - `reportObjectKey`
-5. If debug is enabled, MinIO also contains `processed/{projectId}/{jobId}/{itemId}/debug/*.png`.
+5. The frontend exposes download buttons for processed image, preview image, and report JSON.
+6. If debug is enabled, MinIO also contains `processed/{projectId}/{jobId}/{itemId}/debug/*.png`.
 
 ## Verified Local Result
 
@@ -84,6 +87,7 @@ Worker item result: SUCCEEDED
 processedObjectKey: processed/{projectId}/{jobId}/{itemId}/processed.png
 previewObjectKey: processed/{projectId}/{jobId}/{itemId}/preview.png
 reportObjectKey: processed/{projectId}/{jobId}/{itemId}/processing-report.json
+download buttons: processed, preview, report
 debug artifacts: uploaded when debug=true
 ```
 
@@ -93,5 +97,6 @@ The summary API currently returns counts and progress percentage, not a textual 
 ## Known Limits
 
 1. The smoke page is intentionally minimal and not a full production upload UI.
-2. Result image preview/download UI is not included yet; object keys are displayed for MinIO verification.
-3. SSE still needs an auth-compatible frontend integration. This page uses polling for local smoke verification.
+2. The smoke page opens presigned URLs in a new tab. It is not a full artifact browser yet.
+3. Debug artifact download buttons are not included yet; debug object keys remain available in MinIO.
+4. SSE still needs an auth-compatible frontend integration. This page uses polling for local smoke verification.

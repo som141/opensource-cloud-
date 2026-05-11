@@ -4,6 +4,7 @@ import com.moonju.preprocess.api.domain.job.dto.JobArtifactResponse;
 import com.moonju.preprocess.api.domain.job.dto.JobCancelResponse;
 import com.moonju.preprocess.api.domain.job.dto.JobCreateRequest;
 import com.moonju.preprocess.api.domain.job.dto.JobCreateResponse;
+import com.moonju.preprocess.api.domain.job.dto.JobItemDownloadUrlResponse;
 import com.moonju.preprocess.api.domain.job.dto.JobItemResponse;
 import com.moonju.preprocess.api.domain.job.dto.JobResponse;
 import com.moonju.preprocess.api.domain.job.dto.JobRetryResponse;
@@ -24,6 +25,7 @@ import org.springframework.web.bind.annotation.PathVariable;
 import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RequestMapping;
+import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.bind.annotation.RestController;
 
 @RestController
@@ -105,5 +107,15 @@ public class JobController {
     @GetMapping("/{jobId}/download.zip")
     public ApiResponse<JobArtifactResponse> downloadZip(@CurrentUser Long currentUserId, @PathVariable Long jobId) {
         return ApiResponse.success(jobQueryService.artifacts(currentUserId, jobId));
+    }
+
+    @GetMapping("/{jobId}/items/{itemId}/download")
+    public ApiResponse<JobItemDownloadUrlResponse> createItemDownloadUrl(
+        @CurrentUser Long currentUserId,
+        @PathVariable Long jobId,
+        @PathVariable Long itemId,
+        @RequestParam(defaultValue = "processed") String type
+    ) {
+        return ApiResponse.success(jobQueryService.createItemDownloadUrl(currentUserId, jobId, itemId, type));
     }
 }

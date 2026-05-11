@@ -60,6 +60,15 @@ type JobItemResponse = {
   errorMessage?: string;
 };
 
+type JobItemDownloadUrlResponse = {
+  jobId: number;
+  itemId: number;
+  type: 'processed' | 'preview' | 'report';
+  objectKey: string;
+  downloadUrl: string;
+  expiresAt: string;
+};
+
 type SmokeResult = {
   project?: ProjectResponse;
   image?: ImageListResponse;
@@ -280,6 +289,30 @@ export function UploadPage() {
     appendLog('Polling timed out. Refresh the job summary after the Worker finishes.');
   }
 
+  async function downloadArtifact(item: JobItemResponse, type: JobItemDownloadUrlResponse['type']) {
+    if (!result.job) {
+      setError('Job result is not ready yet.');
+      return;
+    }
+    try {
+      const response = await apiClient.get<JobItemDownloadUrlResponse>(
+        `/v1/jobs/${result.job.jobId}/items/${item.id}/download?type=${type}`,
+        accessToken
+      );
+      const anchor = document.createElement('a');
+      anchor.href = response.result.downloadUrl;
+      anchor.target = '_blank';
+      anchor.rel = 'noopener noreferrer';
+      anchor.download = downloadFileName(response.result);
+      document.body.appendChild(anchor);
+      anchor.click();
+      anchor.remove();
+      appendLog(`Download URL opened: ${type}`);
+    } catch (exception) {
+      setError(exception instanceof Error ? exception.message : `Failed to download ${type}.`);
+    }
+  }
+
   function appendLog(message: string) {
     setLogs((previous) => [...previous, `${new Date().toLocaleTimeString()} ${message}`]);
   }
@@ -376,6 +409,32 @@ export function UploadPage() {
           {item.processedObjectKey && <code>{item.processedObjectKey}</code>}
           {item.previewObjectKey && <code>{item.previewObjectKey}</code>}
           {item.reportObjectKey && <code>{item.reportObjectKey}</code>}
+          <div className="download-actions">
+            <button
+              type="button"
+              className="secondary-action"
+              disabled={!item.processedObjectKey}
+              onClick={() => downloadArtifact(item, 'processed')}
+            >
+              Download processed
+            </button>
+            <button
+              type="button"
+              className="secondary-action"
+              disabled={!item.previewObjectKey}
+              onClick={() => downloadArtifact(item, 'preview')}
+            >
+              Download preview
+            </button>
+            <button
+              type="button"
+              className="secondary-action"
+              disabled={!item.reportObjectKey}
+              onClick={() => downloadArtifact(item, 'report')}
+            >
+              Download report
+            </button>
+          </div>
         </div>
       ))}
     </PageSection>
@@ -391,4 +450,9 @@ async function sha256(file: File) {
 
 function delay(milliseconds: number) {
   return new Promise((resolve) => window.setTimeout(resolve, milliseconds));
+}
+
+function downloadFileName(target: JobItemDownloadUrlResponse) {
+  const extension = target.type === 'report' ? 'json' : 'png';
+  return `job-${target.jobId}-item-${target.itemId}-${target.type}.${extension}`;
 }

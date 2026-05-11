@@ -175,6 +175,28 @@ body {
   overflow-wrap: anywhere;
 }
 
+.download-actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.65rem;
+  margin-top: 0.35rem;
+}
+
+.secondary-action {
+  border: 1px solid rgba(38, 50, 56, 0.18);
+  border-radius: 999px;
+  background: #fffdf7;
+  color: var(--ink);
+  padding: 0.7rem 1rem;
+  font-weight: 700;
+  cursor: pointer;
+}
+
+.secondary-action:disabled {
+  cursor: not-allowed;
+  opacity: 0.45;
+}
+
 .status-grid {
   display: grid;
   grid-template-columns: repeat(2, minmax(0, 1fr));
