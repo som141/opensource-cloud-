@@ -65,6 +65,28 @@ class WorkerJobReportClientTests {
     }
 
     @Test
+    void postsSucceededReportWithArtifactKeys() throws IOException {
+        AtomicReference<String> body = new AtomicReference<>();
+        server = server(exchange -> {
+            body.set(new String(exchange.getRequestBody().readAllBytes(), StandardCharsets.UTF_8));
+            exchange.sendResponseHeaders(200, 0);
+            exchange.close();
+        });
+        WorkerJobReportClient client = client(server);
+
+        client.reportSucceeded(
+            message(),
+            "processed/3/1/2/processed.png",
+            "processed/3/1/2/preview.png",
+            "processed/3/1/2/processing-report.json"
+        );
+
+        assertThat(body.get()).contains("\"processedObjectKey\":\"processed/3/1/2/processed.png\"");
+        assertThat(body.get()).contains("\"previewObjectKey\":\"processed/3/1/2/preview.png\"");
+        assertThat(body.get()).contains("\"reportObjectKey\":\"processed/3/1/2/processing-report.json\"");
+    }
+
+    @Test
     void throwsWhenBackendReturnsNon2xx() throws IOException {
         server = server(exchange -> {
             exchange.sendResponseHeaders(500, 0);
@@ -81,6 +103,7 @@ class WorkerJobReportClientTests {
         HttpServer httpServer = HttpServer.create(new InetSocketAddress(0), 0);
         httpServer.createContext("/internal/v1/jobs/1/items/2/started", handler::handle);
         httpServer.createContext("/internal/v1/jobs/1/items/2/heartbeat", handler::handle);
+        httpServer.createContext("/internal/v1/jobs/1/items/2/succeeded", handler::handle);
         httpServer.createContext("/internal/v1/jobs/1/items/2/failed", handler::handle);
         httpServer.start();
         return httpServer;

@@ -13,8 +13,16 @@ import org.springframework.stereotype.Service;
 public class ProcessingReportFactory {
 
     public ProcessingReport createSkeletonReport(PreprocessResult result) {
+        return createReport(result);
+    }
+
+    public ProcessingReport createReport(PreprocessResult result) {
         List<ProcessingStepReport> steps = result.stepExecutions().stream()
-            .map(step -> new ProcessingStepReport(step.stepName(), step.note(), ProcessingTiming.wallOnly(step.wallTime())))
+            .map(step -> new ProcessingStepReport(
+                step.stepName(),
+                step.note(),
+                ProcessingTiming.wallOnly(step.wallTime())
+            ))
             .toList();
         return new ProcessingReport(
             result.jobId(),
