@@ -99,6 +99,16 @@ Crop detects foreground bounds from an inverse Otsu mask and replaces the contex
 crop is available. DPI normalization uses source DPI metadata and `targetDpi` to resize for OCR preprocessing; if source
 DPI metadata is missing, the step records a fallback and leaves the image unchanged.
 
+Issue 75 implements Quality 1:
+
+- `DenoiseStep`
+- `ContrastNormalizeStep`
+- `BinarizationStep`
+
+Denoise supports median and bilateral filtering. Contrast normalization applies CLAHE to grayscale input or to the
+luminance channel of BGR input. Binarization converts the current image to a single-channel binary image with Otsu or
+adaptive thresholding according to preset parameters.
+
 ## Required Execution Order
 
 Every built-in document preset executes the following order:
@@ -151,7 +161,7 @@ that to `PIPELINE_EXECUTION_FAILED` and reports it to the backend Internal Worke
 
 ## Next Implementation Steps
 
-1. Implement quality steps: denoise, contrast, binarization, morphology cleanup.
+1. Implement Quality 2: morphology cleanup and optional sharpen.
 2. Add report generation per step.
 3. Add artifact save service.
 4. Keep OCR text extraction out of the Worker runtime scope.
