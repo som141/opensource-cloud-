@@ -63,10 +63,13 @@ handling multiple input channel layouts.
 Issue 71 adds the first geometry corrections. Orientation normalization handles obvious landscape scans, and deskew
 uses foreground geometry to correct moderate scan tilt.
 
+Issue 73 adds the second geometry increment. Crop uses foreground bounds to remove surrounding border/background where
+safe, and DPI normalization scales the current Mat only when source DPI metadata is available. Missing source DPI is a
+fallback no-op because OCR-oriented DPI normalization should be based on real metadata, not guessed values.
+
 ## Future Implementation Points
 
-1. Crop and DPI normalization update the processing context with reportable facts.
-2. Quality steps update the processing context with reportable facts.
-3. `domain/artifact` saves processed, preview, report, and debug files to Object Storage.
-4. `domain/report` produces `processing-report.json`.
-5. Worker reports artifact metadata back through Backend internal API.
+1. Quality steps update the processing context with reportable facts.
+2. `domain/artifact` saves processed, preview, report, and debug files to Object Storage.
+3. `domain/report` produces `processing-report.json`.
+4. Worker reports artifact metadata back through Backend internal API.

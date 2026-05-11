@@ -90,6 +90,15 @@ Issue 71 implements Geometry 1:
 Orientation normalization rotates landscape input to portrait orientation. Deskew estimates a correction angle from
 foreground pixels and applies `warpAffine` when the angle is within the configured safety bound.
 
+Issue 73 implements Geometry 2:
+
+- `CropStep`
+- `DpiNormalizeStep`
+
+Crop detects foreground bounds from an inverse Otsu mask and replaces the context-owned Mat only when a valid bounded
+crop is available. DPI normalization uses source DPI metadata and `targetDpi` to resize for OCR preprocessing; if source
+DPI metadata is missing, the step records a fallback and leaves the image unchanged.
+
 ## Required Execution Order
 
 Every built-in document preset executes the following order:
@@ -142,8 +151,7 @@ that to `PIPELINE_EXECUTION_FAILED` and reports it to the backend Internal Worke
 
 ## Next Implementation Steps
 
-1. Implement Geometry 2: crop and DPI normalization.
-2. Implement quality steps: denoise, contrast, binarization, morphology cleanup.
-3. Add report generation per step.
-4. Add artifact save service.
-5. Keep OCR text extraction out of the Worker runtime scope.
+1. Implement quality steps: denoise, contrast, binarization, morphology cleanup.
+2. Add report generation per step.
+3. Add artifact save service.
+4. Keep OCR text extraction out of the Worker runtime scope.

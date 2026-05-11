@@ -132,6 +132,18 @@ Issue 71 implements Geometry 1:
 5. Low foreground or excessive angle cases record fallback notes and skip.
 6. Crop, DPI normalization, quality steps, artifact upload, and success callback remain out of scope.
 
+## Current Issue 73 Scope
+
+Issue 73 implements Geometry 2:
+
+1. `CropStep` detects foreground bounds using grayscale conversion, inverse Otsu thresholding, and bounding rectangles.
+2. `CropStep` applies a configurable `cropMarginPixels` margin and clamps the crop area to the image dimensions.
+3. Invalid or low-foreground crop detections record fallback notes and keep the current image unchanged.
+4. `DpiNormalizeStep` reads `sourceDpi`, `sourceDpiX/sourceDpiY`, or compatible aliases from context parameters.
+5. `DpiNormalizeStep` resizes toward `targetDpi` with safe min/max scale bounds.
+6. Missing source DPI metadata records a fallback note and keeps the current image unchanged.
+7. Quality steps, artifact upload, and success callback remain out of scope.
+
 ## Done Criteria
 
 1. A simple resize-only step does not exist.
