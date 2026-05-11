@@ -71,9 +71,12 @@ Issue 75 adds the first quality-processing increment. Denoise removes scan noise
 contrast normalization applies CLAHE, and binarization produces a single-channel binary image using Otsu or adaptive
 thresholding.
 
+Issue 77 completes the currently planned quality-processing steps. Morphology cleanup applies open/close operations with
+black document strokes treated as foreground, and optional sharpen applies unsharp masking only for presets that enable
+`sharpen`.
+
 ## Future Implementation Points
 
-1. Morphology cleanup and optional sharpen update the processing context with reportable facts.
-2. `domain/artifact` saves processed, preview, report, and debug files to Object Storage.
-3. `domain/report` produces `processing-report.json`.
-4. Worker reports artifact metadata back through Backend internal API.
+1. `domain/artifact` saves processed, preview, report, and debug files to Object Storage.
+2. `domain/report` produces `processing-report.json`.
+3. Worker reports artifact metadata back through Backend internal API.
