@@ -1,8 +1,5 @@
 package com.moonju.preprocess.api.infra.storage;
 
-import org.springframework.stereotype.Component;
-
-@Component
 public class LocalObjectStorageAdapter implements ObjectStoragePort {
 
     @Override

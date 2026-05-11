@@ -9,6 +9,7 @@ import java.time.Clock;
 import java.time.Duration;
 import java.time.Instant;
 import java.util.function.Consumer;
+import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
 
 @Service
@@ -18,6 +19,7 @@ public class PreprocessPipelineRunner {
     private final PreprocessStepCatalog stepCatalog;
     private final Clock clock;
 
+    @Autowired
     public PreprocessPipelineRunner(PreprocessPresetRegistry presetRegistry, PreprocessStepCatalog stepCatalog) {
         this(presetRegistry, stepCatalog, Clock.systemUTC());
     }

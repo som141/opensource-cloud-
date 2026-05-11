@@ -2,9 +2,7 @@ package com.moonju.preprocess.api.infra.storage;
 
 import java.time.Instant;
 import java.util.Map;
-import org.springframework.stereotype.Component;
 
-@Component
 public class LocalPresignedUrlGenerator implements PresignedUrlGenerator {
 
     @Override

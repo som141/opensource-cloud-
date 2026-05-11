@@ -4,6 +4,7 @@ import com.moonju.preprocess.api.domain.job.dto.JobEventType;
 import com.moonju.preprocess.api.domain.job.dto.JobProgressEvent;
 import com.moonju.preprocess.api.domain.job.dto.JobSummaryResponse;
 import java.time.Clock;
+import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
 import org.springframework.web.servlet.mvc.method.annotation.SseEmitter;
 
@@ -14,6 +15,7 @@ public class JobEventService {
     private final SseEmitterRegistry emitterRegistry;
     private final Clock clock;
 
+    @Autowired
     public JobEventService(JobQueryService jobQueryService, SseEmitterRegistry emitterRegistry) {
         this(jobQueryService, emitterRegistry, Clock.systemUTC());
     }

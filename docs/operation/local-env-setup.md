@@ -40,6 +40,12 @@ REFRESH_TOKEN_COOKIE_SAME_SITE=Lax
 
 CORS_ALLOWED_ORIGINS=http://localhost:5173
 RABBIT_HEALTH_ENABLED=false
+MINIO_ENDPOINT=http://localhost:9000
+MINIO_PUBLIC_ENDPOINT=http://localhost:9000
+MINIO_ACCESS_KEY=minioadmin
+MINIO_SECRET_KEY=minioadmin
+MINIO_BUCKET=image-preprocess-local
+MINIO_REGION=us-east-1
 ```
 
 ## Google Console
@@ -55,6 +61,30 @@ If NGINX later becomes the local entry point, add this URI too:
 ```text
 http://localhost/login/oauth2/code/google
 ```
+
+## Docker Compose `.env` Template
+
+For the full local MVP stack, copy the Compose template and inject local secrets there:
+
+```powershell
+Copy-Item infra/docker-compose/.env.example infra/docker-compose/.env
+```
+
+Required values:
+
+```env
+GOOGLE_CLIENT_ID=<google-oauth-client-id>
+GOOGLE_CLIENT_SECRET=<google-oauth-client-secret>
+JWT_SECRET=<at-least-32-byte-secret>
+OAUTH2_SUCCESS_REDIRECT_URI=http://localhost/oauth2/success
+
+MINIO_PUBLIC_ENDPOINT=http://localhost:9000
+MINIO_REGION=us-east-1
+MINIO_API_CORS_ALLOW_ORIGIN=http://localhost,http://localhost:5173
+WORKER_LISTENER_ENABLED=true
+```
+
+Do not commit `infra/docker-compose/.env`.
 
 ## Docker PostgreSQL
 
