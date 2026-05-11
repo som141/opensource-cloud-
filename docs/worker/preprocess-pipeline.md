@@ -118,6 +118,14 @@ Morphology cleanup treats black document strokes as foreground internally by inv
 operations and then inverting back. Optional sharpen applies an unsharp mask only when the preset explicitly enables
 `sharpen`.
 
+Issue 79 connects the pipeline output to artifacts and success reporting:
+
+- final output Mat callback before runner cleanup
+- `processed.png` upload
+- `preview.png` upload
+- `processing-report.json` upload
+- Backend Internal Worker API success callback with artifact object keys
+
 ## Required Execution Order
 
 Every built-in document preset executes the following order:
@@ -150,27 +158,20 @@ Preset names must stay aligned with the backend `/api/v1/preprocess/presets` con
 
 ## Worker Runtime Boundary
 
-The current Worker flow executes the skeleton and then reports:
+The Worker now reports success only after these required artifacts are uploaded:
 
-```text
-PIPELINE_NOT_IMPLEMENTED
-```
+- `processed/{projectId}/{jobId}/{itemId}/processed.png`
+- `processed/{projectId}/{jobId}/{itemId}/preview.png`
+- `processed/{projectId}/{jobId}/{itemId}/processing-report.json`
 
-This is intentional. A successful Worker result requires all of the following future integrations:
+If the pipeline finishes without a real output image, the Worker still reports `PIPELINE_NOT_IMPLEMENTED`. This keeps
+the deferred/no-source skeleton path explicit during tests and local smoke checks.
 
-- Actual OpenCV processing after decode.
-- Processed image upload.
-- Preview upload.
-- Processing report upload.
-- Optional debug artifact upload.
-- Backend success callback.
-
-If a skeleton or future OpenCV step throws an exception, the runner returns a failed `PreprocessResult`. The Worker maps
-that to `PIPELINE_EXECUTION_FAILED` and reports it to the backend Internal Worker API.
+If an OpenCV step fails, the Worker maps it to `PIPELINE_EXECUTION_FAILED`. If an artifact upload fails, the Worker maps
+it to `ARTIFACT_UPLOAD_FAILED`. Backend report failures remain `BACKEND_REPORT_FAILED`.
 
 ## Next Implementation Steps
 
-1. Add processed image and preview artifact generation.
-2. Add `processing-report.json` generation/upload.
-3. Add Worker success callback after artifacts are persisted.
-4. Keep OCR text extraction out of the Worker runtime scope.
+1. Generate and upload real debug artifact images for `debug=true`.
+2. Add richer report fields for skew angle, crop bounds, binarization strategy, and DPI normalization.
+3. Keep OCR text extraction out of the Worker runtime scope.

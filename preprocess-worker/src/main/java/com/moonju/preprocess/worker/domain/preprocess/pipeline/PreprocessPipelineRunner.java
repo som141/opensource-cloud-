@@ -2,11 +2,13 @@ package com.moonju.preprocess.worker.domain.preprocess.pipeline;
 
 import com.moonju.preprocess.worker.domain.preprocess.preset.PreprocessPreset;
 import com.moonju.preprocess.worker.domain.preprocess.preset.PreprocessPresetRegistry;
+import com.moonju.preprocess.worker.domain.preprocess.model.ImageMatHolder;
 import com.moonju.preprocess.worker.domain.preprocess.step.PreprocessStep;
 import com.moonju.preprocess.worker.domain.preprocess.step.PreprocessStepCatalog;
 import java.time.Clock;
 import java.time.Duration;
 import java.time.Instant;
+import java.util.function.Consumer;
 import org.springframework.stereotype.Service;
 
 @Service
@@ -31,6 +33,11 @@ public class PreprocessPipelineRunner {
     }
 
     public PreprocessResult run(PreprocessContext context) {
+        return run(context, ignored -> {
+        });
+    }
+
+    public PreprocessResult run(PreprocessContext context, Consumer<ImageMatHolder> outputImageConsumer) {
         long pipelineStartNanos = System.nanoTime();
         boolean success = true;
         String errorMessage = null;
@@ -47,7 +54,13 @@ public class PreprocessPipelineRunner {
                 }
             }
             Duration wallTime = Duration.ofNanos(System.nanoTime() - pipelineStartNanos);
-            return PreprocessResult.from(context, true, wallTime, success, errorMessage);
+            boolean outputImageAvailable = context.decodedImage()
+                .map(ImageMatHolder::loaded)
+                .orElse(false);
+            if (success && outputImageAvailable) {
+                outputImageConsumer.accept(context.decodedImage().orElseThrow());
+            }
+            return PreprocessResult.from(context, !outputImageAvailable, wallTime, success, errorMessage);
         } finally {
             context.releaseDecodedImage();
         }

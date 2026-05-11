@@ -167,6 +167,18 @@ Issue 77 implements Quality 2:
 5. `SharpenStep` skips by default when the preset does not explicitly request sharpening.
 6. Processed image upload, preview upload, report upload, and success callback remain out of scope.
 
+## Current Issue 79 Scope
+
+Issue 79 connects the finished pipeline to required artifacts:
+
+1. The final output `ImageMatHolder` is handed to artifact services before runner cleanup.
+2. The Worker uploads `processed.png`.
+3. The Worker uploads `preview.png`.
+4. The Worker uploads `processing-report.json`.
+5. The Worker reports success with processed, preview, and report object keys.
+6. Artifact upload failures are reported as `ARTIFACT_UPLOAD_FAILED`.
+7. Real debug artifact image generation remains out of scope.
+
 ## Done Criteria
 
 1. A simple resize-only step does not exist.

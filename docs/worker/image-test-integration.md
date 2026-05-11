@@ -75,8 +75,12 @@ Issue 77 completes the currently planned quality-processing steps. Morphology cl
 black document strokes treated as foreground, and optional sharpen applies unsharp masking only for presets that enable
 `sharpen`.
 
+Issue 79 persists the pipeline output. The Worker encodes the final Mat as `processed.png`, creates a bounded
+`preview.png`, writes `processing-report.json`, uploads all three artifacts to Object Storage, and then calls the Backend
+Internal Worker API success endpoint with the object keys.
+
 ## Future Implementation Points
 
-1. `domain/artifact` saves processed, preview, report, and debug files to Object Storage.
-2. `domain/report` produces `processing-report.json`.
-3. Worker reports artifact metadata back through Backend internal API.
+1. Generate and upload real per-step debug images.
+2. Expand report fields with detected image-processing facts.
+3. Keep OCR text extraction outside the product runtime.

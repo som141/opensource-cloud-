@@ -2,6 +2,8 @@ package com.moonju.preprocess.worker.infra.storage;
 
 import io.minio.GetObjectArgs;
 import io.minio.MinioClient;
+import io.minio.PutObjectArgs;
+import java.io.ByteArrayInputStream;
 import java.io.InputStream;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -40,6 +42,27 @@ public class MinioObjectStorageClient implements ObjectStoragePort {
             return bytes;
         } catch (Exception exception) {
             throw new ObjectStorageDownloadFailedException(objectKey, exception);
+        }
+    }
+
+    @Override
+    public void uploadBytes(String objectKey, byte[] content, String contentType) {
+        try (ByteArrayInputStream inputStream = new ByteArrayInputStream(content)) {
+            minioClient.putObject(
+                PutObjectArgs.builder()
+                    .bucket(properties.getBucket())
+                    .object(objectKey)
+                    .contentType(contentType)
+                    .stream(inputStream, (long) content.length, -1L)
+                    .build()
+            );
+            log.info("Uploaded object to storage: bucket={}, objectKey={}, bytes={}",
+                properties.getBucket(),
+                objectKey,
+                content.length
+            );
+        } catch (Exception exception) {
+            throw new ObjectStorageUploadFailedException(objectKey, exception);
         }
     }
 }

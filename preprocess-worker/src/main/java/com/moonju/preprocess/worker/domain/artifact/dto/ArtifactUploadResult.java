@@ -7,6 +7,7 @@ public record ArtifactUploadResult(
     ArtifactType artifactType,
     ArtifactPath artifactPath,
     boolean uploaded,
+    long sizeBytes,
     String note
 ) {
 
@@ -15,7 +16,18 @@ public record ArtifactUploadResult(
             request.artifactType(),
             request.artifactPath(),
             false,
+            request.sizeBytes(),
             "Artifact upload skeleton prepared; object storage upload is not implemented yet."
+        );
+    }
+
+    public static ArtifactUploadResult uploaded(ArtifactUploadRequest request) {
+        return new ArtifactUploadResult(
+            request.artifactType(),
+            request.artifactPath(),
+            true,
+            request.sizeBytes(),
+            "Artifact uploaded."
         );
     }
 }
