@@ -4,6 +4,12 @@
 
 This document explains how to run the local backend stack for development.
 
+For the full local MVP flow from build to Docker run, image upload, Worker preprocessing, and result download, see:
+
+```text
+docs/operation/local-mvp-build-run-test.md
+```
+
 ## Included Services
 
 - PostgreSQL

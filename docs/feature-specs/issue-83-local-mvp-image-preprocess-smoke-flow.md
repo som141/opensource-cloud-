@@ -60,6 +60,12 @@ Register this Google OAuth redirect URI:
 http://localhost/login/oauth2/code/google
 ```
 
+For the step-by-step build, Docker run, smoke test, download, and troubleshooting guide, see:
+
+```text
+docs/operation/local-mvp-build-run-test.md
+```
+
 ## Expected Result
 
 After submitting one image from `/upload`:
