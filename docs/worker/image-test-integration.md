@@ -79,8 +79,12 @@ Issue 79 persists the pipeline output. The Worker encodes the final Mat as `proc
 `preview.png`, writes `processing-report.json`, uploads all three artifacts to Object Storage, and then calls the Backend
 Internal Worker API success endpoint with the object keys.
 
+Issue 81 persists real debug images when the job request has `debug=true`. The runner clones the current Mat after each
+successful preprocessing step, the Worker uploads those snapshots as PNG files, and the processing report keeps the
+debug artifact object keys.
+
 ## Future Implementation Points
 
-1. Generate and upload real per-step debug images.
-2. Expand report fields with detected image-processing facts.
+1. Expand report fields with detected image-processing facts.
+2. Add an end-to-end MinIO smoke check for all artifact types.
 3. Keep OCR text extraction outside the product runtime.

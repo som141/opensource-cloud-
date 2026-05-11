@@ -56,5 +56,5 @@ Examples:
 ## Current Limits
 
 1. Memory usage is currently not sampled and remains `0`.
-2. Debug artifact entries are metadata-only until real debug image generation is implemented.
+2. Debug artifact entries point to uploaded PNG snapshots only when the job request has `debug=true`.
 3. OCR text, confidence, CER, WER, and recognized text are out of scope.

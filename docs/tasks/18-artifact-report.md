@@ -23,6 +23,7 @@ This task is not OCR text extraction. The Worker stores processed images and pre
 4. Processing report JSON generation and upload.
 5. Worker success callback with artifact object keys.
 6. Failure mapping for artifact upload failures.
+7. Debug artifact upload for explicitly requested debug jobs.
 
 ## Current Issue 79 Scope
 
@@ -43,13 +44,14 @@ Issue 79 implements the first real artifact/report integration:
 processed/{projectId}/{jobId}/{itemId}/processed.png
 processed/{projectId}/{jobId}/{itemId}/preview.png
 processed/{projectId}/{jobId}/{itemId}/processing-report.json
+processed/{projectId}/{jobId}/{itemId}/debug/{step-file-name}.png
 ```
 
 ## Remaining Work
 
-1. Generate and upload real per-step debug artifact images when `debug=true`.
-2. Add richer report fields for detected skew angle, crop bounds, binarization strategy, and DPI normalization.
-3. Add memory usage sampling if operationally needed.
+1. Add richer report fields for detected skew angle, crop bounds, binarization strategy, and DPI normalization.
+2. Add memory usage sampling if operationally needed.
+3. Add local Docker smoke verification that checks MinIO object existence for processed, preview, report, and debug paths.
 
 ## Done Criteria
 
@@ -58,3 +60,4 @@ processed/{projectId}/{jobId}/{itemId}/processing-report.json
 3. Success callback includes processed, preview, and report object keys.
 4. Pipeline errors still follow failure callback path.
 5. API server still does not execute OpenCV preprocessing.
+6. `debug=true` stores per-step debug PNG snapshots before the success callback.

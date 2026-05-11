@@ -8,8 +8,10 @@ import static org.mockito.Mockito.when;
 
 import com.moonju.preprocess.worker.domain.artifact.dto.ArtifactUploadResult;
 import com.moonju.preprocess.worker.domain.artifact.model.ArtifactType;
+import com.moonju.preprocess.worker.domain.preprocess.model.DebugArtifactSnapshot;
 import com.moonju.preprocess.worker.domain.preprocess.model.ImageMatHolder;
 import com.moonju.preprocess.worker.domain.preprocess.service.ImageEncodePort;
+import com.moonju.preprocess.worker.domain.preprocess.step.PreprocessStepName;
 import com.moonju.preprocess.worker.domain.report.dto.ProcessingReport;
 import com.moonju.preprocess.worker.domain.report.model.ProcessingFallbackSummary;
 import com.moonju.preprocess.worker.domain.report.model.ProcessingMemoryUsage;
@@ -47,7 +49,10 @@ class ArtifactSaveServiceTests {
             artifactSaveService,
             imageEncodePort
         );
-        DebugArtifactSaveService debugArtifactSaveService = new DebugArtifactSaveService(artifactSaveService);
+        DebugArtifactSaveService debugArtifactSaveService = new DebugArtifactSaveService(
+            artifactSaveService,
+            imageEncodePort
+        );
 
         ArtifactUploadResult processed = processedImageSaveService.prepare(1L, 2L, 3L);
         ArtifactUploadResult preview = previewImageSaveService.prepare(1L, 2L, 3L);
@@ -59,6 +64,42 @@ class ArtifactSaveServiceTests {
         assertThat(processed.artifactPath().value()).isEqualTo("processed/1/2/3/processed.png");
         assertThat(preview.artifactPath().value()).isEqualTo("processed/1/2/3/preview.png");
         assertThat(debug.artifactPath().value()).isEqualTo("processed/1/2/3/debug/00_decoded.png");
+    }
+
+    @Test
+    void uploadsDebugArtifactSnapshots() {
+        DebugArtifactSaveService debugArtifactSaveService = new DebugArtifactSaveService(
+            artifactSaveService,
+            imageEncodePort
+        );
+        Mat source = new Mat(2, 3, CvType.CV_8UC1, new Scalar(255));
+        DebugArtifactSnapshot snapshot = DebugArtifactSnapshot.image(
+            PreprocessStepName.DECODE,
+            1L,
+            2L,
+            3L,
+            "00_decoded.png",
+            source
+        );
+        when(imageEncodePort.encodePng(
+            eq("processed/1/2/3/debug/00_decoded.png"),
+            org.mockito.ArgumentMatchers.any()
+        )).thenReturn(new byte[] {9, 8, 7});
+
+        List<ArtifactUploadResult> results = debugArtifactSaveService.saveAll(List.of(snapshot));
+
+        assertThat(results).hasSize(1);
+        assertThat(results.getFirst().artifactType()).isEqualTo(ArtifactType.DEBUG_IMAGE);
+        assertThat(results.getFirst().artifactPath().value()).isEqualTo("processed/1/2/3/debug/00_decoded.png");
+        assertThat(results.getFirst().uploaded()).isTrue();
+        assertThat(results.getFirst().sizeBytes()).isEqualTo(3);
+        verify(objectStoragePort).uploadBytes(
+            eq("processed/1/2/3/debug/00_decoded.png"),
+            org.mockito.ArgumentMatchers.argThat(bytes -> Arrays.equals(bytes, new byte[] {9, 8, 7})),
+            eq("image/png")
+        );
+        snapshot.release();
+        source.release();
     }
 
     @Test

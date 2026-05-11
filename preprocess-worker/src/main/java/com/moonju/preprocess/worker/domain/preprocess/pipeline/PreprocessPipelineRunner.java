@@ -63,6 +63,7 @@ public class PreprocessPipelineRunner {
             return PreprocessResult.from(context, !outputImageAvailable, wallTime, success, errorMessage);
         } finally {
             context.releaseDecodedImage();
+            context.releaseDebugSnapshots();
         }
     }
 
@@ -71,6 +72,7 @@ public class PreprocessPipelineRunner {
         long startedNanos = System.nanoTime();
         try {
             step.execute(context);
+            recordDebugSnapshot(context, step);
             Instant endedAt = Instant.now(clock);
             Duration wallTime = Duration.ofNanos(System.nanoTime() - startedNanos);
             return PreprocessStepExecution.succeeded(
@@ -92,5 +94,27 @@ public class PreprocessPipelineRunner {
                 exception.getMessage()
             );
         }
+    }
+
+    private void recordDebugSnapshot(PreprocessContext context, PreprocessStep step) {
+        context.decodedImage()
+            .filter(ImageMatHolder::loaded)
+            .ifPresent(image -> context.recordDebugSnapshot(step.name(), debugFileName(step), image));
+    }
+
+    private String debugFileName(PreprocessStep step) {
+        return switch (step.name()) {
+            case DECODE -> "00_decoded.png";
+            case COLOR_NORMALIZE -> "01_normalized.png";
+            case ORIENTATION_NORMALIZE -> "02_orientation.png";
+            case DESKEW -> "03_deskew.png";
+            case CROP -> "04_crop.png";
+            case DENOISE -> "05_denoise.png";
+            case CONTRAST_NORMALIZE -> "06_contrast.png";
+            case BINARIZATION -> "07_binarized.png";
+            case MORPHOLOGY_CLEANUP -> "08_morphology.png";
+            case DPI_NORMALIZE -> "09_dpi.png";
+            case OPTIONAL_SHARPEN -> "10_sharpen.png";
+        };
     }
 }

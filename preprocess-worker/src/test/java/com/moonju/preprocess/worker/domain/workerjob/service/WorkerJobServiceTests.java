@@ -2,6 +2,7 @@ package com.moonju.preprocess.worker.domain.workerjob.service;
 
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.mockito.ArgumentMatchers.any;
+import static org.mockito.ArgumentMatchers.argThat;
 import static org.mockito.ArgumentMatchers.eq;
 import static org.mockito.Mockito.doAnswer;
 import static org.mockito.Mockito.doThrow;
@@ -14,13 +15,16 @@ import com.moonju.preprocess.worker.domain.artifact.dto.ArtifactUploadResult;
 import com.moonju.preprocess.worker.domain.artifact.exception.ArtifactUploadFailedException;
 import com.moonju.preprocess.worker.domain.artifact.model.ArtifactPath;
 import com.moonju.preprocess.worker.domain.artifact.model.ArtifactType;
+import com.moonju.preprocess.worker.domain.artifact.service.DebugArtifactSaveService;
 import com.moonju.preprocess.worker.domain.artifact.service.PreviewImageSaveService;
 import com.moonju.preprocess.worker.domain.artifact.service.ProcessedImageSaveService;
 import com.moonju.preprocess.worker.domain.artifact.service.ProcessingReportSaveService;
+import com.moonju.preprocess.worker.domain.preprocess.model.DebugArtifactSnapshot;
 import com.moonju.preprocess.worker.domain.preprocess.model.ImageMatHolder;
 import com.moonju.preprocess.worker.domain.preprocess.pipeline.PreprocessContext;
 import com.moonju.preprocess.worker.domain.preprocess.pipeline.PreprocessPipelineRunner;
 import com.moonju.preprocess.worker.domain.preprocess.pipeline.PreprocessResult;
+import com.moonju.preprocess.worker.domain.preprocess.step.PreprocessStepName;
 import com.moonju.preprocess.worker.domain.report.dto.ProcessingReport;
 import com.moonju.preprocess.worker.domain.report.service.ProcessingReportFactory;
 import com.moonju.preprocess.worker.domain.workerjob.dto.JobPriority;
@@ -29,11 +33,14 @@ import com.moonju.preprocess.worker.domain.workerjob.dto.WorkerJobResult;
 import com.moonju.preprocess.worker.domain.workerjob.status.WorkerFailureCode;
 import com.moonju.preprocess.worker.domain.workerjob.status.WorkerJobStatus;
 import com.moonju.preprocess.worker.infra.api.BackendApiClient;
+import com.moonju.preprocess.worker.infra.opencv.OpenCvLoader;
 import com.moonju.preprocess.worker.infra.storage.ObjectStoragePort;
 import java.time.Duration;
 import java.time.Instant;
+import java.util.List;
 import java.util.Map;
 import java.util.function.Consumer;
+import org.junit.jupiter.api.BeforeAll;
 import org.junit.jupiter.api.Test;
 import org.opencv.core.CvType;
 import org.opencv.core.Mat;
@@ -41,11 +48,17 @@ import org.opencv.core.Scalar;
 
 class WorkerJobServiceTests {
 
+    @BeforeAll
+    static void loadOpenCv() {
+        new OpenCvLoader().loadIfPresent();
+    }
+
     private final BackendApiClient backendApiClient = mock(BackendApiClient.class);
     private final ObjectStoragePort objectStoragePort = mock(ObjectStoragePort.class);
     private final PreprocessPipelineRunner preprocessPipelineRunner = mock(PreprocessPipelineRunner.class);
     private final ProcessedImageSaveService processedImageSaveService = mock(ProcessedImageSaveService.class);
     private final PreviewImageSaveService previewImageSaveService = mock(PreviewImageSaveService.class);
+    private final DebugArtifactSaveService debugArtifactSaveService = mock(DebugArtifactSaveService.class);
     private final ProcessingReportFactory processingReportFactory = new ProcessingReportFactory();
     private final ProcessingReportSaveService processingReportSaveService = mock(ProcessingReportSaveService.class);
     private final WorkerJobService service = new WorkerJobService(
@@ -54,6 +67,7 @@ class WorkerJobServiceTests {
         preprocessPipelineRunner,
         processedImageSaveService,
         previewImageSaveService,
+        debugArtifactSaveService,
         processingReportFactory,
         processingReportSaveService
     );
@@ -78,12 +92,41 @@ class WorkerJobServiceTests {
         verify(backendApiClient).reportStarted(message);
         verify(objectStoragePort).downloadBytes("originals/scan.png");
         verify(backendApiClient).reportHeartbeat(message);
+        verify(debugArtifactSaveService).saveAll(argThat(List::isEmpty));
         verify(backendApiClient).reportSucceeded(
             message,
             "processed/3/1/2/processed.png",
             "processed/3/1/2/preview.png",
             "processed/3/1/2/processing-report.json"
         );
+    }
+
+    @Test
+    void uploadsDebugArtifactsWhenDebugEnabled() {
+        PreprocessJobMessage message = validMessage(true);
+        when(objectStoragePort.downloadBytes("originals/scan.png")).thenReturn(new byte[] {1, 2, 3});
+        when(processedImageSaveService.save(eq(3L), eq(1L), eq(2L), any(ImageMatHolder.class)))
+            .thenReturn(uploaded(ArtifactType.PROCESSED_IMAGE, "processed/3/1/2/processed.png", 10));
+        when(previewImageSaveService.save(eq(3L), eq(1L), eq(2L), any(ImageMatHolder.class)))
+            .thenReturn(uploaded(ArtifactType.PREVIEW_IMAGE, "processed/3/1/2/preview.png", 5));
+        when(processingReportSaveService.save(eq(3L), eq(1L), eq(2L), any(ProcessingReport.class)))
+            .thenReturn(uploaded(ArtifactType.PROCESSING_REPORT, "processed/3/1/2/processing-report.json", 50));
+        doAnswer(invocation -> {
+            List<DebugArtifactSnapshot> snapshots = invocation.getArgument(0);
+            assertThat(snapshots).hasSize(1);
+            assertThat(snapshots.getFirst().loaded()).isTrue();
+            return List.of();
+        }).when(debugArtifactSaveService).saveAll(any());
+        successfulPipelineRun(message);
+
+        WorkerJobResult result = service.process(message);
+
+        assertThat(result.status()).isEqualTo(WorkerJobStatus.SUCCEEDED);
+        verify(debugArtifactSaveService).saveAll(argThat(snapshots ->
+            snapshots.size() == 1
+                && snapshots.getFirst().descriptor().objectKey()
+                    .equals("processed/3/1/2/debug/00_decoded.png")
+        ));
     }
 
     @Test
@@ -217,8 +260,12 @@ class WorkerJobServiceTests {
                 new Mat(2, 3, CvType.CV_8UC1, new Scalar(255))
             );
             try {
+                if (context.debug()) {
+                    context.recordDebugSnapshot(PreprocessStepName.DECODE, "00_decoded.png", outputImage);
+                }
                 outputConsumer.accept(outputImage);
             } finally {
+                context.releaseDebugSnapshots();
                 outputImage.release();
             }
             return PreprocessResult.from(context, false, Duration.ofMillis(3), true, null);
@@ -230,6 +277,10 @@ class WorkerJobServiceTests {
     }
 
     private PreprocessJobMessage validMessage() {
+        return validMessage(false);
+    }
+
+    private PreprocessJobMessage validMessage(boolean debug) {
         return new PreprocessJobMessage(
             "msg",
             1L,
@@ -240,7 +291,7 @@ class WorkerJobServiceTests {
             "originals/scan.png",
             "A4_SCAN_300DPI",
             Map.of("targetDpi", "300"),
-            false,
+            debug,
             JobPriority.NORMAL,
             1,
             "trace",
