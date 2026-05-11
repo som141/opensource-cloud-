@@ -2,6 +2,7 @@ package com.moonju.preprocess.worker.domain.workerjob.service;
 
 import com.moonju.preprocess.worker.domain.artifact.dto.ArtifactUploadResult;
 import com.moonju.preprocess.worker.domain.artifact.exception.ArtifactUploadFailedException;
+import com.moonju.preprocess.worker.domain.artifact.service.DebugArtifactSaveService;
 import com.moonju.preprocess.worker.domain.artifact.service.PreviewImageSaveService;
 import com.moonju.preprocess.worker.domain.artifact.service.ProcessedImageSaveService;
 import com.moonju.preprocess.worker.domain.artifact.service.ProcessingReportSaveService;
@@ -27,6 +28,7 @@ public class WorkerJobService {
     private final PreprocessPipelineRunner preprocessPipelineRunner;
     private final ProcessedImageSaveService processedImageSaveService;
     private final PreviewImageSaveService previewImageSaveService;
+    private final DebugArtifactSaveService debugArtifactSaveService;
     private final ProcessingReportFactory processingReportFactory;
     private final ProcessingReportSaveService processingReportSaveService;
 
@@ -36,6 +38,7 @@ public class WorkerJobService {
         PreprocessPipelineRunner preprocessPipelineRunner,
         ProcessedImageSaveService processedImageSaveService,
         PreviewImageSaveService previewImageSaveService,
+        DebugArtifactSaveService debugArtifactSaveService,
         ProcessingReportFactory processingReportFactory,
         ProcessingReportSaveService processingReportSaveService
     ) {
@@ -44,6 +47,7 @@ public class WorkerJobService {
         this.preprocessPipelineRunner = preprocessPipelineRunner;
         this.processedImageSaveService = processedImageSaveService;
         this.previewImageSaveService = previewImageSaveService;
+        this.debugArtifactSaveService = debugArtifactSaveService;
         this.processingReportFactory = processingReportFactory;
         this.processingReportSaveService = processingReportSaveService;
     }
@@ -92,6 +96,7 @@ public class WorkerJobService {
                     message.itemId(),
                     outputImage
                 ));
+                debugArtifactSaveService.saveAll(context.debugSnapshots());
             });
             if (!result.success()) {
                 return reportFailure(

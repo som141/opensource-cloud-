@@ -1,6 +1,7 @@
 package com.moonju.preprocess.worker.domain.preprocess.pipeline;
 
 import com.moonju.preprocess.worker.domain.preprocess.model.DebugArtifactDescriptor;
+import com.moonju.preprocess.worker.domain.preprocess.model.DebugArtifactSnapshot;
 import com.moonju.preprocess.worker.domain.preprocess.model.FallbackNote;
 import com.moonju.preprocess.worker.domain.preprocess.model.ImageMatHolder;
 import com.moonju.preprocess.worker.domain.preprocess.step.PreprocessStepName;
@@ -25,6 +26,7 @@ public class PreprocessContext {
     private final List<PreprocessStepExecution> stepExecutions = new ArrayList<>();
     private final List<FallbackNote> fallbackNotes = new ArrayList<>();
     private final List<DebugArtifactDescriptor> debugArtifacts = new ArrayList<>();
+    private final List<DebugArtifactSnapshot> debugSnapshots = new ArrayList<>();
     private final Map<PreprocessStepName, String> stepNotes = new EnumMap<>(PreprocessStepName.class);
     private byte[] sourceImageBytes;
     private ImageMatHolder decodedImage;
@@ -94,6 +96,22 @@ public class PreprocessContext {
         debugArtifacts.add(DebugArtifactDescriptor.image(stepName, projectId, jobId, itemId, fileName));
     }
 
+    public void recordDebugSnapshot(PreprocessStepName stepName, String fileName, ImageMatHolder imageMatHolder) {
+        if (!debug || imageMatHolder == null || !imageMatHolder.loaded()) {
+            return;
+        }
+        DebugArtifactSnapshot snapshot = DebugArtifactSnapshot.image(
+            stepName,
+            projectId,
+            jobId,
+            itemId,
+            fileName,
+            imageMatHolder.mat()
+        );
+        debugSnapshots.add(snapshot);
+        debugArtifacts.add(snapshot.descriptor());
+    }
+
     public PreprocessContext withSourceImageBytes(byte[] imageBytes) {
         if (imageBytes == null) {
             this.sourceImageBytes = null;
@@ -126,6 +144,12 @@ public class PreprocessContext {
     public void releaseDecodedImage() {
         if (decodedImage != null) {
             decodedImage.release();
+        }
+    }
+
+    public void releaseDebugSnapshots() {
+        for (DebugArtifactSnapshot snapshot : debugSnapshots) {
+            snapshot.release();
         }
     }
 
@@ -167,5 +191,9 @@ public class PreprocessContext {
 
     public List<DebugArtifactDescriptor> debugArtifacts() {
         return List.copyOf(debugArtifacts);
+    }
+
+    public List<DebugArtifactSnapshot> debugSnapshots() {
+        return List.copyOf(debugSnapshots);
     }
 }

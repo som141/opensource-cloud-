@@ -126,6 +126,13 @@ Issue 79 connects the pipeline output to artifacts and success reporting:
 - `processing-report.json` upload
 - Backend Internal Worker API success callback with artifact object keys
 
+Issue 81 connects debug artifact snapshots to Object Storage:
+
+- debug snapshots are captured after each successful step only when `debug=true`
+- snapshots clone the current OpenCV Mat so the final output Mat can continue mutating safely
+- debug images are encoded as PNG and uploaded under `processed/{projectId}/{jobId}/{itemId}/debug/`
+- cloned debug Mats are released in the runner cleanup path
+
 ## Required Execution Order
 
 Every built-in document preset executes the following order:
@@ -164,6 +171,20 @@ The Worker now reports success only after these required artifacts are uploaded:
 - `processed/{projectId}/{jobId}/{itemId}/preview.png`
 - `processed/{projectId}/{jobId}/{itemId}/processing-report.json`
 
+When `debug=true`, the Worker also uploads these optional debug artifacts before reporting success:
+
+- `processed/{projectId}/{jobId}/{itemId}/debug/00_decoded.png`
+- `processed/{projectId}/{jobId}/{itemId}/debug/01_normalized.png`
+- `processed/{projectId}/{jobId}/{itemId}/debug/02_orientation.png`
+- `processed/{projectId}/{jobId}/{itemId}/debug/03_deskew.png`
+- `processed/{projectId}/{jobId}/{itemId}/debug/04_crop.png`
+- `processed/{projectId}/{jobId}/{itemId}/debug/05_denoise.png`
+- `processed/{projectId}/{jobId}/{itemId}/debug/06_contrast.png`
+- `processed/{projectId}/{jobId}/{itemId}/debug/07_binarized.png`
+- `processed/{projectId}/{jobId}/{itemId}/debug/08_morphology.png`
+- `processed/{projectId}/{jobId}/{itemId}/debug/09_dpi.png`
+- `processed/{projectId}/{jobId}/{itemId}/debug/10_sharpen.png`
+
 If the pipeline finishes without a real output image, the Worker still reports `PIPELINE_NOT_IMPLEMENTED`. This keeps
 the deferred/no-source skeleton path explicit during tests and local smoke checks.
 
@@ -172,6 +193,6 @@ it to `ARTIFACT_UPLOAD_FAILED`. Backend report failures remain `BACKEND_REPORT_F
 
 ## Next Implementation Steps
 
-1. Generate and upload real debug artifact images for `debug=true`.
-2. Add richer report fields for skew angle, crop bounds, binarization strategy, and DPI normalization.
+1. Add richer report fields for skew angle, crop bounds, binarization strategy, and DPI normalization.
+2. Add a local Docker smoke path that verifies stored artifacts in MinIO.
 3. Keep OCR text extraction out of the Worker runtime scope.

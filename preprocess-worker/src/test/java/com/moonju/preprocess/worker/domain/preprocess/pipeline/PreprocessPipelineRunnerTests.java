@@ -191,6 +191,38 @@ class PreprocessPipelineRunnerTests {
     }
 
     @Test
+    void recordsAndReleasesDebugSnapshotsWhenDebugEnabled() throws IOException {
+        PreprocessPipelineRunner decodeRunner = new PreprocessPipelineRunner(
+            PreprocessPresetRegistry.builtIn(),
+            PreprocessStepCatalog.builtIn(
+                new ImageCodecAdapter(new OpenCvLoader())
+            )
+        );
+        PreprocessContext context = new PreprocessContext(
+            3L,
+            1L,
+            10L,
+            "originals/project/scan.png",
+            "LOW_CONTRAST_SCAN",
+            Map.of(),
+            true
+        ).withSourceImageBytes(pngBytes());
+
+        PreprocessResult result = decodeRunner.run(context);
+
+        assertThat(result.success()).isTrue();
+        assertThat(result.debugArtifacts())
+            .extracting(debugArtifact -> debugArtifact.objectKey())
+            .contains(
+                "processed/3/1/10/debug/00_decoded.png",
+                "processed/3/1/10/debug/01_normalized.png",
+                "processed/3/1/10/debug/10_sharpen.png"
+            );
+        assertThat(context.debugSnapshots()).isNotEmpty();
+        assertThat(context.debugSnapshots()).allSatisfy(snapshot -> assertThat(snapshot.loaded()).isFalse());
+    }
+
+    @Test
     void releasesDecodedImageWhenPipelineFailsAfterDecode() throws IOException {
         PreprocessStep failingColorNormalizeStep = new PreprocessStep() {
 
