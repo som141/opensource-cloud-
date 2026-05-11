@@ -156,6 +156,17 @@ Issue 75 implements Quality 1:
 6. Unsupported binarization modes record a fallback and use Otsu thresholding.
 7. Morphology cleanup, optional sharpen, artifact upload, and success callback remain out of scope.
 
+## Current Issue 77 Scope
+
+Issue 77 implements Quality 2:
+
+1. `MorphologyCleanupStep` supports `open`, `close`, and `open_close` cleanup.
+2. `MorphologyCleanupStep` inverts binary images internally so black strokes are treated as foreground.
+3. Unsupported morphology modes record a fallback and use `open_close`.
+4. `SharpenStep` applies unsharp mask only when `sharpen` is enabled.
+5. `SharpenStep` skips by default when the preset does not explicitly request sharpening.
+6. Processed image upload, preview upload, report upload, and success callback remain out of scope.
+
 ## Done Criteria
 
 1. A simple resize-only step does not exist.

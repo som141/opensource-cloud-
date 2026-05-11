@@ -109,6 +109,15 @@ Denoise supports median and bilateral filtering. Contrast normalization applies 
 luminance channel of BGR input. Binarization converts the current image to a single-channel binary image with Otsu or
 adaptive thresholding according to preset parameters.
 
+Issue 77 implements Quality 2:
+
+- `MorphologyCleanupStep`
+- `SharpenStep`
+
+Morphology cleanup treats black document strokes as foreground internally by inverting the binary image before open/close
+operations and then inverting back. Optional sharpen applies an unsharp mask only when the preset explicitly enables
+`sharpen`.
+
 ## Required Execution Order
 
 Every built-in document preset executes the following order:
@@ -161,7 +170,7 @@ that to `PIPELINE_EXECUTION_FAILED` and reports it to the backend Internal Worke
 
 ## Next Implementation Steps
 
-1. Implement Quality 2: morphology cleanup and optional sharpen.
-2. Add report generation per step.
-3. Add artifact save service.
+1. Add processed image and preview artifact generation.
+2. Add `processing-report.json` generation/upload.
+3. Add Worker success callback after artifacts are persisted.
 4. Keep OCR text extraction out of the Worker runtime scope.
