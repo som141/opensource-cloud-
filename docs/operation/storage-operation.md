@@ -46,27 +46,33 @@ processed/{projectId}/{jobId}/{itemId}/debug/{step}.png
 7. Spring API verifies object existence through `ObjectStoragePort`.
 8. Image domain creates `Image` and `ORIGINAL` `ImageArtifact` rows from completed upload files.
 
-## Local Skeleton
+## Local MinIO Adapter
 
-Current skeleton classes:
+The local backend uses the same MinIO bucket as the Worker:
 
-- `PresignedUrlGenerator`
-- `PresignedDownloadUrlGenerator`
-- `ObjectStoragePort`
-- `LocalPresignedUrlGenerator`
-- `LocalPresignedDownloadUrlGenerator`
-- `LocalObjectStorageAdapter`
+- `MinioObjectStorageAdapter`
+- `StorageProperties`
 
-The local classes are placeholders so the application compiles and the domain boundary is testable. Production work
-must replace them with a MinIO/S3 adapter that uses real SDK calls and real object existence checks.
+The adapter signs upload/download URLs with `storage.public-endpoint` so browser uploads can use `localhost`, while
+object existence checks use `storage.endpoint` so backend-api can reach MinIO inside Docker.
+
+For local browser uploads, MinIO must also allow the frontend origin:
+
+```text
+MINIO_API_CORS_ALLOW_ORIGIN=http://localhost,http://localhost:5173
+```
+
+The local smoke flow verifies presigned PUT CORS with an `OPTIONS` preflight before uploading the image body.
 
 ## Required Environment Variables For Real Adapter
 
 ```text
 MINIO_ENDPOINT
+MINIO_PUBLIC_ENDPOINT
 MINIO_ACCESS_KEY
 MINIO_SECRET_KEY
 MINIO_BUCKET
+MINIO_REGION
 ```
 
 For S3-compatible production storage, equivalent endpoint, region, access key, secret key, and bucket values are

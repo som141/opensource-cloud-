@@ -121,6 +121,70 @@ body {
   background: #f6ecd8;
 }
 
+.status-card.warning {
+  border-left-color: #c58b25;
+}
+
+.status-card.error {
+  border-left-color: #a33d2f;
+}
+
+.smoke-form {
+  display: grid;
+  gap: 1rem;
+}
+
+.smoke-form label {
+  display: grid;
+  gap: 0.45rem;
+  color: var(--muted);
+  font-weight: 700;
+}
+
+.smoke-form input,
+.smoke-form select {
+  border: 1px solid var(--line);
+  border-radius: 0.85rem;
+  background: #fffdf7;
+  color: var(--ink);
+  padding: 0.85rem 1rem;
+}
+
+.check-row {
+  display: flex !important;
+  grid-template-columns: auto 1fr;
+  align-items: center;
+}
+
+.check-row input {
+  width: 1rem;
+}
+
+.log-panel,
+.artifact-card {
+  display: grid;
+  gap: 0.45rem;
+  border: 1px dashed var(--line);
+  border-radius: 1rem;
+  background: rgba(255, 253, 247, 0.82);
+  padding: 1rem;
+}
+
+.log-panel span,
+.artifact-card code {
+  overflow-wrap: anywhere;
+}
+
+.status-grid {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 1rem;
+}
+
+.error-text {
+  color: #a33d2f;
+}
+
 @media (max-width: 780px) {
   .shell {
     grid-template-columns: 1fr;
@@ -133,5 +197,9 @@ body {
 
   .content {
     padding: 2rem 1.25rem;
+  }
+
+  .status-grid {
+    grid-template-columns: 1fr;
   }
 }

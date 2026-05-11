@@ -1,4 +1,28 @@
 {
+  "vhosts": [
+    {
+      "name": "/"
+    }
+  ],
+  "users": [
+    {
+      "name": "local",
+      "password_hash": "TXatvPpZIGPUaFI4bqiarZr9uAtx5Xo+85Y1c5gIoUZaDY8j",
+      "hashing_algorithm": "rabbit_password_hashing_sha256",
+      "tags": [
+        "administrator"
+      ]
+    }
+  ],
+  "permissions": [
+    {
+      "user": "local",
+      "vhost": "/",
+      "configure": ".*",
+      "write": ".*",
+      "read": ".*"
+    }
+  ],
   "exchanges": [
     {
       "name": "image.preprocess.dlx",

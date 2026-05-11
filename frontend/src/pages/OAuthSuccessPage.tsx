@@ -10,9 +10,12 @@ export function OAuthSuccessPage() {
       description="Placeholder for accepting the short-lived access token and loading the current user profile."
     >
       <div className="status-card">
-        <strong>Access token query parameter</strong>
-        <span>{accessToken ? 'present' : 'missing'}</span>
+        <strong>Access token</strong>
+        <span>{accessToken ? 'saved to this browser' : 'missing'}</span>
       </div>
+      <a className="primary-action" href="/upload">
+        Start local smoke test
+      </a>
     </PageSection>
   );
 }

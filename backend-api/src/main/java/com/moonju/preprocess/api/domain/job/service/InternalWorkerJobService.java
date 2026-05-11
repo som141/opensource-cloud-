@@ -18,6 +18,7 @@ import com.moonju.preprocess.api.domain.job.repository.JobRepository;
 import java.time.Clock;
 import java.time.LocalDateTime;
 import java.util.List;
+import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -29,6 +30,7 @@ public class InternalWorkerJobService {
     private final JobEventService jobEventService;
     private final Clock clock;
 
+    @Autowired
     public InternalWorkerJobService(
         JobRepository jobRepository,
         JobItemRepository jobItemRepository,
