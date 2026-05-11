@@ -67,9 +67,13 @@ Issue 73 adds the second geometry increment. Crop uses foreground bounds to remo
 safe, and DPI normalization scales the current Mat only when source DPI metadata is available. Missing source DPI is a
 fallback no-op because OCR-oriented DPI normalization should be based on real metadata, not guessed values.
 
+Issue 75 adds the first quality-processing increment. Denoise removes scan noise with median or bilateral filtering,
+contrast normalization applies CLAHE, and binarization produces a single-channel binary image using Otsu or adaptive
+thresholding.
+
 ## Future Implementation Points
 
-1. Quality steps update the processing context with reportable facts.
+1. Morphology cleanup and optional sharpen update the processing context with reportable facts.
 2. `domain/artifact` saves processed, preview, report, and debug files to Object Storage.
 3. `domain/report` produces `processing-report.json`.
 4. Worker reports artifact metadata back through Backend internal API.

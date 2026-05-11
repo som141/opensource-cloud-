@@ -144,6 +144,18 @@ Issue 73 implements Geometry 2:
 6. Missing source DPI metadata records a fallback note and keeps the current image unchanged.
 7. Quality steps, artifact upload, and success callback remain out of scope.
 
+## Current Issue 75 Scope
+
+Issue 75 implements Quality 1:
+
+1. `DenoiseStep` supports median blur by default.
+2. `DenoiseStep` supports bilateral filtering when `denoiseMode=bilateral`.
+3. Unsupported denoise modes record a fallback and use median blur.
+4. `ContrastNormalizeStep` applies CLAHE to grayscale input or BGR luminance.
+5. `BinarizationStep` supports Otsu and adaptive thresholding.
+6. Unsupported binarization modes record a fallback and use Otsu thresholding.
+7. Morphology cleanup, optional sharpen, artifact upload, and success callback remain out of scope.
+
 ## Done Criteria
 
 1. A simple resize-only step does not exist.
