@@ -16,8 +16,12 @@ public class A4Scan300DpiPreset implements PreprocessPresetDefinition {
             Map.of(
                 "targetDpi", "300",
                 "binarizationMode", "otsu",
-                "contrastClipLimit", "1.2",
-                "sharpen", "false"
+                "contrastClipLimit", "2.0",
+                "sharpen", "false",
+                "denoiseMode", "median",
+                "denoiseKernelSize", "3",
+                "morphologyMode", "open_close",
+                "morphologyKernelSize", "1"
             )
         );
     }

@@ -11,6 +11,8 @@ import org.springframework.stereotype.Component;
 public class DenoiseStep implements PreprocessStep {
 
     private static final int DEFAULT_MEDIAN_KERNEL_SIZE = 3;
+    private static final double DEFAULT_BILATERAL_SIGMA_COLOR = 25.0;
+    private static final double DEFAULT_BILATERAL_SIGMA_RANGE = 75.0;
 
     @Override
     public PreprocessStepName name() {
@@ -44,8 +46,11 @@ public class DenoiseStep implements PreprocessStep {
         Mat denoised = new Mat();
         if ("bilateral".equals(mode)) {
             int diameter = positiveOddInt(context.parameters().get("denoiseDiameter"), 5);
-            Imgproc.bilateralFilter(holder.mat(), denoised, diameter, 75.0, 75.0);
-            replaceImage(context, holder, denoised, "Denoise applied: mode=bilateral, diameter=" + diameter);
+            double sigmaColor = doubleValue(context.parameters().get("denoiseSigmaColor"), DEFAULT_BILATERAL_SIGMA_COLOR);
+            double sigmaRange = doubleValue(context.parameters().get("denoiseSigmaRange"), DEFAULT_BILATERAL_SIGMA_RANGE);
+            Imgproc.bilateralFilter(holder.mat(), denoised, diameter, sigmaColor, sigmaRange);
+            replaceImage(context, holder, denoised, "Denoise applied: mode=bilateral, diameter=" + diameter
+                + ", sigmaColor=" + sigmaColor + ", sigmaRange=" + sigmaRange);
             return;
         }
 
@@ -70,5 +75,12 @@ public class DenoiseStep implements PreprocessStep {
         }
         int parsed = Math.max(3, Integer.parseInt(value));
         return parsed % 2 == 0 ? parsed + 1 : parsed;
+    }
+
+    private double doubleValue(String value, double defaultValue) {
+        if (value == null || value.isBlank()) {
+            return defaultValue;
+        }
+        return Math.max(0.1, Double.parseDouble(value));
     }
 }

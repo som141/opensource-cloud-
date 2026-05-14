@@ -11,8 +11,8 @@ import org.springframework.stereotype.Component;
 @Component
 public class SharpenStep implements PreprocessStep {
 
-    private static final double DEFAULT_SHARPEN_AMOUNT = 0.6;
-    private static final double DEFAULT_SHARPEN_SIGMA = 1.0;
+    private static final double DEFAULT_SHARPEN_AMOUNT = 0.8;
+    private static final double DEFAULT_SHARPEN_SIGMA = 1.5;
 
     @Override
     public PreprocessStepName name() {
