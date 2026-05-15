@@ -7,6 +7,18 @@ exposure from the OAuth success URL and upload UI.
 
 The feature is still OCR preprocessing only. It does not run OCR text extraction.
 
+## MVP Scope Exclusions
+
+The local MVP focuses on project-based image upload, asynchronous preprocessing, and processed-image delivery. These
+items are intentionally excluded from the current product surface:
+
+- OCR benchmark pages and APIs
+- Admin dashboard pages and APIs
+- Audit log domain and APIs
+
+The frontend navigation should not expose excluded pages. Backend placeholder packages for these domains should not be
+kept as active implementation targets.
+
 ## Design References
 
 The UI direction follows common SaaS dashboard patterns without copying a specific product:
