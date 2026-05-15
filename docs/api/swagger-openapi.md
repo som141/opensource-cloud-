@@ -66,11 +66,13 @@ Expected result:
 1. Start the backend.
 2. Open `http://localhost:8080/oauth2/authorization/google`.
 3. Complete Google login.
-4. Copy the `accessToken` query parameter from the OAuth success redirect URL.
-5. Open `http://localhost:8080/swagger-ui/index.html`.
-6. Click `Authorize`.
-7. Paste only the access token value.
-8. Run protected endpoints such as `GET /api/v1/auth/me` or `GET /api/v1/projects`.
+4. The backend redirects to the configured OAuth success URL without exposing the access token in the URL.
+5. Use the frontend OAuth success page to refresh and store the short-lived access token, or call
+   `POST /api/v1/auth/refresh` from a client that includes the `refresh_token` cookie.
+6. Open `http://localhost:8080/swagger-ui/index.html`.
+7. Click `Authorize`.
+8. Paste only the access token value.
+9. Run protected endpoints such as `GET /api/v1/auth/me` or `GET /api/v1/projects`.
 
 Do not paste the `Bearer ` prefix. Swagger applies the Bearer scheme automatically.
 

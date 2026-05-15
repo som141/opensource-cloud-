@@ -48,6 +48,9 @@ All endpoints require `Authorization: Bearer <access-token>`.
 | `GET` | `/api/v1/jobs` | List my jobs |
 | `GET` | `/api/v1/jobs/{jobId}` | Read job detail |
 | `GET` | `/api/v1/jobs/{jobId}/items` | List image-level job items |
+| `GET` | `/api/v1/jobs/{jobId}/items/{itemId}/download?type=processed` | Create processed image download URL |
+| `GET` | `/api/v1/jobs/{jobId}/items/{itemId}/download?type=preview` | Create preview image download URL |
+| `GET` | `/api/v1/jobs/{jobId}/items/{itemId}/download?type=report` | Create processing report download URL |
 | `GET` | `/api/v1/jobs/{jobId}/summary` | Read progress counters |
 | `GET` | `/api/v1/jobs/{jobId}/events` | Subscribe to progress SSE stream |
 | `POST` | `/api/v1/jobs/{jobId}/cancel` | Request cancellation |
@@ -150,6 +153,41 @@ GET /api/v1/jobs/{jobId}/items?page=0&size=50
 ```
 
 `GET /api/v1/jobs` lists jobs created by the current user. Detail and item APIs validate project read permission.
+
+## JobItem Artifact Download
+
+```text
+GET /api/v1/jobs/{jobId}/items/{itemId}/download?type=processed
+GET /api/v1/jobs/{jobId}/items/{itemId}/download?type=preview
+GET /api/v1/jobs/{jobId}/items/{itemId}/download?type=report
+```
+
+The API validates that the current user can read the Job's project, finds the requested JobItem, maps the requested
+artifact type to the Worker-registered object key, and returns a temporary Object Storage download URL.
+
+Response:
+
+```json
+{
+  "isSuccess": true,
+  "code": "common200",
+  "message": "Request succeeded.",
+  "result": {
+    "jobId": 1,
+    "itemId": 10,
+    "type": "PROCESSED",
+    "objectKey": "processed/1/1/10/processed.png",
+    "downloadUrl": "http://localhost:9000/image-preprocess-local/processed/1/1/10/processed.png?...",
+    "expiresAt": "2026-05-15T09:00:00Z"
+  }
+}
+```
+
+Rules:
+
+- `type` must be one of `processed`, `preview`, or `report`.
+- If the Worker has not registered the requested object key yet, the API returns `common404`.
+- Debug artifact expansion remains separate from this JobItem-level result download flow.
 
 ## Summary
 

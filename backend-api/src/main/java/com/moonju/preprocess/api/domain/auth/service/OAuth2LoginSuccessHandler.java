@@ -51,8 +51,7 @@ public class OAuth2LoginSuccessHandler implements AuthenticationSuccessHandler {
             refreshTokenCookieService.createRefreshCookie(tokenPair.refreshToken()).toString()
         );
         String redirectUri = UriComponentsBuilder.fromUriString(successRedirectUri)
-            .queryParam("accessToken", tokenPair.accessToken())
-            .queryParam("accessTokenExpiresAt", tokenPair.accessTokenExpiresAt())
+            .queryParam("login", "success")
             .build()
             .toUriString();
         redirectStrategy.sendRedirect(request, response, redirectUri);

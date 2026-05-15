@@ -53,13 +53,26 @@ The local backend uses the same MinIO bucket as the Worker:
 - `MinioObjectStorageAdapter`
 - `StorageProperties`
 
-The adapter signs upload/download URLs with `storage.public-endpoint` so browser uploads can use `localhost`, while
-object existence checks use `storage.endpoint` so backend-api can reach MinIO inside Docker.
+The adapter signs upload/download URLs with `storage.public-endpoint` so browser uploads can use the public local entry
+point, while object existence checks use `storage.endpoint` so backend-api can reach MinIO inside Docker.
+
+In Docker Compose local mode, `MINIO_PUBLIC_ENDPOINT` is set to `http://localhost` and NGINX proxies the local bucket
+path to MinIO:
+
+```text
+Browser
+  -> http://localhost/image-preprocess-local/{objectKey}
+  -> NGINX
+  -> minio:9000
+```
+
+This keeps browser uploads on the same origin as the frontend and avoids local CORS or blocked-port failures during
+manual testing. MinIO is still exposed on `http://localhost:9000` for console/API debugging.
 
 For local browser uploads, MinIO must also allow the frontend origin:
 
 ```text
-MINIO_API_CORS_ALLOW_ORIGIN=http://localhost,http://localhost:5173
+MINIO_API_CORS_ALLOW_ORIGIN=http://localhost,http://localhost:5173,http://127.0.0.1,http://127.0.0.1:5173
 ```
 
 The local smoke flow verifies presigned PUT CORS with an `OPTIONS` preflight before uploading the image body.
