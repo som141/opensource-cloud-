@@ -90,12 +90,13 @@ The Worker stores result object keys on each `JobItem` after preprocessing succe
 - `previewObjectKey`
 - `reportObjectKey`
 
-The batch console does not access MinIO object keys directly. It calls:
+The API still supports item-level artifact download URLs for internal verification. The batch console only exposes the
+processed image download to users and does not surface preview or report downloads as final results.
+
+The batch console does not access MinIO object keys directly. It calls the processed endpoint:
 
 ```text
 GET /api/v1/jobs/{jobId}/items/{itemId}/download?type=processed
-GET /api/v1/jobs/{jobId}/items/{itemId}/download?type=preview
-GET /api/v1/jobs/{jobId}/items/{itemId}/download?type=report
 ```
 
 The API validates project read permission and returns a temporary presigned download URL for the selected artifact.
@@ -108,7 +109,7 @@ The API validates project read permission and returns a temporary presigned down
 4. NGINX routes exact `/oauth2/success` to the frontend while keeping `/oauth2/authorization/google` on backend-api.
 5. The frontend can run a multi-image batch through the existing backend API and Worker.
 6. The UI shows selected file count, total size, job progress, and item-level artifact downloads.
-7. Processed image, preview, and report buttons open temporary download URLs returned by the API.
+7. The batch console exposes only processed image downloads as user-facing results.
 8. The sidebar shows either a Google sign-in action or the current account identity and sign-out action.
 
 ## Sidebar Account UX

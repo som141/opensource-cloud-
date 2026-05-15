@@ -425,7 +425,7 @@ export function UploadPage() {
           <h2>Prepare scanned documents for OCR at queue scale.</h2>
           <p>
             Upload multiple scans, let the API create one JobItem per image, and watch the Worker produce processed
-            images, previews, reports, and optional debug artifacts.
+            images that can be downloaded as the final output.
           </p>
         </div>
         <div className="session-card">
@@ -439,7 +439,7 @@ export function UploadPage() {
         <div className="status-card warning">
           <strong>Google session required</strong>
           <span>Sign in first. The OAuth callback now refreshes the access token without exposing it in the URL.</span>
-          <a className="primary-action" href="/login">Go to login</a>
+          <a className="primary-action" href="/oauth2/authorization/google">Continue with Google</a>
         </div>
       )}
 
@@ -566,7 +566,7 @@ export function UploadPage() {
         <section className="artifact-board">
           <div>
             <span className="status-pill accent">Results</span>
-            <h2>Worker artifacts</h2>
+            <h2>Processed images</h2>
           </div>
           <div className="artifact-grid">
             {result.items.map((item) => (
@@ -578,8 +578,6 @@ export function UploadPage() {
                 <small>Image #{item.imageId}</small>
                 {item.errorMessage && <span className="error-text">{item.errorCode}: {item.errorMessage}</span>}
                 {item.processedObjectKey && <code>{item.processedObjectKey}</code>}
-                {item.previewObjectKey && <code>{item.previewObjectKey}</code>}
-                {item.reportObjectKey && <code>{item.reportObjectKey}</code>}
                 <div className="download-actions">
                   <button
                     type="button"
@@ -587,23 +585,7 @@ export function UploadPage() {
                     disabled={!item.processedObjectKey}
                     onClick={() => downloadArtifact(item, 'processed')}
                   >
-                    Processed
-                  </button>
-                  <button
-                    type="button"
-                    className="secondary-action"
-                    disabled={!item.previewObjectKey}
-                    onClick={() => downloadArtifact(item, 'preview')}
-                  >
-                    Preview
-                  </button>
-                  <button
-                    type="button"
-                    className="secondary-action"
-                    disabled={!item.reportObjectKey}
-                    onClick={() => downloadArtifact(item, 'report')}
-                  >
-                    Report
+                    Download processed image
                   </button>
                 </div>
               </div>
