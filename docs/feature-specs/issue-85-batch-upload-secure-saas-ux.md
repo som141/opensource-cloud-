@@ -79,3 +79,13 @@ Browser
 4. NGINX routes exact `/oauth2/success` to the frontend while keeping `/oauth2/authorization/google` on backend-api.
 5. The frontend can run a multi-image batch through the existing backend API and Worker.
 6. The UI shows selected file count, total size, job progress, and item-level artifact downloads.
+
+## Local Static Cache Policy
+
+The local frontend container disables long-lived caching for the SPA shell so OAuth callback and upload UI changes are
+visible immediately after a Docker rebuild.
+
+- `index.html` and fallback SPA routes use `Cache-Control: no-store, no-cache, must-revalidate`.
+- `/assets/*` uses `Cache-Control: no-cache, must-revalidate`.
+- This is a local verification policy. A production deployment can later use immutable hashed assets after the release
+  pipeline guarantees content hashes change for every changed bundle.
