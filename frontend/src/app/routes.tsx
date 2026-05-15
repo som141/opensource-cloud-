@@ -1,5 +1,3 @@
-import { AdminPage } from '../pages/AdminPage';
-import { BenchmarkPage } from '../pages/BenchmarkPage';
 import { DashboardPage } from '../pages/DashboardPage';
 import { ImageDetailPage } from '../pages/ImageDetailPage';
 import { JobDetailPage } from '../pages/JobDetailPage';
@@ -24,9 +22,7 @@ export const routes: AppRoute[] = [
   { path: '/projects/:projectId', label: 'Project Detail', element: <ProjectDetailPage /> },
   { path: '/upload', label: 'Upload', element: <UploadPage /> },
   { path: '/jobs/:jobId', label: 'Job Detail', element: <JobDetailPage /> },
-  { path: '/images/:imageId', label: 'Image Detail', element: <ImageDetailPage /> },
-  { path: '/benchmarks', label: 'Benchmarks', element: <BenchmarkPage /> },
-  { path: '/admin', label: 'Admin', element: <AdminPage /> }
+  { path: '/images/:imageId', label: 'Image Detail', element: <ImageDetailPage /> }
 ];
 
 export function resolveRoute(pathname: string): AppRoute {
