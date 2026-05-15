@@ -123,4 +123,4 @@ Response:
 }
 ```
 
-`imageCount` counts non-deleted `Image` rows. `jobCount` remains a placeholder until the Job domain is implemented.
+`imageCount` counts non-deleted `Image` rows. `jobCount` counts preprocessing jobs attached to the project.

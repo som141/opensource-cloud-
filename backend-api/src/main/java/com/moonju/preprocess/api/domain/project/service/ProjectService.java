@@ -2,6 +2,7 @@ package com.moonju.preprocess.api.domain.project.service;
 
 import com.moonju.preprocess.api.domain.image.entity.ImageStatus;
 import com.moonju.preprocess.api.domain.image.repository.ImageRepository;
+import com.moonju.preprocess.api.domain.job.repository.JobRepository;
 import com.moonju.preprocess.api.domain.project.dto.ProjectCreateRequest;
 import com.moonju.preprocess.api.domain.project.dto.ProjectResponse;
 import com.moonju.preprocess.api.domain.project.dto.ProjectSummaryResponse;
@@ -29,19 +30,22 @@ public class ProjectService {
     private final UserRepository userRepository;
     private final ProjectPermissionService projectPermissionService;
     private final ImageRepository imageRepository;
+    private final JobRepository jobRepository;
 
     public ProjectService(
         ProjectRepository projectRepository,
         ProjectMemberRepository projectMemberRepository,
         UserRepository userRepository,
         ProjectPermissionService projectPermissionService,
-        ImageRepository imageRepository
+        ImageRepository imageRepository,
+        JobRepository jobRepository
     ) {
         this.projectRepository = projectRepository;
         this.projectMemberRepository = projectMemberRepository;
         this.userRepository = userRepository;
         this.projectPermissionService = projectPermissionService;
         this.imageRepository = imageRepository;
+        this.jobRepository = jobRepository;
     }
 
     @Transactional
@@ -92,12 +96,13 @@ public class ProjectService {
         ProjectMember member = projectPermissionService.validateReadable(projectId, currentUserId);
         long memberCount = projectMemberRepository.countByProject_IdAndProject_Status(projectId, ProjectStatus.ACTIVE);
         long imageCount = imageRepository.countByProjectIdAndStatusNot(projectId, ImageStatus.DELETED);
+        long jobCount = jobRepository.countByProjectId(projectId);
         return new ProjectSummaryResponse(
             member.getProject().getId(),
             member.getProject().getName(),
             memberCount,
             imageCount,
-            0
+            jobCount
         );
     }
 

@@ -23,8 +23,16 @@ export class ApiClient {
     return this.request<T>('POST', path, body, accessToken);
   }
 
+  async patch<T>(path: string, body: unknown, accessToken?: string): Promise<ApiResponse<T>> {
+    return this.request<T>('PATCH', path, body, accessToken);
+  }
+
+  async delete<T>(path: string, accessToken?: string): Promise<ApiResponse<T>> {
+    return this.request<T>('DELETE', path, undefined, accessToken);
+  }
+
   private async request<T>(
-    method: 'GET' | 'POST',
+    method: 'GET' | 'POST' | 'PATCH' | 'DELETE',
     path: string,
     body?: unknown,
     accessToken?: string
@@ -38,7 +46,12 @@ export class ApiClient {
     return this.parse<T>(response);
   }
 
-  private async fetchJson(method: 'GET' | 'POST', path: string, body?: unknown, accessToken?: string) {
+  private async fetchJson(
+    method: 'GET' | 'POST' | 'PATCH' | 'DELETE',
+    path: string,
+    body?: unknown,
+    accessToken?: string
+  ) {
     const headers: Record<string, string> = {
       ...this.headers(accessToken)
     };
@@ -48,7 +61,7 @@ export class ApiClient {
       credentials: 'include',
       redirect: 'manual'
     };
-    if (method === 'POST') {
+    if (method === 'POST' || method === 'PATCH') {
       headers['Content-Type'] = 'application/json';
       init.body = JSON.stringify(body ?? {});
     }
