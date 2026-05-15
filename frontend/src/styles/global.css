@@ -45,6 +45,8 @@ button {
 .sidebar {
   position: sticky;
   top: 0;
+  display: flex;
+  flex-direction: column;
   height: 100vh;
   border-right: 1px solid rgba(18, 56, 45, 0.12);
   background:
@@ -101,6 +103,98 @@ button {
   border-color: rgba(255, 255, 255, 0.18);
   background: rgba(255, 255, 255, 0.12);
   color: #fff8df;
+}
+
+.sidebar-account {
+  display: grid;
+  gap: 0.75rem;
+  margin-top: auto;
+  border-top: 1px solid rgba(255, 255, 255, 0.14);
+  padding-top: 1rem;
+}
+
+.account-state {
+  color: rgba(247, 243, 231, 0.68);
+  font-size: 0.82rem;
+  font-weight: 800;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+}
+
+.account-login,
+.text-action {
+  display: inline-flex;
+  width: fit-content;
+  align-items: center;
+  justify-content: center;
+  border-radius: 999px;
+  font-size: 0.9rem;
+  font-weight: 900;
+}
+
+.account-login {
+  background: #fff8df;
+  color: var(--pine);
+  padding: 0.72rem 0.88rem;
+  box-shadow: 0 0.8rem 1.5rem rgba(0, 0, 0, 0.12);
+}
+
+.account-card {
+  display: grid;
+  grid-template-columns: 2.45rem minmax(0, 1fr);
+  gap: 0.75rem;
+  align-items: center;
+}
+
+.account-avatar {
+  display: grid;
+  width: 2.45rem;
+  height: 2.45rem;
+  place-items: center;
+  border: 1px solid rgba(255, 255, 255, 0.24);
+  border-radius: 999px;
+  background: rgba(255, 255, 255, 0.16);
+  color: #fff8df;
+  font-size: 0.78rem;
+  font-weight: 900;
+  object-fit: cover;
+}
+
+.account-copy {
+  display: grid;
+  min-width: 0;
+}
+
+.account-copy strong,
+.account-copy small {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.account-copy strong {
+  color: #fff8df;
+  font-size: 0.92rem;
+}
+
+.account-copy small {
+  color: rgba(247, 243, 231, 0.64);
+  font-size: 0.76rem;
+}
+
+.text-action {
+  background: transparent;
+  color: rgba(247, 243, 231, 0.7);
+  padding: 0;
+}
+
+.text-action:hover:not(:disabled) {
+  color: #fff8df;
+}
+
+.text-action:disabled {
+  cursor: not-allowed;
+  opacity: 0.52;
 }
 
 .content {
@@ -549,6 +643,10 @@ button {
   .sidebar {
     position: static;
     height: auto;
+  }
+
+  .sidebar-account {
+    margin-top: 1rem;
   }
 
   .metric-strip,

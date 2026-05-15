@@ -18,7 +18,7 @@ export type AppRoute = {
 
 export const routes: AppRoute[] = [
   { path: '/', label: 'Dashboard', element: <DashboardPage /> },
-  { path: '/login', label: 'Login', element: <LoginPage /> },
+  { path: '/login', label: 'Login', element: <LoginPage />, showInNav: false },
   { path: '/oauth2/success', label: 'OAuth Success', element: <OAuthSuccessPage />, showInNav: false },
   { path: '/projects', label: 'Projects', element: <ProjectListPage /> },
   { path: '/projects/:projectId', label: 'Project Detail', element: <ProjectDetailPage /> },

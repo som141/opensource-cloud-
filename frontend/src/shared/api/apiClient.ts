@@ -90,7 +90,7 @@ export class ApiClient {
   }
 
   private headers(accessToken?: string): Record<string, string> {
-    const token = readStoredAccessToken() ?? accessToken;
+    const token = accessToken ?? readStoredAccessToken();
     return token ? { Authorization: `Bearer ${token}` } : {};
   }
 }

@@ -37,6 +37,7 @@ Reference URLs:
 10. Poll job summary and item list, then display per-item artifact download actions.
 11. Refresh the frontend visual system into a SaaS-style batch operations console.
 12. Add the JobItem artifact download API used by the batch console for processed image, preview, and report links.
+13. Move sign-in and signed-in account controls to the bottom of the sidebar instead of a primary login dashboard link.
 
 ## Updated OAuth Flow
 
@@ -108,6 +109,21 @@ The API validates project read permission and returns a temporary presigned down
 5. The frontend can run a multi-image batch through the existing backend API and Worker.
 6. The UI shows selected file count, total size, job progress, and item-level artifact downloads.
 7. Processed image, preview, and report buttons open temporary download URLs returned by the API.
+8. The sidebar shows either a Google sign-in action or the current account identity and sign-out action.
+
+## Sidebar Account UX
+
+The app keeps `/login` as a fallback route, but it is not shown in the primary navigation. The left sidebar owns the
+normal authentication entry point:
+
+```text
+unauthenticated -> bottom sidebar "Continue with Google"
+authenticated   -> bottom sidebar avatar, name/email, sign out
+```
+
+The sidebar reads `GET /api/v1/auth/me` through the shared API client. If the stored access token is expired, the client
+uses the HttpOnly refresh cookie through `POST /api/v1/auth/refresh` and retries once. Token values are not rendered in
+the sidebar, upload page, OAuth success page, or browser URL.
 
 ## Local Static Cache Policy
 
