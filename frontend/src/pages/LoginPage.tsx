@@ -4,8 +4,8 @@ import { PageSection } from '../shared/components/PageSection';
 export function LoginPage() {
   return (
     <PageSection
-      title="Google sign-in"
-      description="Authenticate through the backend OAuth endpoint. Only Google login is exposed."
+      title="Secure workspace access"
+      description="Sign in through Google. The refresh token is kept in an HttpOnly cookie and the access token is no longer shown in the URL or UI."
     >
       <GoogleLoginButton />
     </PageSection>

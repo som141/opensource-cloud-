@@ -154,7 +154,7 @@ tokenService.issue(user)
 
 | 토큰 | 목적 | 저장 위치 |
 | --- | --- | --- |
-| access token | 보호 API 호출 인증 | DB 저장 안 함. frontend로 전달 |
+| access token | 보호 API 호출 인증 | DB 저장 안 함. refresh API 응답으로 frontend에 전달 |
 | refresh token | 새 access token 발급 | 원문은 cookie, hash는 DB |
 
 ## Access Token 처리
@@ -206,10 +206,12 @@ JWT payload에는 다음 claim이 들어간다.
 
 ### access token 전달 방식
 
-로그인 성공 후 backend는 access token을 frontend redirect URL의 query parameter로 전달한다.
+로그인 성공 후 backend는 access token을 URL query parameter로 전달하지 않는다.
+대신 refresh token을 HttpOnly cookie로 설정하고, frontend는 OAuth success page에서 refresh API를 호출해 짧은 access token을 받는다.
 
 ```text
-{OAUTH2_SUCCESS_REDIRECT_URI}?accessToken=<jwt>&accessTokenExpiresAt=<instant>
+POST /api/v1/auth/refresh
+Cookie: refresh_token=<raw-refresh-token>
 ```
 
 로컬 기본 redirect URI는 다음이다.
@@ -221,13 +223,13 @@ http://localhost:5173/oauth2/success
 즉, Google login 완료 후 최종적으로 브라우저는 다음과 유사한 주소로 이동한다.
 
 ```text
-http://localhost:5173/oauth2/success?accessToken=<jwt>&accessTokenExpiresAt=2026-05-08T10:00:00Z
+http://localhost:5173/oauth2/success?login=success
 ```
 
 backend는 access token을 DB에 저장하지 않는다.
 
-frontend는 이 access token을 읽어서 이후 보호 API 호출에 사용해야 한다. 현재 backend 코드는 frontend가 이 값을 memory,
-session storage, local storage 중 어디에 보관할지 강제하지 않는다.
+frontend는 refresh API 응답의 access token을 이후 보호 API 호출에 사용한다. 현재 frontend는 로컬 MVP 검증을 위해
+브라우저 storage에 저장하지만, token 원문을 화면이나 URL에 노출하지 않는다.
 
 ### 보호 API에서 access token 사용
 
@@ -361,7 +363,7 @@ REFRESH_TOKEN_COOKIE_SAME_SITE=Lax
 Google 로그인 성공 후 backend 응답은 두 가지를 동시에 한다.
 
 1. `Set-Cookie`로 raw refresh token을 HttpOnly cookie에 저장한다.
-2. frontend success URL로 redirect하면서 access token을 query parameter로 넘긴다.
+2. frontend success URL로 redirect하면서 민감하지 않은 로그인 상태만 query parameter로 넘긴다.
 
 결과적으로 브라우저는 다음 상태가 된다.
 
@@ -370,7 +372,7 @@ Google 로그인 성공 후 backend 응답은 두 가지를 동시에 한다.
 refresh_token=<raw-refresh-token>; HttpOnly
 
 브라우저 주소:
-http://localhost:5173/oauth2/success?accessToken=<jwt>&accessTokenExpiresAt=<instant>
+http://localhost:5173/oauth2/success?login=success
 ```
 
 ## Access Token 재발급 흐름
@@ -552,10 +554,11 @@ TokenService
 Backend response
   -> Set-Cookie: refresh_token=<raw>; HttpOnly
   -> frontend success URL로 redirect
-  -> redirect query에 accessToken 포함
+  -> redirect query에는 login=success 같은 비민감 상태만 포함
 
 Frontend
-  -> access token을 읽어서 보호 API 호출에 사용
+  -> POST /api/v1/auth/refresh 호출
+  -> refresh API 응답의 access token을 보호 API 호출에 사용
   -> Authorization: Bearer <access-token>
   -> access token 만료 시 /api/v1/auth/refresh 호출
   -> logout 시 /api/v1/auth/logout 호출
@@ -567,7 +570,7 @@ Frontend
 | --- | --- | --- |
 | 형식 | JWT HS256 | 48 bytes random hex string |
 | 기본 수명 | 30분 | 14일 |
-| frontend 전달 | redirect query, refresh response body | HttpOnly cookie |
+| frontend 전달 | refresh response body | HttpOnly cookie |
 | DB 저장 | 저장하지 않음 | SHA-256 hash만 저장 |
 | API 사용 방식 | `Authorization: Bearer` header | browser cookie 자동 전송 |
 | refresh 시 | 새 access token 발급 | 기존 token revoke 후 새 token 발급 |

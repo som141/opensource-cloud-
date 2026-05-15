@@ -11,8 +11,8 @@ export function App() {
           <a className="brand" href="/">
             <span className="brand-mark">DP</span>
             <span>
-              <strong>Doc Pipeline</strong>
-              <small>OCR preprocessing</small>
+              <strong>DocPrep Cloud</strong>
+              <small>document intelligence ops</small>
             </span>
           </a>
           <nav className="nav-list">
@@ -26,6 +26,10 @@ export function App() {
           </nav>
         </aside>
         <main className="content">
+          <div className="topbar">
+            <span>Local MVP</span>
+            <strong>Queue-backed preprocessing workspace</strong>
+          </div>
           <header className="page-header">
             <p className="eyebrow">Large-scale document image preprocessing</p>
             <h1>{route.label}</h1>

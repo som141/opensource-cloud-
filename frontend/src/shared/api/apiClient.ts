@@ -30,6 +30,12 @@ export class ApiClient {
   }
 
   private async parse<T>(response: Response): Promise<ApiResponse<T>> {
+    const contentType = response.headers.get('content-type') ?? '';
+    if (!contentType.includes('application/json')) {
+      const text = await response.text();
+      const preview = text.replace(/\s+/g, ' ').slice(0, 120);
+      throw new Error(`API returned non-JSON response with HTTP ${response.status}: ${preview}`);
+    }
     const payload = (await response.json()) as ApiResponse<T>;
     if (!response.ok || !payload.isSuccess) {
       throw new Error(payload.message || `API request failed with ${response.status}`);

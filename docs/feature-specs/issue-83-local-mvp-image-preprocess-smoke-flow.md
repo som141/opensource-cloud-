@@ -25,7 +25,8 @@ The smoke flow is still OCR preprocessing only. It does not run OCR text extract
 ```text
 Browser
   -> /oauth2/authorization/google
-  -> /oauth2/success?accessToken=...
+  -> /oauth2/success?login=success
+  -> POST /api/v1/auth/refresh
   -> /upload
   -> POST /api/v1/projects
   -> POST /api/v1/projects/{projectId}/upload-sessions
@@ -92,6 +93,6 @@ The summary API currently returns counts and progress percentage, not a textual 
 
 ## Known Limits
 
-1. The smoke page is intentionally minimal and not a full production upload UI.
-2. Result image preview/download UI is not included yet; object keys are displayed for MinIO verification.
+1. The original issue 83 smoke page handled one image. Issue 85 extends this into a multi-image batch upload console.
+2. Result image preview/download UI was completed after the original smoke page and is extended per item in issue 85.
 3. SSE still needs an auth-compatible frontend integration. This page uses polling for local smoke verification.

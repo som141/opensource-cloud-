@@ -7,6 +7,11 @@ export function useAccessToken() {
     const token = params.get('accessToken') ?? undefined;
     if (token) {
       storeAccessToken(token);
+      params.delete('accessToken');
+      params.delete('accessTokenExpiresAt');
+      const nextSearch = params.toString();
+      const nextUrl = `${window.location.pathname}${nextSearch ? `?${nextSearch}` : ''}${window.location.hash}`;
+      window.history.replaceState({}, document.title, nextUrl);
       return token;
     }
     return readStoredAccessToken();
