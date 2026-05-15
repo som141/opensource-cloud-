@@ -15,6 +15,8 @@ then notify the API that the upload is complete.
 - Upload session access is controlled by project membership, not only by the user who created the session.
 - Supported image extensions are `png`, `jpg`, `jpeg`, `tif`, `tiff`, `bmp`, and `webp`.
 - Checksums are collected as SHA-256 hex strings and are used for duplicate detection.
+- In the local frontend MVP, ZIP files are expanded in the browser before this API is called. The API still receives
+  image file entries through the normal upload session and presigned URL flow.
 
 ## Endpoints
 
@@ -142,4 +144,4 @@ Response:
 
 - Replace the local presigned URL generator with a MinIO/S3 adapter.
 - Add image magic number validation after object download or metadata extraction.
-- Add ZIP upload as a separate expansion task.
+- Add server-side ZIP extraction only if browser-side extraction becomes too slow for the expected batch size.
