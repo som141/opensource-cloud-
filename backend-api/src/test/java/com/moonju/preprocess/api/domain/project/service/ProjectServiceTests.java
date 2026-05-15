@@ -7,6 +7,7 @@ import static org.mockito.Mockito.when;
 
 import com.moonju.preprocess.api.domain.image.entity.ImageStatus;
 import com.moonju.preprocess.api.domain.image.repository.ImageRepository;
+import com.moonju.preprocess.api.domain.job.repository.JobRepository;
 import com.moonju.preprocess.api.domain.project.dto.ProjectCreateRequest;
 import com.moonju.preprocess.api.domain.project.dto.ProjectResponse;
 import com.moonju.preprocess.api.domain.project.dto.ProjectSummaryResponse;
@@ -43,6 +44,9 @@ class ProjectServiceTests {
 
     @Mock
     private ImageRepository imageRepository;
+
+    @Mock
+    private JobRepository jobRepository;
 
     @Test
     void createsProjectAndOwnerMember() {
@@ -97,12 +101,13 @@ class ProjectServiceTests {
             .thenReturn(new ProjectMember(project, owner, ProjectRole.OWNER));
         when(projectMemberRepository.countByProject_IdAndProject_Status(10L, ProjectStatus.ACTIVE)).thenReturn(2L);
         when(imageRepository.countByProjectIdAndStatusNot(10L, ImageStatus.DELETED)).thenReturn(5L);
+        when(jobRepository.countByProjectId(10L)).thenReturn(3L);
 
         ProjectSummaryResponse response = projectService.summary(1L, 10L);
 
         assertThat(response.memberCount()).isEqualTo(2L);
         assertThat(response.imageCount()).isEqualTo(5L);
-        assertThat(response.jobCount()).isZero();
+        assertThat(response.jobCount()).isEqualTo(3L);
     }
 
     private ProjectService projectService() {
@@ -111,7 +116,8 @@ class ProjectServiceTests {
             projectMemberRepository,
             userRepository,
             projectPermissionService,
-            imageRepository
+            imageRepository,
+            jobRepository
         );
     }
 

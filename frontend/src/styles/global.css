@@ -28,7 +28,8 @@ body {
 
 button,
 input,
-select {
+select,
+textarea {
   font: inherit;
 }
 
@@ -420,6 +421,7 @@ button {
 
 .field input,
 .field select,
+.field textarea,
 .file-dropzone {
   border: 1px solid var(--line);
   border-radius: 1rem;
@@ -429,8 +431,14 @@ button {
 }
 
 .field input:focus,
-.field select:focus {
+.field select:focus,
+.field textarea:focus {
   outline: 3px solid rgba(31, 90, 71, 0.14);
+}
+
+.field textarea {
+  min-height: 7rem;
+  resize: vertical;
 }
 
 .check-row {
@@ -591,6 +599,83 @@ button {
   padding: clamp(1.2rem, 2vw, 1.6rem);
 }
 
+.project-console {
+  display: grid;
+  max-width: 76rem;
+  gap: 1.3rem;
+}
+
+.project-layout {
+  display: grid;
+  grid-template-columns: minmax(18rem, 0.72fr) minmax(24rem, 1.28fr);
+  gap: 1.1rem;
+  align-items: start;
+}
+
+.stack-form,
+.project-grid,
+.metadata-grid {
+  display: grid;
+  gap: 0.9rem;
+}
+
+.project-grid {
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+}
+
+.project-card {
+  display: grid;
+  gap: 0.9rem;
+  border: 1px solid rgba(18, 56, 45, 0.12);
+  border-radius: 1.15rem;
+  background: rgba(255, 254, 248, 0.9);
+  padding: 1rem;
+}
+
+.project-card p {
+  margin: 0;
+  color: var(--muted);
+  line-height: 1.55;
+}
+
+.metadata-grid {
+  grid-template-columns: minmax(5rem, auto) minmax(0, 1fr);
+  gap: 0.5rem 0.8rem;
+  align-items: baseline;
+  border-radius: 0.9rem;
+  background: rgba(18, 56, 45, 0.04);
+  padding: 0.8rem;
+}
+
+.metadata-grid span {
+  color: var(--subtle);
+  font-size: 0.76rem;
+  font-weight: 900;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+}
+
+.metadata-grid strong {
+  min-width: 0;
+  overflow-wrap: anywhere;
+}
+
+.link-row {
+  color: inherit;
+}
+
+.text-button {
+  border: 0;
+  background: transparent;
+  color: var(--pine-2);
+  cursor: pointer;
+  font-weight: 900;
+}
+
+.text-button.danger {
+  color: var(--danger);
+}
+
 .artifact-board h2 {
   margin: 0.45rem 0 0;
   font-size: 1.8rem;
@@ -636,6 +721,7 @@ button {
 @media (max-width: 980px) {
   .shell,
   .upload-layout,
+  .project-layout,
   .console-hero {
     grid-template-columns: 1fr;
   }
@@ -650,7 +736,8 @@ button {
   }
 
   .metric-strip,
-  .artifact-grid {
+  .artifact-grid,
+  .project-grid {
     grid-template-columns: repeat(2, minmax(0, 1fr));
   }
 }
@@ -667,7 +754,8 @@ button {
   }
 
   .metric-strip,
-  .artifact-grid {
+  .artifact-grid,
+  .project-grid {
     grid-template-columns: 1fr;
   }
 }
