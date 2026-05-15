@@ -18,15 +18,21 @@ public class SecurityConfig {
     private final OAuth2LoginSuccessHandler oauth2LoginSuccessHandler;
     private final JwtAuthenticationFilter jwtAuthenticationFilter;
     private final WorkerAuthenticationFilter workerAuthenticationFilter;
+    private final RestAuthenticationEntryPoint restAuthenticationEntryPoint;
+    private final RestAccessDeniedHandler restAccessDeniedHandler;
 
     public SecurityConfig(
         OAuth2LoginSuccessHandler oauth2LoginSuccessHandler,
         JwtAuthenticationFilter jwtAuthenticationFilter,
-        WorkerAuthenticationFilter workerAuthenticationFilter
+        WorkerAuthenticationFilter workerAuthenticationFilter,
+        RestAuthenticationEntryPoint restAuthenticationEntryPoint,
+        RestAccessDeniedHandler restAccessDeniedHandler
     ) {
         this.oauth2LoginSuccessHandler = oauth2LoginSuccessHandler;
         this.jwtAuthenticationFilter = jwtAuthenticationFilter;
         this.workerAuthenticationFilter = workerAuthenticationFilter;
+        this.restAuthenticationEntryPoint = restAuthenticationEntryPoint;
+        this.restAccessDeniedHandler = restAccessDeniedHandler;
     }
 
     @Bean
@@ -52,6 +58,11 @@ public class SecurityConfig {
             )
             .oauth2Login(oauth2 -> oauth2
                 .successHandler(oauth2LoginSuccessHandler)
+            )
+            .exceptionHandling(exception -> exception
+                .defaultAuthenticationEntryPointFor(restAuthenticationEntryPoint, antMatcher("/api/**"))
+                .defaultAuthenticationEntryPointFor(restAuthenticationEntryPoint, antMatcher("/internal/**"))
+                .accessDeniedHandler(restAccessDeniedHandler)
             )
             .addFilterBefore(workerAuthenticationFilter, UsernamePasswordAuthenticationFilter.class)
             .addFilterBefore(jwtAuthenticationFilter, UsernamePasswordAuthenticationFilter.class);

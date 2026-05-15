@@ -124,3 +124,10 @@ visible immediately after a Docker rebuild.
 The upload console wraps each workflow step with a step label before surfacing an error. Object Storage upload failures
 also include the page origin and target origin so local CORS/proxy issues can be diagnosed from the screen without
 opening server logs.
+
+API authentication failures are handled as JSON responses. `/api/**` must not redirect to Google OAuth because browser
+`fetch` would follow the redirect to `accounts.google.com` and fail with a CORS error. When a protected API returns
+`401`, the frontend refreshes the access token once through `POST /api/v1/auth/refresh` and retries the original request.
+
+The backend enforces this with `RestAuthenticationEntryPoint` for `/api/**` and `/internal/**` so expired access tokens
+return JSON `401 common401` instead of OAuth redirects.

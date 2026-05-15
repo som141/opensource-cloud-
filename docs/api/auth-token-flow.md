@@ -596,3 +596,18 @@ Frontend
 - frontend의 access token 저장 위치는 backend에서 강제하지 않는다.
 - cross-origin 환경에서는 refresh/logout 요청 시 cookie 전달 설정을 frontend와 CORS 정책에서 맞춰야 한다.
 
+## API 401 And Refresh Retry
+
+`/api/**` and `/internal/**` requests must not redirect to Google OAuth when authentication is missing or expired.
+Those paths return JSON `401 common401` through `RestAuthenticationEntryPoint`.
+
+Frontend behavior:
+
+1. A protected API request receives `401`.
+2. The frontend calls `POST /api/v1/auth/refresh` with `credentials: include`.
+3. If the HttpOnly refresh cookie is valid, the response body returns a new short-lived access token.
+4. The frontend stores the new access token and retries the original request once.
+5. If refresh fails, the stored access token is cleared and the user must log in again.
+
+This prevents browser `fetch` from following a backend `302` redirect to `accounts.google.com`, which would fail with a
+CORS error and surface only as `Failed to fetch` in the upload UI.
