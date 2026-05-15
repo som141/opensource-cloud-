@@ -9,10 +9,12 @@ import com.moonju.preprocess.api.domain.job.dto.JobItemResponse;
 import com.moonju.preprocess.api.domain.job.dto.JobResponse;
 import com.moonju.preprocess.api.domain.job.dto.JobRetryResponse;
 import com.moonju.preprocess.api.domain.job.dto.JobSummaryResponse;
+import com.moonju.preprocess.api.domain.job.dto.JobZipDownloadResponse;
 import com.moonju.preprocess.api.domain.job.service.JobCancelService;
 import com.moonju.preprocess.api.domain.job.service.JobCommandService;
 import com.moonju.preprocess.api.domain.job.service.JobQueryService;
 import com.moonju.preprocess.api.domain.job.service.JobRetryService;
+import com.moonju.preprocess.api.domain.job.service.JobZipDownloadService;
 import com.moonju.preprocess.api.global.error.ErrorCode;
 import com.moonju.preprocess.api.global.response.ApiResponse;
 import com.moonju.preprocess.api.global.response.PageResponse;
@@ -36,17 +38,20 @@ public class JobController {
     private final JobQueryService jobQueryService;
     private final JobCancelService jobCancelService;
     private final JobRetryService jobRetryService;
+    private final JobZipDownloadService jobZipDownloadService;
 
     public JobController(
         JobCommandService jobCommandService,
         JobQueryService jobQueryService,
         JobCancelService jobCancelService,
-        JobRetryService jobRetryService
+        JobRetryService jobRetryService,
+        JobZipDownloadService jobZipDownloadService
     ) {
         this.jobCommandService = jobCommandService;
         this.jobQueryService = jobQueryService;
         this.jobCancelService = jobCancelService;
         this.jobRetryService = jobRetryService;
+        this.jobZipDownloadService = jobZipDownloadService;
     }
 
     @PostMapping
@@ -115,7 +120,7 @@ public class JobController {
     }
 
     @GetMapping("/{jobId}/download.zip")
-    public ApiResponse<JobArtifactResponse> downloadZip(@CurrentUser Long currentUserId, @PathVariable Long jobId) {
-        return ApiResponse.success(jobQueryService.artifacts(currentUserId, jobId));
+    public ApiResponse<JobZipDownloadResponse> downloadZip(@CurrentUser Long currentUserId, @PathVariable Long jobId) {
+        return ApiResponse.success(jobZipDownloadService.createProcessedZip(currentUserId, jobId));
     }
 }

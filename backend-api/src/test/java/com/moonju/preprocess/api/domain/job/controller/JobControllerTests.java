@@ -13,6 +13,7 @@ import com.moonju.preprocess.api.domain.job.service.JobCancelService;
 import com.moonju.preprocess.api.domain.job.service.JobCommandService;
 import com.moonju.preprocess.api.domain.job.service.JobQueryService;
 import com.moonju.preprocess.api.domain.job.service.JobRetryService;
+import com.moonju.preprocess.api.domain.job.service.JobZipDownloadService;
 import com.moonju.preprocess.api.global.response.ApiResponse;
 import java.time.LocalDateTime;
 import java.util.List;
@@ -36,6 +37,9 @@ class JobControllerTests {
 
     @Mock
     private JobRetryService jobRetryService;
+
+    @Mock
+    private JobZipDownloadService jobZipDownloadService;
 
     @Test
     void createsJobWithCommonCreatedResponse() {
@@ -79,6 +83,12 @@ class JobControllerTests {
     }
 
     private JobController controller() {
-        return new JobController(jobCommandService, jobQueryService, jobCancelService, jobRetryService);
+        return new JobController(
+            jobCommandService,
+            jobQueryService,
+            jobCancelService,
+            jobRetryService,
+            jobZipDownloadService
+        );
     }
 }

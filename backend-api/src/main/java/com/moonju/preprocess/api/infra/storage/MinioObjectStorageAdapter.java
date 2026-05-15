@@ -1,10 +1,13 @@
 package com.moonju.preprocess.api.infra.storage;
 
 import io.minio.GetPresignedObjectUrlArgs;
+import io.minio.GetObjectArgs;
 import io.minio.Http.Method;
 import io.minio.MinioClient;
+import io.minio.PutObjectArgs;
 import io.minio.StatObjectArgs;
 import io.minio.errors.ErrorResponseException;
+import java.io.ByteArrayInputStream;
 import java.time.Instant;
 import java.util.Map;
 import java.util.concurrent.TimeUnit;
@@ -48,6 +51,32 @@ public class MinioObjectStorageAdapter
             throw new ObjectStorageAccessException("Object storage stat failed: " + objectKey, exception);
         } catch (Exception exception) {
             throw new ObjectStorageAccessException("Object storage stat failed: " + objectKey, exception);
+        }
+    }
+
+    @Override
+    public byte[] downloadBytes(String objectKey) {
+        try (var response = internalClient.getObject(GetObjectArgs.builder()
+            .bucket(properties.getBucket())
+            .object(objectKey)
+            .build())) {
+            return response.readAllBytes();
+        } catch (Exception exception) {
+            throw new ObjectStorageAccessException("Object storage download failed: " + objectKey, exception);
+        }
+    }
+
+    @Override
+    public void uploadBytes(String objectKey, byte[] bytes, String contentType) {
+        try (var input = new ByteArrayInputStream(bytes)) {
+            internalClient.putObject(PutObjectArgs.builder()
+                .bucket(properties.getBucket())
+                .object(objectKey)
+                .contentType(contentType)
+                .stream(input, (long) bytes.length, -1L)
+                .build());
+        } catch (Exception exception) {
+            throw new ObjectStorageAccessException("Object storage upload failed: " + objectKey, exception);
         }
     }
 

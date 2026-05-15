@@ -57,7 +57,7 @@ All endpoints require `Authorization: Bearer <access-token>`.
 | `POST` | `/api/v1/jobs/{jobId}/retry` | Retry failed and dead-lettered items |
 | `POST` | `/api/v1/jobs/{jobId}/rerun` | Requeue all non-processing items |
 | `GET` | `/api/v1/jobs/{jobId}/artifacts` | Read artifact listing placeholder |
-| `GET` | `/api/v1/jobs/{jobId}/download.zip` | Read ZIP download placeholder |
+| `GET` | `/api/v1/jobs/{jobId}/download.zip` | Create processed image ZIP download URL |
 
 Internal Worker endpoints are not user-facing APIs. They require `X-Worker-Token` and are mounted under
 `/internal/v1/**`.
@@ -188,6 +188,46 @@ Rules:
 - `type` must be one of `processed`, `preview`, or `report`.
 - If the Worker has not registered the requested object key yet, the API returns `common404`.
 - Debug artifact expansion remains separate from this JobItem-level result download flow.
+
+## Processed ZIP Download
+
+```text
+GET /api/v1/jobs/{jobId}/download.zip
+```
+
+The API creates a ZIP archive from succeeded JobItems that have a `processedObjectKey`, uploads the archive to object
+storage, and returns a temporary download URL. The archive contains processed images only. Preview images, processing
+reports, and debug artifacts are intentionally excluded from this MVP download flow.
+
+Archive object key:
+
+```text
+archives/{projectId}/{jobId}/processed-results.zip
+```
+
+Response:
+
+```json
+{
+  "isSuccess": true,
+  "code": "common200",
+  "message": "Request succeeded.",
+  "result": {
+    "jobId": 1,
+    "fileCount": 3,
+    "objectKey": "archives/10/1/processed-results.zip",
+    "downloadUrl": "http://localhost/image-preprocess-local/archives/10/1/processed-results.zip?...",
+    "expiresAt": "2026-05-16T00:00:00Z"
+  }
+}
+```
+
+Rules:
+
+- The current user must have read permission for the Job's project.
+- Only `SUCCEEDED` items with a non-empty `processedObjectKey` are included.
+- If no processed images are ready, the API returns `common404`.
+- The ZIP file is regenerated on request so the archive reflects the latest processed item set.
 
 ## Summary
 
@@ -327,5 +367,5 @@ POST /api/v1/jobs/{jobId}/rerun
 
 ## Current Limitations
 
-- Artifact listing and ZIP download currently return placeholders.
+- Artifact listing currently returns a placeholder.
 - Detailed debug artifact row expansion is deferred to a later artifact domain task.

@@ -1,4 +1,5 @@
 import { FormEvent, useEffect, useMemo, useState } from 'react';
+import JSZip from 'jszip';
 import { apiClient } from '../shared/api/apiClient';
 import { readStoredAccessToken } from '../shared/auth/accessTokenStore';
 import { PageSection } from '../shared/components/PageSection';
@@ -69,6 +70,14 @@ type JobItemDownloadUrlResponse = {
   expiresAt: string;
 };
 
+type JobZipDownloadResponse = {
+  jobId: number;
+  fileCount: number;
+  objectKey: string;
+  downloadUrl: string;
+  expiresAt: string;
+};
+
 type SelectedUploadFile = {
   key: string;
   file: File;
@@ -92,6 +101,11 @@ type SmokeResult = {
   items?: JobItemResponse[];
 };
 
+const imageExtensions = ['.png', '.jpg', '.jpeg', '.webp', '.bmp', '.tif', '.tiff'];
+const zipExtensions = ['.zip'];
+const maxZipImages = 500;
+const maxZipTotalBytes = 512 * 1024 * 1024;
+
 export function UploadPage() {
   const [accessToken] = useState(() => readStoredAccessToken() ?? '');
   const [projects, setProjects] = useState<ProjectResponse[]>([]);
@@ -101,6 +115,7 @@ export function UploadPage() {
   const [fileRows, setFileRows] = useState<FileUploadRow[]>([]);
   const [debug, setDebug] = useState(true);
   const [busy, setBusy] = useState(false);
+  const [zipDownloading, setZipDownloading] = useState(false);
   const [logs, setLogs] = useState<string[]>([]);
   const [result, setResult] = useState<SmokeResult>({});
   const [error, setError] = useState<string | null>(null);
@@ -110,6 +125,7 @@ export function UploadPage() {
     [selectedFiles]
   );
   const completedItems = result.summary ? result.summary.succeeded + result.summary.failed : 0;
+  const processedItems = result.items?.filter((item) => item.processedObjectKey) ?? [];
 
   useEffect(() => {
     if (!accessToken) {
@@ -372,21 +388,57 @@ export function UploadPage() {
     }
   }
 
-  function handleFileSelection(files: FileList | null) {
-    const nextFiles = Array.from(files ?? []).map((file, index) => ({
-      key: `${file.name}-${file.size}-${file.lastModified}-${index}`,
-      file
-    }));
-    setSelectedFiles(nextFiles);
-    setFileRows(nextFiles.map((entry) => ({
-      key: entry.key,
-      name: entry.file.name,
-      size: entry.file.size,
-      phase: 'selected',
-      detail: 'Waiting'
-    })));
-    setResult({});
+  async function downloadProcessedZip() {
+    if (!result.job) {
+      setError('Job result is not ready yet.');
+      return;
+    }
+    setZipDownloading(true);
     setError(null);
+    try {
+      const response = await apiClient.get<JobZipDownloadResponse>(
+        `/v1/jobs/${result.job.jobId}/download.zip`,
+        accessToken
+      );
+      const anchor = document.createElement('a');
+      anchor.href = response.result.downloadUrl;
+      anchor.target = '_blank';
+      anchor.rel = 'noopener noreferrer';
+      anchor.download = `job-${response.result.jobId}-processed-results.zip`;
+      document.body.appendChild(anchor);
+      anchor.click();
+      anchor.remove();
+      appendLog(`Processed ZIP opened: ${response.result.fileCount} images`);
+    } catch (exception) {
+      setError(describeError(exception, 'Failed to download processed ZIP.'));
+    } finally {
+      setZipDownloading(false);
+    }
+  }
+
+  async function handleFileSelection(files: FileList | null) {
+    setError(null);
+    try {
+      const expandedFiles = await expandInputFiles(Array.from(files ?? []));
+      const nextFiles = expandedFiles.map((file, index) => ({
+        key: `${file.name}-${file.size}-${file.lastModified}-${index}`,
+        file
+      }));
+      setSelectedFiles(nextFiles);
+      setFileRows(nextFiles.map((entry) => ({
+        key: entry.key,
+        name: entry.file.name,
+        size: entry.file.size,
+        phase: 'selected',
+        detail: 'Waiting'
+      })));
+      setResult({});
+    } catch (exception) {
+      setSelectedFiles([]);
+      setFileRows([]);
+      setResult({});
+      setError(describeError(exception, 'Failed to read selected files.'));
+    }
   }
 
   function updateFileRow(key: string, patch: Partial<FileUploadRow>) {
@@ -451,7 +503,7 @@ export function UploadPage() {
           value={`${result.summary?.progressPercent.toFixed(0) ?? '0'}%`}
           detail={result.summary ? `${completedItems}/${result.summary.total} done` : 'not started'}
         />
-        <MetricCard label="Artifacts" value={String(result.items?.filter((item) => item.processedObjectKey).length ?? 0)} detail="ready" />
+        <MetricCard label="Processed" value={String(processedItems.length)} detail="ready" />
       </section>
 
       <form className="upload-layout" onSubmit={handleSubmit}>
@@ -487,17 +539,17 @@ export function UploadPage() {
 
           <PageSection
             title="2. Files"
-            description="Select multiple document images. Each image becomes a separate queue message."
+            description="Select multiple document images or one ZIP file. Each image becomes a separate queue message."
           >
             <label className="file-dropzone">
               <span>Drop zone</span>
               <strong>{selectedFiles.length > 0 ? `${selectedFiles.length} files ready` : 'Choose document images'}</strong>
-              <small>PNG, JPEG, WEBP, BMP, or TIFF. Duplicate checksums are rejected per project.</small>
+              <small>PNG, JPEG, WEBP, BMP, TIFF, or ZIP. ZIP files are expanded in the browser before upload.</small>
               <input
                 type="file"
                 multiple
-                accept="image/png,image/jpeg,image/jpg,image/webp,image/bmp,image/tiff"
-                onChange={(event) => handleFileSelection(event.target.files)}
+                accept="image/png,image/jpeg,image/jpg,image/webp,image/bmp,image/tiff,.zip,application/zip,application/x-zip-compressed"
+                onChange={(event) => void handleFileSelection(event.target.files)}
               />
             </label>
 
@@ -568,6 +620,14 @@ export function UploadPage() {
             <span className="status-pill accent">Results</span>
             <h2>Processed images</h2>
           </div>
+          <button
+            className="primary-action"
+            type="button"
+            disabled={processedItems.length === 0 || zipDownloading}
+            onClick={downloadProcessedZip}
+          >
+            {zipDownloading ? 'Preparing ZIP...' : 'Download processed ZIP'}
+          </button>
           <div className="artifact-grid">
             {result.items.map((item) => (
               <div className="artifact-card" key={item.id}>
@@ -605,11 +665,91 @@ async function runStep<T>(stepName: string, action: () => Promise<T>): Promise<T
   }
 }
 
+async function expandInputFiles(files: File[]) {
+  const expanded: File[] = [];
+  for (const file of files) {
+    if (isZipFile(file)) {
+      expanded.push(...await expandZipFile(file));
+    } else {
+      if (!isSupportedImageName(file.name)) {
+        throw new Error(`Unsupported file type: ${file.name}`);
+      }
+      expanded.push(file);
+    }
+  }
+  return expanded;
+}
+
+async function expandZipFile(file: File) {
+  const zip = await JSZip.loadAsync(file);
+  const entries = Object.values(zip.files).filter((entry) => !entry.dir && isSupportedImageName(entry.name));
+  if (entries.length === 0) {
+    throw new Error(`ZIP file does not contain supported images: ${file.name}`);
+  }
+  if (entries.length > maxZipImages) {
+    throw new Error(`ZIP file contains too many images. Limit: ${maxZipImages}`);
+  }
+
+  let totalBytes = 0;
+  const zipBaseName = stripExtension(file.name);
+  const expanded: File[] = [];
+  for (const entry of entries) {
+    const blob = await entry.async('blob');
+    totalBytes += blob.size;
+    if (totalBytes > maxZipTotalBytes) {
+      throw new Error('ZIP extracted image size exceeds the local MVP limit of 512 MB.');
+    }
+    const safeName = `${zipBaseName}-${entry.name.replace(/[\\/]+/g, '__')}`;
+    expanded.push(new File([blob], safeName, {
+      type: contentTypeFor(safeName),
+      lastModified: file.lastModified
+    }));
+  }
+  return expanded;
+}
+
 function describeError(exception: unknown, fallback: string) {
   if (exception instanceof Error && exception.message) {
     return exception.message;
   }
   return fallback;
+}
+
+function isZipFile(file: File) {
+  const lowerName = file.name.toLowerCase();
+  return zipExtensions.some((extension) => lowerName.endsWith(extension))
+    || file.type === 'application/zip'
+    || file.type === 'application/x-zip-compressed';
+}
+
+function isSupportedImageName(name: string) {
+  const lowerName = name.toLowerCase();
+  return imageExtensions.some((extension) => lowerName.endsWith(extension));
+}
+
+function stripExtension(name: string) {
+  const index = name.lastIndexOf('.');
+  return index > 0 ? name.slice(0, index) : name;
+}
+
+function contentTypeFor(name: string) {
+  const lowerName = name.toLowerCase();
+  if (lowerName.endsWith('.png')) {
+    return 'image/png';
+  }
+  if (lowerName.endsWith('.jpg') || lowerName.endsWith('.jpeg')) {
+    return 'image/jpeg';
+  }
+  if (lowerName.endsWith('.webp')) {
+    return 'image/webp';
+  }
+  if (lowerName.endsWith('.bmp')) {
+    return 'image/bmp';
+  }
+  if (lowerName.endsWith('.tif') || lowerName.endsWith('.tiff')) {
+    return 'image/tiff';
+  }
+  return 'application/octet-stream';
 }
 
 function safeOrigin(url: string) {
