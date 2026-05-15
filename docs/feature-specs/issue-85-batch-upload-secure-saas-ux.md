@@ -72,6 +72,15 @@ Browser
   -> GET /api/v1/jobs/{jobId}/items/{itemId}/download?type=processed|preview|report
 ```
 
+In local Docker Compose, generated MinIO presigned URLs use the NGINX single entry point:
+
+```text
+http://localhost/image-preprocess-local/{objectKey}
+```
+
+NGINX proxies that bucket path to `minio:9000`. This keeps the upload request on the same browser origin as the
+frontend and removes local CORS/port issues from the manual upload test path.
+
 ## JobItem Artifact Download
 
 The Worker stores result object keys on each `JobItem` after preprocessing succeeds:
@@ -109,3 +118,9 @@ visible immediately after a Docker rebuild.
 - `/assets/*` uses `Cache-Control: no-cache, must-revalidate`.
 - This is a local verification policy. A production deployment can later use immutable hashed assets after the release
   pipeline guarantees content hashes change for every changed bundle.
+
+## Frontend Failure Diagnostics
+
+The upload console wraps each workflow step with a step label before surfacing an error. Object Storage upload failures
+also include the page origin and target origin so local CORS/proxy issues can be diagnosed from the screen without
+opening server logs.

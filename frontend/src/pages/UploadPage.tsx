@@ -146,33 +146,36 @@ export function UploadPage() {
       const project = await ensureProject();
       appendLog(`Project ready: ${project.name} (#${project.id})`);
 
-      const existingImageIds = await loadExistingImageIds(project.id);
-      const hashedFiles = await hashSelectedFiles();
+      const existingImageIds = await runStep('Load existing project images', () => loadExistingImageIds(project.id));
+      const hashedFiles = await runStep('Calculate SHA-256 checksums', () => hashSelectedFiles());
       appendLog(`SHA-256 calculated for ${hashedFiles.length} files.`);
 
-      const session = await createUploadSession(project, selectedFiles);
+      const session = await runStep('Create upload session', () => createUploadSession(project, selectedFiles));
       appendLog(`Upload session created: #${session.id}`);
 
-      const uploadTargets = await createPresignedTargets(session, hashedFiles);
+      const uploadTargets = await runStep('Issue presigned upload URLs', () => createPresignedTargets(session, hashedFiles));
       appendLog(`Presigned upload URLs issued: ${uploadTargets.length}`);
 
-      await uploadFilesToObjectStorage(uploadTargets);
+      await runStep('Upload originals to object storage', () => uploadFilesToObjectStorage(uploadTargets));
       appendLog('Original images uploaded to MinIO.');
 
-      await completeUpload(session, uploadTargets.map((target) => target.uploadFileId));
+      await runStep('Complete upload session', () => completeUpload(session, uploadTargets.map((target) => target.uploadFileId)));
       appendLog('Upload session completed.');
 
-      const images = await findCreatedImages(project.id, selectedFiles, existingImageIds);
+      const images = await runStep(
+        'Resolve uploaded image metadata',
+        () => findCreatedImages(project.id, selectedFiles, existingImageIds)
+      );
       appendLog(`Image metadata created: ${images.length}`);
 
-      const job = await createJob(project, images);
+      const job = await runStep('Create preprocessing job', () => createJob(project, images));
       appendLog(`Preprocess job queued: #${job.jobId} (${job.totalImages} images)`);
 
       const smokeResult: SmokeResult = { project, images, job };
       setResult(smokeResult);
-      await pollJob(job.jobId, smokeResult);
+      await runStep('Poll preprocessing job', () => pollJob(job.jobId, smokeResult));
     } catch (exception) {
-      setError(exception instanceof Error ? exception.message : 'Batch preprocess flow failed.');
+      setError(describeError(exception, 'Batch preprocess flow failed.'));
     } finally {
       setBusy(false);
     }
@@ -261,11 +264,7 @@ export function UploadPage() {
     await Promise.all(
       targets.map(async (target) => {
         updateFileRow(target.entry.key, { phase: 'uploading', detail: 'Uploading original' });
-        const response = await fetch(target.uploadUrl, {
-          method: 'PUT',
-          headers: target.requiredHeaders,
-          body: target.entry.file
-        });
+        const response = await uploadFile(target);
         if (!response.ok) {
           updateFileRow(target.entry.key, { phase: 'failed', detail: `HTTP ${response.status}` });
           throw new Error(`MinIO upload failed for ${target.entry.file.name} with HTTP ${response.status}.`);
@@ -396,6 +395,26 @@ export function UploadPage() {
 
   function appendLog(message: string) {
     setLogs((previous) => [...previous, `${new Date().toLocaleTimeString()} ${message}`]);
+  }
+
+  async function uploadFile(
+    target: PresignedUploadUrlResponse['uploadTargets'][number] & { entry: SelectedUploadFile }
+  ) {
+    try {
+      return await fetch(target.uploadUrl, {
+        method: 'PUT',
+        headers: target.requiredHeaders,
+        body: target.entry.file
+      });
+    } catch (exception) {
+      updateFileRow(target.entry.key, { phase: 'failed', detail: 'Network/CORS failure' });
+      const targetOrigin = safeOrigin(target.uploadUrl);
+      throw new Error(
+        `Object storage upload request failed for ${target.entry.file.name}. `
+        + `pageOrigin=${window.location.origin}, targetOrigin=${targetOrigin}. `
+        + describeError(exception, 'Browser fetch failed.')
+      );
+    }
   }
 
   return (
@@ -594,6 +613,29 @@ export function UploadPage() {
       )}
     </div>
   );
+}
+
+async function runStep<T>(stepName: string, action: () => Promise<T>): Promise<T> {
+  try {
+    return await action();
+  } catch (exception) {
+    throw new Error(`${stepName} failed. ${describeError(exception, 'Unknown error.')}`);
+  }
+}
+
+function describeError(exception: unknown, fallback: string) {
+  if (exception instanceof Error && exception.message) {
+    return exception.message;
+  }
+  return fallback;
+}
+
+function safeOrigin(url: string) {
+  try {
+    return new URL(url).origin;
+  } catch {
+    return 'invalid-url';
+  }
 }
 
 function MetricCard({ label, value, detail }: { label: string; value: string; detail: string }) {
