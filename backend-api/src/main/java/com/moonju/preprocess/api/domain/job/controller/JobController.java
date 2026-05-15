@@ -4,6 +4,7 @@ import com.moonju.preprocess.api.domain.job.dto.JobArtifactResponse;
 import com.moonju.preprocess.api.domain.job.dto.JobCancelResponse;
 import com.moonju.preprocess.api.domain.job.dto.JobCreateRequest;
 import com.moonju.preprocess.api.domain.job.dto.JobCreateResponse;
+import com.moonju.preprocess.api.domain.job.dto.JobItemDownloadUrlResponse;
 import com.moonju.preprocess.api.domain.job.dto.JobItemResponse;
 import com.moonju.preprocess.api.domain.job.dto.JobResponse;
 import com.moonju.preprocess.api.domain.job.dto.JobRetryResponse;
@@ -22,6 +23,7 @@ import org.springframework.data.web.PageableDefault;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PathVariable;
 import org.springframework.web.bind.annotation.PostMapping;
+import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RestController;
@@ -75,6 +77,16 @@ public class JobController {
         @PageableDefault(size = 50) Pageable pageable
     ) {
         return ApiResponse.success(jobQueryService.findItems(currentUserId, jobId, pageable));
+    }
+
+    @GetMapping("/{jobId}/items/{itemId}/download")
+    public ApiResponse<JobItemDownloadUrlResponse> downloadItemArtifact(
+        @CurrentUser Long currentUserId,
+        @PathVariable Long jobId,
+        @PathVariable Long itemId,
+        @RequestParam String type
+    ) {
+        return ApiResponse.success(jobQueryService.createItemArtifactDownloadUrl(currentUserId, jobId, itemId, type));
     }
 
     @GetMapping("/{jobId}/summary")

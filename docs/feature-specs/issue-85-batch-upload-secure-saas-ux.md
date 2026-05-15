@@ -36,6 +36,7 @@ Reference URLs:
 9. Resolve newly created image metadata rows and create one preprocessing job with multiple `imageIds`.
 10. Poll job summary and item list, then display per-item artifact download actions.
 11. Refresh the frontend visual system into a SaaS-style batch operations console.
+12. Add the JobItem artifact download API used by the batch console for processed image, preview, and report links.
 
 ## Updated OAuth Flow
 
@@ -71,6 +72,24 @@ Browser
   -> GET /api/v1/jobs/{jobId}/items/{itemId}/download?type=processed|preview|report
 ```
 
+## JobItem Artifact Download
+
+The Worker stores result object keys on each `JobItem` after preprocessing succeeds:
+
+- `processedObjectKey`
+- `previewObjectKey`
+- `reportObjectKey`
+
+The batch console does not access MinIO object keys directly. It calls:
+
+```text
+GET /api/v1/jobs/{jobId}/items/{itemId}/download?type=processed
+GET /api/v1/jobs/{jobId}/items/{itemId}/download?type=preview
+GET /api/v1/jobs/{jobId}/items/{itemId}/download?type=report
+```
+
+The API validates project read permission and returns a temporary presigned download URL for the selected artifact.
+
 ## Completion Criteria
 
 1. The upload page accepts multiple images.
@@ -79,6 +98,7 @@ Browser
 4. NGINX routes exact `/oauth2/success` to the frontend while keeping `/oauth2/authorization/google` on backend-api.
 5. The frontend can run a multi-image batch through the existing backend API and Worker.
 6. The UI shows selected file count, total size, job progress, and item-level artifact downloads.
+7. Processed image, preview, and report buttons open temporary download URLs returned by the API.
 
 ## Local Static Cache Policy
 
