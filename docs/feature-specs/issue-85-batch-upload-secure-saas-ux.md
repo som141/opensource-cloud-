@@ -76,5 +76,6 @@ Browser
 1. The upload page accepts multiple images.
 2. Access token raw value is not rendered in the UI.
 3. OAuth success URL no longer contains `accessToken`.
-4. The frontend can run a multi-image batch through the existing backend API and Worker.
-5. The UI shows selected file count, total size, job progress, and item-level artifact downloads.
+4. NGINX routes exact `/oauth2/success` to the frontend while keeping `/oauth2/authorization/google` on backend-api.
+5. The frontend can run a multi-image batch through the existing backend API and Worker.
+6. The UI shows selected file count, total size, job progress, and item-level artifact downloads.
