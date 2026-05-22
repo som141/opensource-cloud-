@@ -74,7 +74,7 @@ The frontend uploads the original directly to MinIO through a presigned URL gene
 to the browser through:
 
 ```text
-MINIO_PUBLIC_ENDPOINT=http://localhost:9000
+MINIO_PUBLIC_ENDPOINT=http://localhost
 MINIO_API_CORS_ALLOW_ORIGIN=http://localhost,http://localhost:5173
 ```
 
@@ -89,6 +89,63 @@ processedObjectKey: processed/{projectId}/{jobId}/{itemId}/processed.png
 previewObjectKey: processed/{projectId}/{jobId}/{itemId}/preview.png
 reportObjectKey: processed/{projectId}/{jobId}/{itemId}/processing-report.json
 ```
+
+## API E2E Smoke Script
+
+For a repeatable Docker Compose MVP check, use:
+
+```powershell
+.\scripts\local-e2e-smoke.ps1 -AccessToken "<access-token>"
+```
+
+The script creates synthetic document images, packages them into a ZIP, expands the ZIP like the frontend upload page,
+uploads the extracted images through presigned URLs, creates a preprocessing Job, waits for Worker completion, and
+downloads:
+
+- one processed image
+- one processed-only ZIP archive
+
+The script writes run artifacts under:
+
+```text
+out/local-e2e-smoke/{runId}
+```
+
+### Access Token
+
+The script uses the normal authenticated APIs. It does not create a dev auth bypass.
+
+After signing in through `http://localhost/login`, open DevTools and read:
+
+```javascript
+localStorage.getItem('doc-pipeline.access-token')
+```
+
+Then either pass the token directly:
+
+```powershell
+.\scripts\local-e2e-smoke.ps1 -AccessToken "<access-token>"
+```
+
+Or set it for the current PowerShell session:
+
+```powershell
+$env:ACCESS_TOKEN = "<access-token>"
+.\scripts\local-e2e-smoke.ps1
+```
+
+### Direct Backend Mode
+
+If you want to bypass NGINX for API calls, use:
+
+```powershell
+.\scripts\local-e2e-smoke.ps1 `
+  -BaseUrl "http://localhost:8080/api" `
+  -AccessToken "<access-token>"
+```
+
+Keep the stack's `MINIO_PUBLIC_ENDPOINT` browser reachable. The default Docker Compose value points presigned URLs
+through `http://localhost`, which keeps MinIO downloads and uploads reachable from the host.
 
 ## Google OAuth Redirect URI
 

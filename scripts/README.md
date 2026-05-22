@@ -1,12 +1,28 @@
 # scripts
 
-로컬 실행, 정리, 운영 보조 스크립트를 두는 경로다.
+This directory contains local development and operation helper scripts.
 
-## 예정 파일
+## Current Scripts
 
-1. `local-up.sh`
-2. `local-down.sh`
-3. `seed-dev-data.sh`
-4. `clean-object-storage.sh`
+- `local-e2e-smoke.ps1`: Runs the Docker Compose local MVP flow through HTTP APIs. It creates synthetic document
+  images, simulates ZIP expansion, uploads through presigned URLs, creates a preprocessing Job, waits for Worker
+  completion, and downloads processed outputs.
 
-현재 PR에서는 실제 스크립트 구현 없이 경로만 고정한다.
+Run from the repository root:
+
+```powershell
+.\scripts\local-e2e-smoke.ps1 -AccessToken "<access-token>"
+```
+
+To get the token, sign in through `http://localhost/login` and read this value in browser DevTools:
+
+```javascript
+localStorage.getItem('doc-pipeline.access-token')
+```
+
+## Planned Scripts
+
+- `local-up.sh`
+- `local-down.sh`
+- `seed-dev-data.sh`
+- `clean-object-storage.sh`
