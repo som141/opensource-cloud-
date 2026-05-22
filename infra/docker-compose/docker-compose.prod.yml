@@ -1,0 +1,30 @@
+services:
+  nginx:
+    restart: unless-stopped
+    ports:
+      - "${NGINX_HTTP_PORT:-80}:80"
+
+  frontend:
+    restart: unless-stopped
+
+  backend-api:
+    restart: unless-stopped
+    ports: !reset []
+
+  preprocess-worker:
+    restart: unless-stopped
+
+  postgres:
+    restart: unless-stopped
+    ports: !reset []
+
+  rabbitmq:
+    restart: unless-stopped
+    ports: !reset []
+
+  minio:
+    restart: unless-stopped
+    ports: !reset []
+
+  minio-bucket-init:
+    restart: "no"

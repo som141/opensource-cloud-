@@ -140,10 +140,8 @@ docker compose `
 
 ## Current MVP Limitations
 
-- `docker-compose.local.yml` is still the only Compose file. A separate production override should be added before a
-  real public deployment.
-- Direct service ports are still declared for local convenience. In production, firewall everything except HTTP/HTTPS
-  unless a service must be reachable for operations.
+- `docker-compose.prod.yml` is an MVP production override. It limits published service ports and adds restart policies,
+  but it does not implement TLS certificates inside the NGINX container.
 - HTTPS termination is not implemented in this Compose file. Put a TLS proxy or cloud load balancer in front of NGINX,
   or add a production NGINX/TLS task.
 - `JPA_DDL_AUTO=update` is acceptable for MVP rehearsal. Move to migrations and `validate` for durable production data.
