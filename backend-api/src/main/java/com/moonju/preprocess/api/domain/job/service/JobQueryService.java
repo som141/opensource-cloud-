@@ -8,6 +8,7 @@ import com.moonju.preprocess.api.domain.job.dto.JobSummaryResponse;
 import com.moonju.preprocess.api.domain.job.entity.Job;
 import com.moonju.preprocess.api.domain.job.entity.JobItem;
 import com.moonju.preprocess.api.domain.job.entity.JobItemArtifactDownloadType;
+import com.moonju.preprocess.api.domain.job.entity.JobItemStatus;
 import com.moonju.preprocess.api.domain.job.exception.JobNotFoundException;
 import com.moonju.preprocess.api.domain.job.repository.JobItemRepository;
 import com.moonju.preprocess.api.domain.job.repository.JobRepository;
@@ -19,6 +20,7 @@ import com.moonju.preprocess.api.infra.storage.PresignedDownloadCommand;
 import com.moonju.preprocess.api.infra.storage.PresignedDownloadTarget;
 import com.moonju.preprocess.api.infra.storage.PresignedDownloadUrlGenerator;
 import java.time.Duration;
+import java.util.List;
 import org.springframework.data.domain.Pageable;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
@@ -69,7 +71,12 @@ public class JobQueryService {
     @Transactional(readOnly = true)
     public JobArtifactResponse artifacts(Long currentUserId, Long jobId) {
         Job job = findReadableJob(currentUserId, jobId);
-        return JobArtifactResponse.skeleton(job.getId());
+        List<JobItem> items = jobItemRepository.findAllByJobId(job.getId());
+        List<JobArtifactResponse.ProcessedArtifact> processedArtifacts = items.stream()
+            .filter(this::hasReadyProcessedArtifact)
+            .map(this::createProcessedArtifact)
+            .toList();
+        return JobArtifactResponse.of(job.getId(), items.size(), processedArtifacts);
     }
 
     @Transactional(readOnly = true)
@@ -117,5 +124,18 @@ public class JobQueryService {
         } catch (IllegalArgumentException exception) {
             throw new BusinessException(ErrorCode.VALIDATION_ERROR, "Unsupported job item artifact type.");
         }
+    }
+
+    private boolean hasReadyProcessedArtifact(JobItem item) {
+        return item.getStatus() == JobItemStatus.SUCCEEDED
+            && item.getProcessedObjectKey() != null
+            && !item.getProcessedObjectKey().isBlank();
+    }
+
+    private JobArtifactResponse.ProcessedArtifact createProcessedArtifact(JobItem item) {
+        PresignedDownloadTarget target = presignedDownloadUrlGenerator.generateDownloadUrl(
+            new PresignedDownloadCommand(item.getProcessedObjectKey(), DOWNLOAD_URL_EXPIRES_IN)
+        );
+        return JobArtifactResponse.ProcessedArtifact.of(item, target);
     }
 }

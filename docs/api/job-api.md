@@ -56,7 +56,7 @@ All endpoints require `Authorization: Bearer <access-token>`.
 | `POST` | `/api/v1/jobs/{jobId}/cancel` | Request cancellation |
 | `POST` | `/api/v1/jobs/{jobId}/retry` | Retry failed and dead-lettered items |
 | `POST` | `/api/v1/jobs/{jobId}/rerun` | Requeue all non-processing items |
-| `GET` | `/api/v1/jobs/{jobId}/artifacts` | Read artifact listing placeholder |
+| `GET` | `/api/v1/jobs/{jobId}/artifacts` | List processed image artifacts |
 | `GET` | `/api/v1/jobs/{jobId}/download.zip` | Create processed image ZIP download URL |
 
 Internal Worker endpoints are not user-facing APIs. They require `X-Worker-Token` and are mounted under
@@ -188,6 +188,48 @@ Rules:
 - `type` must be one of `processed`, `preview`, or `report`.
 - If the Worker has not registered the requested object key yet, the API returns `common404`.
 - Debug artifact expansion remains separate from this JobItem-level result download flow.
+
+## Job Processed Artifact Listing
+
+```text
+GET /api/v1/jobs/{jobId}/artifacts
+```
+
+The API validates project read permission, scans JobItems for completed processed images, and returns processed-only
+artifact download URLs. Preview images, processing reports, and debug artifacts stay hidden from the MVP user-facing
+listing.
+
+Response:
+
+```json
+{
+  "isSuccess": true,
+  "code": "common200",
+  "message": "Request succeeded.",
+  "result": {
+    "jobId": 1,
+    "totalItems": 3,
+    "processedReadyCount": 2,
+    "processedArtifacts": [
+      {
+        "itemId": 10,
+        "imageId": 100,
+        "status": "SUCCEEDED",
+        "objectKey": "processed/1/1/10/processed.png",
+        "downloadUrl": "http://localhost:9000/image-preprocess-local/processed/1/1/10/processed.png?...",
+        "expiresAt": "2026-05-15T09:00:00Z"
+      }
+    ]
+  }
+}
+```
+
+Rules:
+
+- Only `SUCCEEDED` JobItems with a non-empty `processedObjectKey` are included.
+- If no processed images are ready, `processedArtifacts` is an empty list.
+- The endpoint does not expose preview, report, or debug artifact URLs.
+- Item-level artifact download remains available through `/items/{itemId}/download`.
 
 ## Processed ZIP Download
 
@@ -367,5 +409,4 @@ POST /api/v1/jobs/{jobId}/rerun
 
 ## Current Limitations
 
-- Artifact listing currently returns a placeholder.
 - Detailed debug artifact row expansion is deferred to a later artifact domain task.

@@ -3,9 +3,11 @@ package com.moonju.preprocess.api.domain.job.service;
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
 import static org.mockito.ArgumentMatchers.any;
+import static org.mockito.Mockito.never;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 
+import com.moonju.preprocess.api.domain.job.dto.JobArtifactResponse;
 import com.moonju.preprocess.api.domain.job.dto.JobItemDownloadUrlResponse;
 import com.moonju.preprocess.api.domain.job.dto.JobResponse;
 import com.moonju.preprocess.api.domain.job.dto.JobSummaryResponse;
@@ -23,6 +25,7 @@ import com.moonju.preprocess.api.infra.storage.PresignedDownloadCommand;
 import com.moonju.preprocess.api.infra.storage.PresignedDownloadTarget;
 import com.moonju.preprocess.api.infra.storage.PresignedDownloadUrlGenerator;
 import java.time.Instant;
+import java.util.List;
 import java.util.Map;
 import java.util.Optional;
 import org.junit.jupiter.api.Test;
@@ -113,6 +116,48 @@ class JobQueryServiceTests {
     }
 
     @Test
+    void listsProcessedArtifactsWithDownloadUrls() {
+        Job job = job(1L);
+        JobItem succeededItem = succeededItem(2L, job.getId());
+        JobItem failedItem = failedItem(3L, job.getId());
+        when(jobRepository.findById(1L)).thenReturn(Optional.of(job));
+        when(projectPermissionService.validateReadable(10L, 20L)).thenReturn(null);
+        when(jobItemRepository.findAllByJobId(1L)).thenReturn(List.of(succeededItem, failedItem));
+        when(presignedDownloadUrlGenerator.generateDownloadUrl(any(PresignedDownloadCommand.class)))
+            .thenReturn(new PresignedDownloadTarget(
+                "processed/10/1/2/processed.png",
+                "http://localhost:9000/image-preprocess-local/processed.png",
+                Instant.parse("2026-05-15T09:00:00Z"),
+                Map.of()
+            ));
+
+        JobArtifactResponse response = service.artifacts(20L, 1L);
+
+        assertThat(response.jobId()).isEqualTo(1L);
+        assertThat(response.totalItems()).isEqualTo(2);
+        assertThat(response.processedReadyCount()).isEqualTo(1);
+        assertThat(response.processedArtifacts()).hasSize(1);
+        assertThat(response.processedArtifacts().getFirst().itemId()).isEqualTo(2L);
+        assertThat(response.processedArtifacts().getFirst().downloadUrl()).contains("localhost:9000");
+        verify(projectPermissionService).validateReadable(10L, 20L);
+    }
+
+    @Test
+    void returnsEmptyArtifactListWhenNoProcessedImageIsReady() {
+        Job job = job(1L);
+        when(jobRepository.findById(1L)).thenReturn(Optional.of(job));
+        when(projectPermissionService.validateReadable(10L, 20L)).thenReturn(null);
+        when(jobItemRepository.findAllByJobId(1L)).thenReturn(List.of(failedItem(3L, job.getId())));
+
+        JobArtifactResponse response = service.artifacts(20L, 1L);
+
+        assertThat(response.totalItems()).isEqualTo(1);
+        assertThat(response.processedReadyCount()).isZero();
+        assertThat(response.processedArtifacts()).isEmpty();
+        verify(presignedDownloadUrlGenerator, never()).generateDownloadUrl(any(PresignedDownloadCommand.class));
+    }
+
+    @Test
     void rejectsUnsupportedJobItemArtifactType() {
         Job job = job(1L);
         JobItem item = succeededItem(2L, job.getId());
@@ -139,6 +184,12 @@ class JobQueryServiceTests {
             "processed/10/1/2/preview.png",
             "processed/10/1/2/processing-report.json"
         );
+        ReflectionTestUtils.setField(item, "id", id);
+        return item;
+    }
+
+    private JobItem failedItem(Long id, Long jobId) {
+        JobItem item = new JobItem(jobId, 101L, JobItemStatus.FAILED, 1);
         ReflectionTestUtils.setField(item, "id", id);
         return item;
     }
