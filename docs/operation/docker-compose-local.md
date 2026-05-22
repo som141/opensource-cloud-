@@ -45,9 +45,9 @@ docker compose -f docker-compose.local.yml --env-file .env up -d --build
 
 These are local placeholders. Do not reuse them outside local development.
 
-RabbitMQ definitions import the local `/` vhost, queue topology, and the `local/local` development user. If you change
-RabbitMQ credentials in `.env`, update `infra/rabbitmq/definitions.json` as well or remove the definitions import and
-create equivalent queues another way.
+RabbitMQ definitions import the local `/` vhost and queue topology only. User credentials come from
+`RABBITMQ_DEFAULT_USER` and `RABBITMQ_DEFAULT_PASS`, so local and production env files can use different values without
+editing `infra/rabbitmq/definitions.json`.
 
 ## Worker Listener
 
