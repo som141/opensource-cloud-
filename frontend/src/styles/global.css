@@ -557,6 +557,16 @@ button {
   background: rgba(186, 63, 53, 0.1);
 }
 
+.status-card.success {
+  border-color: rgba(47, 157, 104, 0.24);
+  background: rgba(47, 157, 104, 0.1);
+}
+
+.danger-action {
+  border-color: rgba(186, 63, 53, 0.24);
+  color: var(--danger);
+}
+
 .progress-card {
   background: rgba(18, 56, 45, 0.06);
 }
@@ -783,6 +793,11 @@ button {
 .job-item-list {
   display: grid;
   gap: 0.8rem;
+}
+
+.job-action-stack {
+  display: grid;
+  gap: 0.85rem;
 }
 
 .job-item-row {
