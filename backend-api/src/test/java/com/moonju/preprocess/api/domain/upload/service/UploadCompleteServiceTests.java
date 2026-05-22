@@ -6,9 +6,12 @@ import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.Mockito.doThrow;
 import static org.mockito.Mockito.never;
 import static org.mockito.Mockito.verify;
+import static org.mockito.Mockito.verifyNoInteractions;
 import static org.mockito.Mockito.when;
 
+import com.moonju.preprocess.api.domain.image.model.ImageMetadata;
 import com.moonju.preprocess.api.domain.image.service.ImageCreateService;
+import com.moonju.preprocess.api.domain.image.service.ImageMetadataExtractor;
 import com.moonju.preprocess.api.domain.project.service.ProjectPermissionService;
 import com.moonju.preprocess.api.domain.upload.dto.UploadCompleteRequest;
 import com.moonju.preprocess.api.domain.upload.dto.UploadCompleteResponse;
@@ -21,6 +24,7 @@ import com.moonju.preprocess.api.domain.upload.exception.UploadNotCompletedExcep
 import com.moonju.preprocess.api.domain.upload.repository.UploadSessionFileRepository;
 import com.moonju.preprocess.api.infra.storage.ObjectStoragePort;
 import java.util.List;
+import java.util.Map;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
 import org.mockito.InjectMocks;
@@ -49,6 +53,9 @@ class UploadCompleteServiceTests {
     @Mock
     private UploadedImageMagicNumberValidator magicNumberValidator;
 
+    @Mock
+    private ImageMetadataExtractor imageMetadataExtractor;
+
     @InjectMocks
     private UploadCompleteService service;
 
@@ -57,12 +64,14 @@ class UploadCompleteServiceTests {
         UploadSession uploadSession = uploadSession(1L, 10L, 20L, 1, 4096L);
         UploadSessionFile file = uploadSessionFile(100L, 1L, 10L, "originals/10/1/file/scan_001.png");
         byte[] validBytes = pngBytes();
+        ImageMetadata metadata = new ImageMetadata(1240, 1754, 300, 300);
 
         when(uploadSessionService.findOpenSession(1L)).thenReturn(uploadSession);
         when(projectPermissionService.validateEditable(10L, 20L)).thenReturn(null);
         when(uploadSessionFileRepository.findByUploadSessionIdAndIdIn(1L, List.of(100L))).thenReturn(List.of(file));
         when(objectStoragePort.exists(file.getObjectKey())).thenReturn(true);
         when(objectStoragePort.downloadBytes(file.getObjectKey())).thenReturn(validBytes);
+        when(imageMetadataExtractor.extract(validBytes)).thenReturn(metadata);
 
         UploadCompleteResponse response = service.complete(20L, 1L, new UploadCompleteRequest(List.of(100L)));
 
@@ -72,7 +81,8 @@ class UploadCompleteServiceTests {
         assertThat(uploadSession.getStatus()).isEqualTo(UploadSessionStatus.COMPLETED);
         assertThat(file.getStatus()).isEqualTo(UploadFileStatus.UPLOADED);
         verify(magicNumberValidator).validate(file, validBytes);
-        verify(imageCreateService).createFromCompletedUpload(uploadSession, List.of(file));
+        verify(imageMetadataExtractor).extract(validBytes);
+        verify(imageCreateService).createFromCompletedUpload(uploadSession, List.of(file), Map.of(100L, metadata));
     }
 
     @Test
@@ -89,6 +99,7 @@ class UploadCompleteServiceTests {
             .isInstanceOf(UploadNotCompletedException.class)
             .hasMessage("Uploaded object does not exist: originals/10/1/file/scan_001.png");
         verify(magicNumberValidator, never()).validate(any(UploadSessionFile.class), any(byte[].class));
+        verifyNoInteractions(imageMetadataExtractor, imageCreateService);
     }
 
     @Test
@@ -109,7 +120,7 @@ class UploadCompleteServiceTests {
         assertThatThrownBy(() -> service.complete(20L, 1L, new UploadCompleteRequest(List.of(100L))))
             .isInstanceOf(InvalidUploadFileException.class)
             .hasMessage("Unsupported or corrupted image signature.");
-        verify(imageCreateService, never()).createFromCompletedUpload(uploadSession, List.of(file));
+        verifyNoInteractions(imageMetadataExtractor, imageCreateService);
     }
 
     private UploadSession uploadSession(

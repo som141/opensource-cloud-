@@ -13,6 +13,7 @@ soft delete, original/processed/preview download URLs, processing report lookup,
 - Original files and preprocessing artifacts are stored separately as `ImageArtifact` rows.
 - Access is controlled by project membership through `ProjectPermissionService`.
 - Deleting an image is a soft delete and does not immediately remove Object Storage objects.
+- Upload completion extracts original width, height, and DPI when the source format exposes those values.
 
 ## Endpoints
 
@@ -80,14 +81,17 @@ Response:
     "checksumSha256": "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
     "format": "PNG",
     "status": "UPLOADED",
-    "width": null,
-    "height": null,
-    "dpiX": null,
-    "dpiY": null,
+    "width": 1240,
+    "height": 1754,
+    "dpiX": 300,
+    "dpiY": 300,
     "createdAt": "2026-05-09T21:00:00"
   }
 }
 ```
+
+Metadata values may be `null` when the uploaded file does not expose reliable dimensions or DPI in the supported
+header fields. The API treats metadata extraction failure as non-fatal after the magic number validation succeeds.
 
 ## Download URL
 
@@ -135,10 +139,11 @@ When `POST /api/v1/upload-sessions/{sessionId}/complete` succeeds:
 1. API verifies the original objects exist.
 2. API downloads each original object and validates the image magic number.
 3. API rejects files whose byte signature does not match the declared extension or content type.
-4. API marks upload files as `UPLOADED`.
-5. API marks the upload session as `COMPLETED`.
-6. API creates one `Image` row per uploaded file.
-7. API creates one `ORIGINAL` `ImageArtifact` row per image.
+4. API extracts width, height, and optional DPI from PNG, JPEG, WEBP, BMP, or TIFF headers.
+5. API marks upload files as `UPLOADED`.
+6. API marks the upload session as `COMPLETED`.
+7. API creates one `Image` row per uploaded file with extracted metadata.
+8. API creates one `ORIGINAL` `ImageArtifact` row per image.
 
 The `Image` row is idempotent by `uploadSessionFileId`, so repeated internal finalization does not create duplicate
 images.
@@ -146,5 +151,4 @@ images.
 ## Next Work
 
 - Replace local download URL generator with a MinIO/S3 adapter.
-- Add metadata extraction for width, height, and DPI.
 - Add worker internal artifact registration for processed, preview, report, and debug files.

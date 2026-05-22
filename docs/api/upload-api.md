@@ -12,6 +12,7 @@ then notify the API that the upload is complete.
 - Presigned upload URLs must include an expiration time.
 - Upload completion must verify object existence through `ObjectStoragePort`.
 - Upload completion must validate the stored object's image magic number against the declared file name and content type.
+- Upload completion extracts original image width, height, and optional DPI from supported image headers.
 - Image rows are not finalized before upload completion.
 - Upload session access is controlled by project membership, not only by the user who created the session.
 - Supported image extensions are `png`, `jpg`, `jpeg`, `tif`, `tiff`, `bmp`, and `webp`.
@@ -139,7 +140,8 @@ Completion verification:
 3. Each stored object is downloaded through `ObjectStoragePort`.
 4. The API validates the image magic number.
 5. The detected image type must match the original file extension and content type.
-6. Only then does the API mark files as uploaded and create finalized image rows.
+6. The API extracts width, height, and DPI metadata when available.
+7. Only then does the API mark files as uploaded and create finalized image rows.
 
 Supported signatures:
 
