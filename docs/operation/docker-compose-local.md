@@ -61,6 +61,15 @@ Set it to `false` only when you want to inspect queued messages without Worker c
 
 ## Frontend Smoke Test
 
+Before browser testing, run the preflight check:
+
+```powershell
+.\scripts\docker-compose-preflight.ps1
+```
+
+The preflight script verifies Docker Compose config, container state, NGINX routing, backend health, Swagger/OpenAPI,
+MinIO health, and RabbitMQ queue topology. See `docs/operation/docker-compose-preflight.md` for failure triage.
+
 1. Start the stack.
 2. Open `http://localhost/login`.
 3. Sign in with Google.
