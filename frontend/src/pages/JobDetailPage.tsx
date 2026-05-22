@@ -70,7 +70,22 @@ type JobZipDownloadResponse = {
   expiresAt: string;
 };
 
+type JobCancelResponse = {
+  jobId: number;
+  status: string;
+};
+
+type JobRetryResponse = {
+  jobId: number;
+  status: string;
+  queuedItems: number;
+};
+
 const terminalStatuses = new Set(['SUCCEEDED', 'FAILED', 'PARTIAL_SUCCEEDED', 'CANCELLED']);
+const cancellableStatuses = new Set(['CREATED', 'QUEUED', 'RUNNING', 'RETRYING']);
+const retryableItemStatuses = new Set(['FAILED', 'DEAD_LETTERED']);
+
+type JobAction = 'cancel' | 'retry';
 
 export function JobDetailPage() {
   const jobId = useMemo(() => {
@@ -84,10 +99,15 @@ export function JobDetailPage() {
   const [refreshing, setRefreshing] = useState(false);
   const [zipDownloading, setZipDownloading] = useState(false);
   const [itemDownloading, setItemDownloading] = useState<number | null>(null);
+  const [actionPending, setActionPending] = useState<JobAction | null>(null);
+  const [actionNotice, setActionNotice] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(null);
 
   const processedItems = items.filter((item) => item.processedObjectKey);
+  const retryableItems = items.filter((item) => retryableItemStatuses.has(item.status));
   const isTerminal = job ? terminalStatuses.has(job.status) : false;
+  const canCancel = Boolean(job && cancellableStatuses.has(job.status) && !actionPending);
+  const canRetry = retryableItems.length > 0 && !actionPending;
 
   useEffect(() => {
     void loadJob(true);
@@ -166,6 +186,58 @@ export function JobDetailPage() {
     }
   }
 
+  async function cancelJob() {
+    if (!job || !window.confirm(`Cancel Job #${job.id}? Queued items will be marked as cancelled.`)) {
+      return;
+    }
+
+    setActionPending('cancel');
+    setActionNotice(null);
+    setError(null);
+    try {
+      const response = await apiClient.post<JobCancelResponse>(
+        `/v1/jobs/${job.id}/cancel`,
+        {},
+        readStoredAccessToken()
+      );
+      setActionNotice(`Cancel requested for Job #${response.result.jobId}. Current status: ${response.result.status}.`);
+      await loadJob(false);
+    } catch (exception) {
+      setError(describeError(exception, 'Failed to cancel job.'));
+    } finally {
+      setActionPending(null);
+    }
+  }
+
+  async function retryFailedItems() {
+    if (!job || retryableItems.length === 0) {
+      return;
+    }
+    if (!window.confirm(`Retry ${retryableItems.length} failed items in Job #${job.id}?`)) {
+      return;
+    }
+
+    setActionPending('retry');
+    setActionNotice(null);
+    setError(null);
+    try {
+      const response = await apiClient.post<JobRetryResponse>(
+        `/v1/jobs/${job.id}/retry`,
+        {},
+        readStoredAccessToken()
+      );
+      setActionNotice(
+        `Retry queued ${response.result.queuedItems} items for Job #${response.result.jobId}. `
+        + `Current status: ${response.result.status}.`
+      );
+      await loadJob(false);
+    } catch (exception) {
+      setError(describeError(exception, 'Failed to retry failed items.'));
+    } finally {
+      setActionPending(null);
+    }
+  }
+
   if (loading) {
     return (
       <PageSection title="Loading job" description="Fetching job state, item progress, and available processed outputs.">
@@ -183,6 +255,13 @@ export function JobDetailPage() {
         <div className="status-card error">
           <strong>Job detail failed</strong>
           <span>{error}</span>
+        </div>
+      )}
+
+      {actionNotice && (
+        <div className="status-card success">
+          <strong>Job action completed</strong>
+          <span>{actionNotice}</span>
         </div>
       )}
 
@@ -248,7 +327,33 @@ export function JobDetailPage() {
           </div>
         </PageSection>
 
-        <PageSection title="Downloads" description="MVP downloads expose processed images only.">
+        <PageSection title="Controls and downloads" description="Cancel active work or retry only failed Worker items.">
+          <div className="job-action-stack">
+            <div className="status-card">
+              <strong>{retryableItems.length} retryable items</strong>
+              <span>
+                Retry only targets `FAILED` and `DEAD_LETTERED` items. Full rerun is intentionally hidden from MVP UI.
+              </span>
+            </div>
+            <div className="download-actions">
+              <button
+                className="secondary-action danger-action"
+                type="button"
+                onClick={cancelJob}
+                disabled={!canCancel}
+              >
+                {actionPending === 'cancel' ? 'Cancelling...' : 'Cancel job'}
+              </button>
+              <button
+                className="secondary-action"
+                type="button"
+                onClick={retryFailedItems}
+                disabled={!canRetry}
+              >
+                {actionPending === 'retry' ? 'Retrying...' : `Retry failed (${retryableItems.length})`}
+              </button>
+            </div>
+          </div>
           <div className="status-card">
             <strong>{processedItems.length} processed images ready</strong>
             <span>Preview, report, and debug artifacts are intentionally hidden from the MVP UI.</span>
