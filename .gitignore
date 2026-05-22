@@ -46,6 +46,8 @@ frontend/vite.config.d.ts
 
 .env
 .env.local
+.env.prod
+infra/docker-compose/.env.prod
 LOCAL_CONFIG.md
 *.local.md
 
