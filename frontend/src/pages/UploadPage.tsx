@@ -600,6 +600,11 @@ export function UploadPage() {
                 <div className="progress-track">
                   <span style={{ width: `${Math.min(result.summary.progressPercent, 100)}%` }} />
                 </div>
+                <div className="download-actions">
+                  <a className="secondary-action" href={`/jobs/${result.summary.jobId}`}>
+                    Open job detail
+                  </a>
+                </div>
               </div>
             )}
 

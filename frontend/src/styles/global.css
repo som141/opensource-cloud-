@@ -612,6 +612,13 @@ button {
   align-items: start;
 }
 
+.job-detail-layout {
+  display: grid;
+  grid-template-columns: minmax(22rem, 1fr) minmax(18rem, 0.58fr);
+  gap: 1.1rem;
+  align-items: start;
+}
+
 .stack-form,
 .project-grid,
 .metadata-grid {
@@ -714,6 +721,43 @@ button {
   font-size: 0.78rem;
 }
 
+.job-item-list {
+  display: grid;
+  gap: 0.8rem;
+}
+
+.job-item-row {
+  display: grid;
+  grid-template-columns: minmax(10rem, 0.9fr) auto minmax(16rem, 1.4fr) auto;
+  gap: 0.85rem;
+  align-items: center;
+  border: 1px solid rgba(18, 56, 45, 0.12);
+  border-radius: 1rem;
+  background: rgba(255, 254, 248, 0.86);
+  padding: 0.9rem;
+}
+
+.job-item-row strong,
+.job-item-row small {
+  display: block;
+}
+
+.job-item-meta {
+  display: grid;
+  min-width: 0;
+  gap: 0.25rem;
+}
+
+.job-item-meta code {
+  overflow-wrap: anywhere;
+  border-radius: 0.7rem;
+  background: rgba(18, 56, 45, 0.06);
+  color: var(--pine);
+  padding: 0.45rem;
+  font-family: "JetBrains Mono", "Consolas", monospace;
+  font-size: 0.72rem;
+}
+
 .error-text {
   color: var(--danger);
 }
@@ -722,6 +766,7 @@ button {
   .shell,
   .upload-layout,
   .project-layout,
+  .job-detail-layout,
   .console-hero {
     grid-template-columns: 1fr;
   }
@@ -748,7 +793,8 @@ button {
   }
 
   .topbar,
-  .file-row {
+  .file-row,
+  .job-item-row {
     align-items: stretch;
     grid-template-columns: 1fr;
   }
