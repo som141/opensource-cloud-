@@ -133,10 +133,12 @@ worker/report task and are empty until worker integration exists.
 When `POST /api/v1/upload-sessions/{sessionId}/complete` succeeds:
 
 1. API verifies the original objects exist.
-2. API marks upload files as `UPLOADED`.
-3. API marks the upload session as `COMPLETED`.
-4. API creates one `Image` row per uploaded file.
-5. API creates one `ORIGINAL` `ImageArtifact` row per image.
+2. API downloads each original object and validates the image magic number.
+3. API rejects files whose byte signature does not match the declared extension or content type.
+4. API marks upload files as `UPLOADED`.
+5. API marks the upload session as `COMPLETED`.
+6. API creates one `Image` row per uploaded file.
+7. API creates one `ORIGINAL` `ImageArtifact` row per image.
 
 The `Image` row is idempotent by `uploadSessionFileId`, so repeated internal finalization does not create duplicate
 images.
@@ -146,4 +148,3 @@ images.
 - Replace local download URL generator with a MinIO/S3 adapter.
 - Add metadata extraction for width, height, and DPI.
 - Add worker internal artifact registration for processed, preview, report, and debug files.
-- Add image magic number validation after object download.

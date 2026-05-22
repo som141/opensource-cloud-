@@ -11,6 +11,7 @@ then notify the API that the upload is complete.
 - The Spring API must not receive large image file bodies.
 - Presigned upload URLs must include an expiration time.
 - Upload completion must verify object existence through `ObjectStoragePort`.
+- Upload completion must validate the stored object's image magic number against the declared file name and content type.
 - Image rows are not finalized before upload completion.
 - Upload session access is controlled by project membership, not only by the user who created the session.
 - Supported image extensions are `png`, `jpg`, `jpeg`, `tif`, `tiff`, `bmp`, and `webp`.
@@ -131,6 +132,25 @@ Response:
 }
 ```
 
+Completion verification:
+
+1. The requested upload file IDs must match the session's expected file count.
+2. Each object key must exist in Object Storage.
+3. Each stored object is downloaded through `ObjectStoragePort`.
+4. The API validates the image magic number.
+5. The detected image type must match the original file extension and content type.
+6. Only then does the API mark files as uploaded and create finalized image rows.
+
+Supported signatures:
+
+| Format | Extensions | Content types |
+| --- | --- | --- |
+| PNG | `.png` | `image/png` |
+| JPEG | `.jpg`, `.jpeg` | `image/jpeg` |
+| WEBP | `.webp` | `image/webp` |
+| BMP | `.bmp` | `image/bmp`, `image/x-ms-bmp` |
+| TIFF | `.tif`, `.tiff` | `image/tiff` |
+
 ## Status
 
 | Status | Meaning |
@@ -143,5 +163,4 @@ Response:
 ## Next Work
 
 - Replace the local presigned URL generator with a MinIO/S3 adapter.
-- Add image magic number validation after object download or metadata extraction.
 - Add server-side ZIP extraction only if browser-side extraction becomes too slow for the expected batch size.

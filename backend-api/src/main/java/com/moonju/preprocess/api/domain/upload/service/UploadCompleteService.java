@@ -23,19 +23,22 @@ public class UploadCompleteService {
     private final ProjectPermissionService projectPermissionService;
     private final ObjectStoragePort objectStoragePort;
     private final ImageCreateService imageCreateService;
+    private final UploadedImageMagicNumberValidator magicNumberValidator;
 
     public UploadCompleteService(
         UploadSessionService uploadSessionService,
         UploadSessionFileRepository uploadSessionFileRepository,
         ProjectPermissionService projectPermissionService,
         ObjectStoragePort objectStoragePort,
-        ImageCreateService imageCreateService
+        ImageCreateService imageCreateService,
+        UploadedImageMagicNumberValidator magicNumberValidator
     ) {
         this.uploadSessionService = uploadSessionService;
         this.uploadSessionFileRepository = uploadSessionFileRepository;
         this.projectPermissionService = projectPermissionService;
         this.objectStoragePort = objectStoragePort;
         this.imageCreateService = imageCreateService;
+        this.magicNumberValidator = magicNumberValidator;
     }
 
     @Transactional
@@ -76,6 +79,7 @@ public class UploadCompleteService {
         if (!objectStoragePort.exists(file.getObjectKey())) {
             throw new UploadNotCompletedException("Uploaded object does not exist: " + file.getObjectKey());
         }
+        magicNumberValidator.validate(file, objectStoragePort.downloadBytes(file.getObjectKey()));
         file.markUploaded();
     }
 }
