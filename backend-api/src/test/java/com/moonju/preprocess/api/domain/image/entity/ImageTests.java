@@ -2,6 +2,7 @@ package com.moonju.preprocess.api.domain.image.entity;
 
 import static org.assertj.core.api.Assertions.assertThat;
 
+import com.moonju.preprocess.api.domain.image.model.ImageMetadata;
 import com.moonju.preprocess.api.domain.upload.entity.UploadSession;
 import com.moonju.preprocess.api.domain.upload.entity.UploadSessionFile;
 import org.junit.jupiter.api.Test;
@@ -24,7 +25,7 @@ class ImageTests {
         );
         ReflectionTestUtils.setField(file, "id", 100L);
 
-        Image image = Image.fromUpload(uploadSession, file);
+        Image image = Image.fromUpload(uploadSession, file, new ImageMetadata(1240, 1754, 300, 300));
 
         assertThat(image.getProjectId()).isEqualTo(10L);
         assertThat(image.getUploadSessionId()).isEqualTo(1L);
@@ -32,6 +33,10 @@ class ImageTests {
         assertThat(image.getUploaderId()).isEqualTo(20L);
         assertThat(image.getFormat()).isEqualTo(ImageFormat.PNG);
         assertThat(image.getStatus()).isEqualTo(ImageStatus.UPLOADED);
+        assertThat(image.getWidth()).isEqualTo(1240);
+        assertThat(image.getHeight()).isEqualTo(1754);
+        assertThat(image.getDpiX()).isEqualTo(300);
+        assertThat(image.getDpiY()).isEqualTo(300);
     }
 
     @Test

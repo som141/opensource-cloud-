@@ -1,6 +1,8 @@
 package com.moonju.preprocess.api.domain.upload.service;
 
 import com.moonju.preprocess.api.domain.image.service.ImageCreateService;
+import com.moonju.preprocess.api.domain.image.model.ImageMetadata;
+import com.moonju.preprocess.api.domain.image.service.ImageMetadataExtractor;
 import com.moonju.preprocess.api.domain.project.service.ProjectPermissionService;
 import com.moonju.preprocess.api.domain.upload.dto.UploadCompleteRequest;
 import com.moonju.preprocess.api.domain.upload.dto.UploadCompleteResponse;
@@ -9,8 +11,10 @@ import com.moonju.preprocess.api.domain.upload.entity.UploadSessionFile;
 import com.moonju.preprocess.api.domain.upload.exception.UploadNotCompletedException;
 import com.moonju.preprocess.api.domain.upload.repository.UploadSessionFileRepository;
 import com.moonju.preprocess.api.infra.storage.ObjectStoragePort;
+import java.util.HashMap;
 import java.util.HashSet;
 import java.util.List;
+import java.util.Map;
 import java.util.Set;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
@@ -24,6 +28,7 @@ public class UploadCompleteService {
     private final ObjectStoragePort objectStoragePort;
     private final ImageCreateService imageCreateService;
     private final UploadedImageMagicNumberValidator magicNumberValidator;
+    private final ImageMetadataExtractor imageMetadataExtractor;
 
     public UploadCompleteService(
         UploadSessionService uploadSessionService,
@@ -31,7 +36,8 @@ public class UploadCompleteService {
         ProjectPermissionService projectPermissionService,
         ObjectStoragePort objectStoragePort,
         ImageCreateService imageCreateService,
-        UploadedImageMagicNumberValidator magicNumberValidator
+        UploadedImageMagicNumberValidator magicNumberValidator,
+        ImageMetadataExtractor imageMetadataExtractor
     ) {
         this.uploadSessionService = uploadSessionService;
         this.uploadSessionFileRepository = uploadSessionFileRepository;
@@ -39,6 +45,7 @@ public class UploadCompleteService {
         this.objectStoragePort = objectStoragePort;
         this.imageCreateService = imageCreateService;
         this.magicNumberValidator = magicNumberValidator;
+        this.imageMetadataExtractor = imageMetadataExtractor;
     }
 
     @Transactional
@@ -52,9 +59,10 @@ public class UploadCompleteService {
         );
         validateCompletion(uploadSession, request.uploadFileIds(), files);
 
-        files.forEach(this::verifyAndMarkUploaded);
+        Map<Long, ImageMetadata> metadataByUploadFileId = new HashMap<>();
+        files.forEach(file -> metadataByUploadFileId.put(file.getId(), verifyAndMarkUploaded(file)));
         uploadSession.complete();
-        imageCreateService.createFromCompletedUpload(uploadSession, files);
+        imageCreateService.createFromCompletedUpload(uploadSession, files, metadataByUploadFileId);
         return UploadCompleteResponse.of(uploadSession, files.size());
     }
 
@@ -75,11 +83,14 @@ public class UploadCompleteService {
         }
     }
 
-    private void verifyAndMarkUploaded(UploadSessionFile file) {
+    private ImageMetadata verifyAndMarkUploaded(UploadSessionFile file) {
         if (!objectStoragePort.exists(file.getObjectKey())) {
             throw new UploadNotCompletedException("Uploaded object does not exist: " + file.getObjectKey());
         }
-        magicNumberValidator.validate(file, objectStoragePort.downloadBytes(file.getObjectKey()));
+        byte[] bytes = objectStoragePort.downloadBytes(file.getObjectKey());
+        magicNumberValidator.validate(file, bytes);
+        ImageMetadata metadata = imageMetadataExtractor.extract(bytes);
         file.markUploaded();
+        return metadata;
     }
 }

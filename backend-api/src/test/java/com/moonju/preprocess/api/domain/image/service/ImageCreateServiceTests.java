@@ -9,11 +9,13 @@ import static org.mockito.Mockito.when;
 import com.moonju.preprocess.api.domain.image.entity.Image;
 import com.moonju.preprocess.api.domain.image.entity.ImageArtifact;
 import com.moonju.preprocess.api.domain.image.entity.ImageArtifactType;
+import com.moonju.preprocess.api.domain.image.model.ImageMetadata;
 import com.moonju.preprocess.api.domain.image.repository.ImageArtifactRepository;
 import com.moonju.preprocess.api.domain.image.repository.ImageRepository;
 import com.moonju.preprocess.api.domain.upload.entity.UploadSession;
 import com.moonju.preprocess.api.domain.upload.entity.UploadSessionFile;
 import java.util.List;
+import java.util.Map;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
 import org.mockito.ArgumentCaptor;
@@ -38,6 +40,7 @@ class ImageCreateServiceTests {
     void createsImageAndOriginalArtifactFromCompletedUpload() {
         UploadSession uploadSession = uploadSession();
         UploadSessionFile file = uploadSessionFile(100L);
+        ImageMetadata metadata = new ImageMetadata(1240, 1754, 300, 300);
         when(imageRepository.existsByUploadSessionFileId(100L)).thenReturn(false);
         when(imageRepository.save(any(Image.class))).thenAnswer(invocation -> {
             Image image = invocation.getArgument(0);
@@ -45,10 +48,14 @@ class ImageCreateServiceTests {
             return image;
         });
 
-        List<Image> images = service.createFromCompletedUpload(uploadSession, List.of(file));
+        List<Image> images = service.createFromCompletedUpload(uploadSession, List.of(file), Map.of(100L, metadata));
 
         assertThat(images).hasSize(1);
         assertThat(images.getFirst().getUploadSessionFileId()).isEqualTo(100L);
+        assertThat(images.getFirst().getWidth()).isEqualTo(1240);
+        assertThat(images.getFirst().getHeight()).isEqualTo(1754);
+        assertThat(images.getFirst().getDpiX()).isEqualTo(300);
+        assertThat(images.getFirst().getDpiY()).isEqualTo(300);
         ArgumentCaptor<ImageArtifact> artifactCaptor = ArgumentCaptor.forClass(ImageArtifact.class);
         verify(imageArtifactRepository).save(artifactCaptor.capture());
         assertThat(artifactCaptor.getValue().getImageId()).isEqualTo(200L);

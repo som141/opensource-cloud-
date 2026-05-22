@@ -1,5 +1,6 @@
 package com.moonju.preprocess.api.domain.image.entity;
 
+import com.moonju.preprocess.api.domain.image.model.ImageMetadata;
 import com.moonju.preprocess.api.domain.upload.entity.UploadSession;
 import com.moonju.preprocess.api.domain.upload.entity.UploadSessionFile;
 import com.moonju.preprocess.api.global.support.BaseEntity;
@@ -96,7 +97,11 @@ public class Image extends BaseEntity {
     }
 
     public static Image fromUpload(UploadSession uploadSession, UploadSessionFile file) {
-        return new Image(
+        return fromUpload(uploadSession, file, ImageMetadata.empty());
+    }
+
+    public static Image fromUpload(UploadSession uploadSession, UploadSessionFile file, ImageMetadata metadata) {
+        Image image = new Image(
             uploadSession.getProjectId(),
             uploadSession.getId(),
             file.getId(),
@@ -109,6 +114,18 @@ public class Image extends BaseEntity {
             ImageFormat.fromFileName(file.getOriginalFileName()),
             ImageStatus.UPLOADED
         );
+        image.applyMetadata(metadata);
+        return image;
+    }
+
+    public void applyMetadata(ImageMetadata metadata) {
+        if (metadata == null) {
+            return;
+        }
+        width = metadata.width();
+        height = metadata.height();
+        dpiX = metadata.dpiX();
+        dpiY = metadata.dpiY();
     }
 
     public void delete() {
