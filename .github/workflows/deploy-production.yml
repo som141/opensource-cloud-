@@ -1,0 +1,113 @@
+name: Deploy Production
+
+on:
+  workflow_dispatch:
+  push:
+    branches:
+      - main
+
+concurrency:
+  group: production-deploy
+  cancel-in-progress: false
+
+jobs:
+  deploy:
+    name: Deploy Docker Compose stack
+    runs-on: ubuntu-latest
+    environment: production
+    timeout-minutes: 30
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Validate production compose template
+        run: |
+          docker compose \
+            -f infra/docker-compose/docker-compose.local.yml \
+            -f infra/docker-compose/docker-compose.prod.yml \
+            --env-file infra/docker-compose/.env.prod.example \
+            config >/tmp/image-preprocess-prod-compose.yml
+
+      - name: Create deployment archive
+        run: |
+          tar \
+            --exclude='.git' \
+            --exclude='.github' \
+            --exclude='infra/docker-compose/.env' \
+            --exclude='infra/docker-compose/.env.prod' \
+            --exclude='node_modules' \
+            --exclude='frontend/node_modules' \
+            --exclude='out' \
+            -czf /tmp/image-preprocess-release.tgz .
+
+      - name: Configure SSH
+        env:
+          DEPLOY_SSH_PRIVATE_KEY: ${{ secrets.DEPLOY_SSH_PRIVATE_KEY }}
+          DEPLOY_HOST: ${{ secrets.DEPLOY_HOST }}
+          DEPLOY_SSH_PORT: ${{ secrets.DEPLOY_SSH_PORT || '22' }}
+        run: |
+          mkdir -p ~/.ssh
+          printf '%s\n' "$DEPLOY_SSH_PRIVATE_KEY" > ~/.ssh/deploy_key
+          chmod 600 ~/.ssh/deploy_key
+          ssh-keyscan -p "$DEPLOY_SSH_PORT" "$DEPLOY_HOST" >> ~/.ssh/known_hosts
+
+      - name: Upload deployment archive
+        env:
+          DEPLOY_HOST: ${{ secrets.DEPLOY_HOST }}
+          DEPLOY_USER: ${{ secrets.DEPLOY_USER }}
+          DEPLOY_PATH: ${{ secrets.DEPLOY_PATH }}
+          DEPLOY_SSH_PORT: ${{ secrets.DEPLOY_SSH_PORT || '22' }}
+        run: |
+          ssh -i ~/.ssh/deploy_key -p "$DEPLOY_SSH_PORT" "$DEPLOY_USER@$DEPLOY_HOST" \
+            "mkdir -p '$DEPLOY_PATH/releases' '$DEPLOY_PATH/shared'"
+          scp -i ~/.ssh/deploy_key -P "$DEPLOY_SSH_PORT" /tmp/image-preprocess-release.tgz \
+            "$DEPLOY_USER@$DEPLOY_HOST:$DEPLOY_PATH/releases/image-preprocess-release.tgz"
+
+      - name: Deploy on server
+        env:
+          DEPLOY_HOST: ${{ secrets.DEPLOY_HOST }}
+          DEPLOY_USER: ${{ secrets.DEPLOY_USER }}
+          DEPLOY_PATH: ${{ secrets.DEPLOY_PATH }}
+          DEPLOY_SSH_PORT: ${{ secrets.DEPLOY_SSH_PORT || '22' }}
+        run: |
+          ssh -i ~/.ssh/deploy_key -p "$DEPLOY_SSH_PORT" "$DEPLOY_USER@$DEPLOY_HOST" \
+            "DEPLOY_PATH='$DEPLOY_PATH' bash -s" <<'REMOTE'
+          set -euo pipefail
+
+          cd "$DEPLOY_PATH"
+          rm -rf current
+          mkdir -p current
+          tar -xzf releases/image-preprocess-release.tgz -C current
+
+          if [ ! -f shared/.env.prod ]; then
+            echo "Missing $DEPLOY_PATH/shared/.env.prod"
+            echo "Create it from infra/docker-compose/.env.prod.example before deploying."
+            exit 1
+          fi
+
+          cp shared/.env.prod current/infra/docker-compose/.env.prod
+          cd current
+
+          docker compose \
+            -f infra/docker-compose/docker-compose.local.yml \
+            -f infra/docker-compose/docker-compose.prod.yml \
+            --env-file infra/docker-compose/.env.prod \
+            config >/tmp/image-preprocess-prod-compose.yml
+
+          docker compose \
+            -f infra/docker-compose/docker-compose.local.yml \
+            -f infra/docker-compose/docker-compose.prod.yml \
+            --env-file infra/docker-compose/.env.prod \
+            up -d --build
+
+          docker image prune -f
+          REMOTE
+
+      - name: Post-deploy HTTP checks
+        env:
+          PROD_BASE_URL: ${{ secrets.PROD_BASE_URL }}
+        run: |
+          test -n "$PROD_BASE_URL"
+          curl --fail --show-error --silent "$PROD_BASE_URL/health"
+          curl --fail --show-error --silent "$PROD_BASE_URL/v3/api-docs" | grep -q "Image Preprocess Platform API"

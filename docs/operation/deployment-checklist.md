@@ -25,6 +25,7 @@ Use this checklist before exposing the MVP outside the local machine.
 ```powershell
 docker compose `
   -f infra/docker-compose/docker-compose.local.yml `
+  -f infra/docker-compose/docker-compose.prod.yml `
   --env-file infra/docker-compose/.env.prod `
   config
 ```
@@ -34,20 +35,30 @@ If using the template only:
 ```powershell
 docker compose `
   -f infra/docker-compose/docker-compose.local.yml `
+  -f infra/docker-compose/docker-compose.prod.yml `
   --env-file infra/docker-compose/.env.prod.example `
   config
 ```
 
-## 4. Build And Start
+## 4. Build And Start Manually
 
 ```powershell
 docker compose `
   -f infra/docker-compose/docker-compose.local.yml `
+  -f infra/docker-compose/docker-compose.prod.yml `
   --env-file infra/docker-compose/.env.prod `
   up -d --build
 ```
 
-## 5. Run Preflight
+For normal production deployment, prefer GitHub Actions:
+
+```text
+Actions -> Deploy Production -> Run workflow
+```
+
+See `docs/operation/github-actions-deployment.md`.
+
+## 5. Run Preflight Or Post-Deploy Checks
 
 For local host validation:
 
@@ -105,8 +116,7 @@ Then run:
 
 ## 9. Operational Follow-Up
 
-- Add a production Compose override with restart policies and restricted port exposure.
 - Add HTTPS termination configuration.
 - Add database migration tooling and change `JPA_DDL_AUTO` to `validate`.
-- Add backup policy for PostgreSQL and object storage volumes.
+- Follow `docs/operation/backup-restore.md` for PostgreSQL and object storage backup.
 - Add observability stack only after the MVP flow is stable.
