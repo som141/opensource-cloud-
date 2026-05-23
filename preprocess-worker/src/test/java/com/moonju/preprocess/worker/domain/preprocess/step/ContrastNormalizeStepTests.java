@@ -58,6 +58,18 @@ class ContrastNormalizeStepTests {
     }
 
     @Test
+    void usesTunedDefaultClipLimitWhenParameterIsMissing() {
+        PreprocessContext context = context(Map.of());
+        ImageMatHolder sourceHolder = ImageMatHolder.decoded("originals/default.png", lowContrastBgrImage());
+        context.storeDecodedImage(sourceHolder);
+
+        step.execute(context);
+
+        assertThat(context.consumeStepNote(PreprocessStepName.CONTRAST_NORMALIZE)).contains("clipLimit=2.0");
+        context.releaseDecodedImage();
+    }
+
+    @Test
     void defersWhenDecodedImageIsMissing() {
         PreprocessContext context = context(Map.of());
 

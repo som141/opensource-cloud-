@@ -69,6 +69,42 @@ class DenoiseStepTests {
     }
 
     @Test
+    void appliesBilateralDenoiseWithTunedDefaultSigmas() {
+        PreprocessContext context = context(Map.of("denoiseMode", "bilateral"));
+        ImageMatHolder sourceHolder = ImageMatHolder.decoded("originals/noisy.png", noisyImage());
+        context.storeDecodedImage(sourceHolder);
+
+        step.execute(context);
+
+        assertThat(context.consumeStepNote(PreprocessStepName.DENOISE))
+            .contains("mode=bilateral")
+            .contains("sigmaColor=25.0")
+            .contains("sigmaRange=75.0");
+        context.releaseDecodedImage();
+    }
+
+    @Test
+    void appliesBilateralDenoiseWithConfiguredSigmas() {
+        PreprocessContext context = context(Map.of(
+            "denoiseMode",
+            "bilateral",
+            "denoiseSigmaColor",
+            "40.0",
+            "denoiseSigmaRange",
+            "60.0"
+        ));
+        ImageMatHolder sourceHolder = ImageMatHolder.decoded("originals/noisy.png", noisyImage());
+        context.storeDecodedImage(sourceHolder);
+
+        step.execute(context);
+
+        assertThat(context.consumeStepNote(PreprocessStepName.DENOISE))
+            .contains("sigmaColor=40.0")
+            .contains("sigmaRange=60.0");
+        context.releaseDecodedImage();
+    }
+
+    @Test
     void defersWhenDecodedImageIsMissing() {
         PreprocessContext context = context(Map.of());
 
