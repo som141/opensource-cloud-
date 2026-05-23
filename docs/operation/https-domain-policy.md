@@ -1,37 +1,34 @@
-# HTTPS And Domain Policy
+# HTTPS와 도메인 정책
 
-## Purpose
+운영 Google OAuth 로그인과 Refresh Token cookie 보안은 HTTPS를 전제로 합니다.
+운영 환경에서는 하나의 공개 도메인을 NGINX 앞단에 두고, backend-api, PostgreSQL, RabbitMQ, MinIO 직접 포트는 외부에 공개하지 않습니다.
 
-Google OAuth production login requires HTTPS. The application should be exposed through one public domain and keep
-backend, database, queue, and object storage ports private.
-
-## Recommended Layout
+## 권장 구성
 
 ```text
-User Browser
-  -> HTTPS domain
-  -> TLS terminator or cloud load balancer
-  -> NGINX container on HTTP :80
+사용자 브라우저
+  -> https://YOUR_DOMAIN
+  -> TLS 종료 지점 또는 클라우드 로드밸런서
+  -> Compose NGINX container HTTP :80
   -> frontend / backend-api / MinIO bucket proxy
 ```
 
-The current Docker Compose production override exposes only NGINX. Direct ports for backend-api, PostgreSQL, RabbitMQ,
-and MinIO are reset by `docker-compose.prod.yml`.
+현재 production compose override는 NGINX만 외부에 노출합니다. backend-api, PostgreSQL, RabbitMQ, MinIO 직접 포트는 `docker-compose.prod.yml`에서 제거합니다.
 
-## TLS Options
+## TLS 처리 방식
 
-### Option A: Cloudflare Or Load Balancer TLS Termination
+### 선택지 A. Cloudflare 또는 Load Balancer에서 TLS 종료
 
-Use this for the first MVP deployment.
+MVP 첫 운영 배포에 가장 단순한 방식입니다.
 
-- Public browser traffic uses `https://YOUR_DOMAIN`.
-- Cloudflare/load balancer terminates TLS.
-- It forwards HTTP to the server's NGINX container.
-- Keep `NGINX_HTTP_PORT=80` or bind NGINX to an internal port depending on your load balancer setup.
+- 브라우저는 `https://YOUR_DOMAIN`으로 접속합니다.
+- Cloudflare 또는 로드밸런서가 TLS를 종료합니다.
+- 서버의 NGINX container로 HTTP를 전달합니다.
+- `NGINX_HTTP_PORT=80`을 사용하거나 로드밸런서 구성에 맞춰 내부 포트로 바인딩합니다.
 
-### Option B: Host NGINX/Caddy In Front Of Compose
+### 선택지 B. 서버 호스트 NGINX/Caddy가 TLS 종료
 
-Use a host-level reverse proxy with Let's Encrypt:
+서버에 host-level reverse proxy를 두고 Let's Encrypt를 사용합니다.
 
 ```text
 host nginx/caddy :443
@@ -39,27 +36,26 @@ host nginx/caddy :443
   -> compose nginx :80
 ```
 
-Set:
+이 경우 `.env.prod` 예시:
 
 ```text
 NGINX_HTTP_PORT=127.0.0.1:8088
 ```
 
-### Option C: TLS Inside The Compose NGINX Container
+### 선택지 C. Compose NGINX container 안에서 TLS 처리
 
-This is not implemented yet. It needs certificate volume mounts, port `443`, renewal automation, and a production NGINX
-server block. Treat it as a separate hardening task.
+아직 구현하지 않은 hardening 작업입니다. 인증서 volume mount, 443 포트, 갱신 자동화, production NGINX server block이 필요합니다.
 
-## Required Google OAuth Values
+## Google OAuth 필수 값
 
-Configure Google Console:
+Google Console:
 
 ```text
 Authorized JavaScript origin: https://YOUR_DOMAIN
 Authorized redirect URI:      https://YOUR_DOMAIN/login/oauth2/code/google
 ```
 
-Configure `.env.prod`:
+`.env.prod`:
 
 ```text
 OAUTH2_SUCCESS_REDIRECT_URI=https://YOUR_DOMAIN/oauth2/success
@@ -68,9 +64,9 @@ REFRESH_TOKEN_COOKIE_SECURE=true
 REFRESH_TOKEN_COOKIE_SAME_SITE=Lax
 ```
 
-## Object Storage URL Policy
+## Object Storage URL 정책
 
-For the in-compose MinIO MVP:
+Compose 내부 MinIO MVP 기준:
 
 ```text
 MINIO_ENDPOINT=http://minio:9000
@@ -78,45 +74,45 @@ MINIO_PUBLIC_ENDPOINT=https://YOUR_DOMAIN
 MINIO_BUCKET=image-preprocess-prod
 ```
 
-The frontend receives presigned URLs using the public endpoint. NGINX proxies this bucket prefix:
+프론트엔드는 public endpoint가 들어간 presigned URL을 받습니다. NGINX는 아래 bucket prefix를 proxy합니다.
 
 ```text
 /image-preprocess-prod/
 ```
 
-If the bucket name changes, update:
+bucket 이름을 바꾸면 아래 파일에도 같은 prefix를 추가해야 합니다.
 
 ```text
 infra/nginx/conf.d/app.conf
 ```
 
-## Public Port Policy
+## 공개 포트 정책
 
-Only one public entry point should be open:
+공개 진입점은 하나만 둡니다.
 
-| Port | Public? | Reason |
+| 포트 | 공개 여부 | 이유 |
 | --- | --- | --- |
-| `80` or `443` | Yes | NGINX or TLS terminator |
-| `8080` backend-api | No | Routed through NGINX |
-| `5432` PostgreSQL | No | Internal only |
-| `5672` RabbitMQ AMQP | No | Internal only |
-| `15672` RabbitMQ Management | No | SSH tunnel only |
-| `9000` MinIO API | No | Bucket path routed through NGINX |
-| `9001` MinIO Console | No | SSH tunnel only |
+| `80` 또는 `443` | 예 | NGINX 또는 TLS 종료 지점 |
+| `8080` backend-api | 아니오 | NGINX를 통해 접근 |
+| `5432` PostgreSQL | 아니오 | 내부 전용 |
+| `5672` RabbitMQ AMQP | 아니오 | 내부 전용 |
+| `15672` RabbitMQ Management | 아니오 | SSH tunnel 또는 관리자망 전용 |
+| `9000` MinIO API | 아니오 | bucket path를 NGINX로 proxy |
+| `9001` MinIO Console | 아니오 | SSH tunnel 또는 관리자망 전용 |
 
-## Swagger Policy
+## Swagger 공개 정책
 
-The current MVP leaves:
+현재 MVP는 아래 경로를 NGINX를 통해 접근할 수 있습니다.
 
 ```text
 /swagger-ui/
 /v3/api-docs
 ```
 
-reachable through NGINX. Before public production, choose one:
+운영 공개 전 아래 중 하나를 결정합니다.
 
-1. Leave it open for MVP demo only.
-2. Restrict by IP at the load balancer/firewall.
-3. Add Basic Auth or disable the NGINX routes.
+1. MVP 시연용으로만 공개합니다.
+2. 로드밸런서나 방화벽에서 IP를 제한합니다.
+3. Basic Auth를 붙이거나 NGINX route를 막습니다.
 
-For a student/demo MVP, option 1 is acceptable only if no real user data is uploaded.
+실제 사용자 데이터가 올라가는 환경에서는 Swagger 공개 범위를 제한하는 것이 안전합니다.

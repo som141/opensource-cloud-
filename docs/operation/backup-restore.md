@@ -1,22 +1,20 @@
-# Backup And Restore
+# 백업과 복구
 
-## Purpose
+MVP에서 영속 데이터는 PostgreSQL과 MinIO volume에 저장됩니다.
+운영 백업은 두 저장소를 모두 포함해야 합니다. RabbitMQ queue topology는 Git에 있으며, 대기 중인 메시지는 유지 대상이 아니라 배포/점검 전에 가능한 비우는 것을 기준으로 합니다.
 
-The MVP stores durable data in PostgreSQL and MinIO volumes. Backups must cover both. RabbitMQ queue definitions are in
-Git; queued messages are transient and should normally be drained before maintenance.
+## 백업 대상
 
-## What To Back Up
-
-| Data | Source | Backup method |
+| 데이터 | 위치 | 백업 방식 |
 | --- | --- | --- |
-| PostgreSQL records | `image-preprocess-postgres` | `pg_dump` |
-| Original and processed images | MinIO data volume | MinIO mirror or volume archive |
-| Production secrets | `/opt/image-preprocess/shared/.env.prod` | Secure password manager or encrypted backup |
+| 사용자, 프로젝트, 이미지, Job 메타데이터 | PostgreSQL | `pg_dump` |
+| 원본 이미지와 처리 결과 | MinIO data volume | volume archive 또는 MinIO mirror |
+| 운영 secret | `/opt/image-preprocess/shared/.env.prod` | password manager 또는 암호화 백업 |
 | Queue topology | `infra/rabbitmq/definitions.json` | Git |
 
-## PostgreSQL Backup
+## PostgreSQL 백업
 
-Run on the deployment server:
+운영 서버에서 실행합니다.
 
 ```bash
 mkdir -p /opt/image-preprocess/backups/postgres
@@ -25,13 +23,13 @@ docker exec image-preprocess-postgres \
   > "/opt/image-preprocess/backups/postgres/image-preprocess-$(date +%Y%m%d-%H%M%S).sql"
 ```
 
-If the shell does not have `POSTGRES_USER` and `POSTGRES_DB`, read them from:
+shell에 `POSTGRES_USER`, `POSTGRES_DB`가 없다면 아래 파일에서 값을 확인합니다.
 
 ```text
 /opt/image-preprocess/shared/.env.prod
 ```
 
-or pass explicit values:
+또는 명시적으로 실행합니다.
 
 ```bash
 docker exec image-preprocess-postgres \
@@ -39,9 +37,9 @@ docker exec image-preprocess-postgres \
   > /opt/image-preprocess/backups/postgres/image-preprocess.sql
 ```
 
-## PostgreSQL Restore
+## PostgreSQL 복구
 
-Restore into an empty or intentionally reset database:
+비어 있는 DB 또는 의도적으로 초기화한 DB에만 복구합니다.
 
 ```bash
 cat /opt/image-preprocess/backups/postgres/image-preprocess.sql | \
@@ -49,11 +47,11 @@ cat /opt/image-preprocess/backups/postgres/image-preprocess.sql | \
   psql -U image_preprocess -d image_preprocess
 ```
 
-Do not restore over active production traffic without stopping API and Worker first.
+운영 트래픽이 살아 있는 상태에서 덮어쓰지 않습니다. 복구 전 backend-api와 preprocess-worker를 먼저 중지합니다.
 
-## MinIO Backup
+## MinIO 백업
 
-Recommended MVP backup is a volume archive while the stack is stopped or quiesced:
+MVP에서는 stack을 멈추거나 API/Worker를 일시 중지한 뒤 volume archive를 만드는 방식을 권장합니다.
 
 ```bash
 mkdir -p /opt/image-preprocess/backups/minio
@@ -70,7 +68,7 @@ docker run --rm \
   tar -czf /backup/minio-data-$(date +%Y%m%d-%H%M%S).tgz -C /source .
 ```
 
-Restart after the archive finishes:
+백업 후 stack을 다시 시작합니다.
 
 ```bash
 docker compose \
@@ -80,9 +78,9 @@ docker compose \
   up -d
 ```
 
-## MinIO Restore
+## MinIO 복구
 
-Restore only when the stack is stopped:
+stack을 중지한 뒤 복구합니다.
 
 ```bash
 docker compose \
@@ -98,28 +96,28 @@ docker run --rm \
   sh -c 'rm -rf /target/* && tar -xzf /backup/minio-data-YYYYMMDD-HHMMSS.tgz -C /target'
 ```
 
-Then start the stack.
+복구가 끝나면 stack을 다시 시작합니다.
 
-## Secret Backup
+## Secret 백업
 
-Back up:
+아래 파일은 반드시 별도로 보관합니다.
 
 ```text
 /opt/image-preprocess/shared/.env.prod
 ```
 
-Store it in a password manager or encrypted secret storage. Never commit it to Git.
+password manager 또는 암호화 저장소에 저장합니다. Git에는 절대 커밋하지 않습니다.
 
-## Minimum Backup Schedule
+## 최소 백업 주기
 
-For MVP demo:
+MVP 시연 기준:
 
-- PostgreSQL: before every deployment and after successful demo data upload.
-- MinIO: before every deployment that changes storage paths or worker artifact behavior.
-- `.env.prod`: whenever secrets change.
+- PostgreSQL: 배포 전, 시연 데이터 업로드 후
+- MinIO: 저장 경로 또는 Worker artifact 동작이 바뀌는 배포 전
+- `.env.prod`: secret 변경 시
 
-For real usage:
+실사용 기준:
 
-- PostgreSQL: daily.
-- MinIO: daily or object-storage-provider lifecycle backup.
-- Retention: at least 7 daily backups and 4 weekly backups.
+- PostgreSQL: 매일
+- MinIO: 매일 또는 object-storage-provider lifecycle backup
+- 보존 기간: 최소 일별 7개, 주별 4개
