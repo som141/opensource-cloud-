@@ -22,6 +22,16 @@ class PreprocessParameterValidatorTests {
         assertThat(response.resolvedParameters())
             .containsEntry("targetDpi", "300")
             .containsEntry("binarizationMode", "otsu")
+            .containsEntry("adaptiveBlockSize", "21")
+            .containsEntry("adaptiveC", "5.0")
+            .containsEntry("contrastClipLimit", "2.0")
+            .containsEntry("denoiseMode", "median")
+            .containsEntry("denoiseSigmaColor", "25.0")
+            .containsEntry("denoiseSigmaRange", "75.0")
+            .containsEntry("morphologyMode", "open_close")
+            .containsEntry("morphologyKernelSize", "2")
+            .containsEntry("sharpenAmount", "0.8")
+            .containsEntry("sharpenSigma", "1.5")
             .containsEntry("debugArtifacts", "false");
     }
 

@@ -35,4 +35,21 @@ class PreprocessPresetRegistryTests {
         assertThatThrownBy(() -> registry.findByName("resize_only"))
             .isInstanceOf(PresetNotFoundException.class);
     }
+
+    @Test
+    void exposesWorkerQualityParameters() {
+        assertThat(registry.findByName("NOISY_SCAN").getParameters())
+            .extracting(parameter -> parameter.name())
+            .contains(
+                "adaptiveBlockSize",
+                "adaptiveC",
+                "denoiseMode",
+                "denoiseSigmaColor",
+                "denoiseSigmaRange",
+                "morphologyMode",
+                "morphologyKernelSize",
+                "sharpenAmount",
+                "sharpenSigma"
+            );
+    }
 }

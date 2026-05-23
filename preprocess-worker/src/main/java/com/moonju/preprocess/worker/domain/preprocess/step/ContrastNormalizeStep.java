@@ -14,7 +14,7 @@ import org.springframework.stereotype.Component;
 @Component
 public class ContrastNormalizeStep implements PreprocessStep {
 
-    private static final double DEFAULT_CLIP_LIMIT = 1.2;
+    private static final double DEFAULT_CLIP_LIMIT = 2.0;
     private static final int DEFAULT_TILE_GRID_SIZE = 8;
 
     @Override

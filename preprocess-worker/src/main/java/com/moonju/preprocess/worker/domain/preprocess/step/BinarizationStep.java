@@ -10,8 +10,8 @@ import org.springframework.stereotype.Component;
 @Component
 public class BinarizationStep implements PreprocessStep {
 
-    private static final int DEFAULT_ADAPTIVE_BLOCK_SIZE = 31;
-    private static final double DEFAULT_ADAPTIVE_C = 7.0;
+    private static final int DEFAULT_ADAPTIVE_BLOCK_SIZE = 21;
+    private static final double DEFAULT_ADAPTIVE_C = 5.0;
 
     @Override
     public PreprocessStepName name() {

@@ -63,6 +63,20 @@ class BinarizationStepTests {
     }
 
     @Test
+    void usesTunedAdaptiveDefaultsWhenParametersAreMissing() {
+        PreprocessContext context = context(Map.of("binarizationMode", "adaptive"));
+        ImageMatHolder sourceHolder = ImageMatHolder.decoded("originals/text.png", documentLikeImage());
+        context.storeDecodedImage(sourceHolder);
+
+        step.execute(context);
+
+        assertThat(context.consumeStepNote(PreprocessStepName.BINARIZATION))
+            .contains("blockSize=21")
+            .contains("c=5.0");
+        context.releaseDecodedImage();
+    }
+
+    @Test
     void fallsBackToOtsuWhenModeIsUnsupported() {
         PreprocessContext context = context(Map.of("binarizationMode", "unknown"));
         ImageMatHolder sourceHolder = ImageMatHolder.decoded("originals/text.png", documentLikeImage());

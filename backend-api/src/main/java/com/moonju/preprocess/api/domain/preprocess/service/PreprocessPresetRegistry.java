@@ -63,7 +63,7 @@ public class PreprocessPresetRegistry {
             "General A4 document scan preset for OCR preprocessing.",
             true,
             DOCUMENT_PIPELINE_STEPS,
-            commonParameters(300, "otsu", 1.2, false)
+            commonParameters(300, "otsu", 2.0, "median", false)
         ));
         register(new PreprocessPreset(
             PreprocessPresetName.LOW_CONTRAST_SCAN,
@@ -72,7 +72,7 @@ public class PreprocessPresetRegistry {
             "Improves low contrast scans using stronger contrast normalization before binarization.",
             true,
             DOCUMENT_PIPELINE_STEPS,
-            commonParameters(300, "adaptive", 1.6, true)
+            commonParameters(300, "adaptive", 2.4, "median", true)
         ));
         register(new PreprocessPreset(
             PreprocessPresetName.RECEIPT,
@@ -81,7 +81,7 @@ public class PreprocessPresetRegistry {
             "Narrow receipt-like document preset with adaptive thresholding and light morphology cleanup.",
             true,
             DOCUMENT_PIPELINE_STEPS,
-            commonParameters(300, "adaptive", 1.4, true)
+            commonParameters(300, "adaptive", 2.2, "median", true)
         ));
         register(new PreprocessPreset(
             PreprocessPresetName.NOISY_SCAN,
@@ -90,7 +90,7 @@ public class PreprocessPresetRegistry {
             "Preset for scans with strong background noise and more aggressive denoise settings.",
             true,
             DOCUMENT_PIPELINE_STEPS,
-            commonParameters(300, "adaptive", 1.5, false)
+            commonParameters(300, "adaptive", 2.0, "bilateral", false)
         ));
         register(new PreprocessPreset(
             PreprocessPresetName.AUTO,
@@ -115,6 +115,7 @@ public class PreprocessPresetRegistry {
         int targetDpi,
         String binarizationMode,
         double contrastClipLimit,
+        String denoiseMode,
         boolean sharpen
     ) {
         return List.of(
@@ -141,6 +142,22 @@ public class PreprocessPresetRegistry {
                 binarizationMode,
                 Set.of("otsu", "adaptive")
             ),
+            PresetParameterDefinition.integer(
+                "adaptiveBlockSize",
+                "Odd block size for adaptive thresholding.",
+                true,
+                21,
+                3,
+                99
+            ),
+            PresetParameterDefinition.decimal(
+                "adaptiveC",
+                "Constant subtracted from the adaptive threshold mean.",
+                true,
+                5.0,
+                -20.0,
+                20.0
+            ),
             PresetParameterDefinition.decimal(
                 "contrastClipLimit",
                 "CLAHE-like contrast normalization strength.",
@@ -149,10 +166,88 @@ public class PreprocessPresetRegistry {
                 1.0,
                 4.0
             ),
+            PresetParameterDefinition.integer(
+                "contrastTileGridSize",
+                "CLAHE tile grid size.",
+                true,
+                8,
+                1,
+                32
+            ),
+            PresetParameterDefinition.option(
+                "denoiseMode",
+                "Denoise strategy used by the worker.",
+                true,
+                denoiseMode,
+                Set.of("median", "bilateral", "none", "off", "false")
+            ),
+            PresetParameterDefinition.integer(
+                "denoiseKernelSize",
+                "Median blur kernel size.",
+                true,
+                3,
+                3,
+                15
+            ),
+            PresetParameterDefinition.integer(
+                "denoiseDiameter",
+                "Bilateral filter neighborhood diameter.",
+                true,
+                5,
+                3,
+                15
+            ),
+            PresetParameterDefinition.decimal(
+                "denoiseSigmaColor",
+                "Bilateral filter color sigma. Lower values preserve text edges.",
+                true,
+                25.0,
+                0.1,
+                200.0
+            ),
+            PresetParameterDefinition.decimal(
+                "denoiseSigmaRange",
+                "Bilateral filter spatial sigma range.",
+                true,
+                75.0,
+                0.1,
+                200.0
+            ),
+            PresetParameterDefinition.option(
+                "morphologyMode",
+                "Morphology cleanup strategy.",
+                true,
+                "open_close",
+                Set.of("open", "close", "open_close", "none", "off", "false")
+            ),
+            PresetParameterDefinition.integer(
+                "morphologyKernelSize",
+                "Morphology cleanup kernel size.",
+                true,
+                2,
+                1,
+                7
+            ),
             PresetParameterDefinition.bool(
                 "sharpen",
                 "Whether optional sharpen step should run after DPI normalization.",
                 sharpen
+            ),
+            PresetParameterDefinition.decimal(
+                "sharpenAmount",
+                "Unsharp mask weight for optional sharpen.",
+                true,
+                0.8,
+                0.1,
+                3.0
+            ),
+            PresetParameterDefinition.decimal(
+                "sharpenSigma",
+                "Gaussian blur sigma for optional sharpen.",
+                true,
+                1.5,
+                0.1,
+                10.0
             ),
             PresetParameterDefinition.bool(
                 "debugArtifacts",
