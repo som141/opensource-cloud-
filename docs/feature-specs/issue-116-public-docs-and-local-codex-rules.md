@@ -1,49 +1,19 @@
-# Issue 116. 사용자 문서와 Codex 로컬 규칙 문서 분리
+# 이슈 116. 공개 문서와 로컬 Codex 규칙 분리
 
 ## 목적
 
-AI/Codex가 참고하는 작업 규칙 문서와 사용자가 읽는 공개 문서를 분리한다.  
-공개 문서는 한글 기준으로 정리하고, README는 SaaS 프로젝트 소개 문서처럼 기능, 아키텍처, 빠른 시작, 운영 배포, 문서 링크를 제공한다.
+사용자가 보는 공개 문서와 AI/Codex 작업 규칙 문서를 분리합니다.
 
-## 변경 범위
+## 작업 범위
 
-- `README.md`를 한글 SaaS 프로젝트 README로 재작성
-- `docs/README.md` 문서 인덱스 추가
-- `docs/architecture/system-overview.md` 추가
-- `docs/architecture/repository-structure.md` 추가
-- `docs/operation/README.md` 추가
-- `docs/operation/production-deployment-guide.md` 추가
-- 운영 배포 관련 문서 한글화
-- Codex 로컬 규칙 문서 Git 추적 제외
+1. `README.md` 정리
+2. `docs/` 사용자 문서 연결
+3. 운영/배포 문서 연결
+4. `AGENTS.md` 같은 로컬 작업 규칙 문서 제외 정책 정리
+5. secret 기록 파일 제외 정책 정리
 
-## 로컬 전용 문서 기준
+## 완료 기준
 
-아래 문서는 작업자 로컬에서만 유지한다.
-
-```text
-AGENTS.md
-CODEX_DIRECTORY_SPEC.md
-LOCAL_CONFIG.md
-*.local.md
-.codex/
-```
-
-이 파일들은 공개 사용자 문서가 아니므로 원격 repository에 올리지 않는다.
-
-## 공개 문서 기준
-
-공개 문서는 아래 경로에 둔다.
-
-```text
-README.md
-docs/
-```
-
-문서는 기본적으로 한글로 작성하고, 운영자가 실제로 따라 할 수 있도록 명령어와 검증 기준을 포함한다.
-
-## 완료 조건
-
-- README에서 주요 문서로 이동할 수 있다.
-- 운영 배포 문서가 서버 준비, 환경변수, GitHub Actions, E2E 검증 순서로 연결된다.
-- Codex 규칙 문서는 Git 추적 대상에서 제외된다.
-- Markdown 링크와 Git diff 공백 검증을 수행한다.
+1. 공개 문서는 GitHub에 올라가도 안전합니다.
+2. 로컬 secret과 AI 작업 규칙은 원격에 올리지 않습니다.
+3. 사용자는 README에서 필요한 운영 문서로 이동할 수 있습니다.

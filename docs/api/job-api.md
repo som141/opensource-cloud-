@@ -1,70 +1,68 @@
 # Job API
 
-## Purpose
+## 목적
 
-Job API registers large-scale document image preprocessing work. It validates project access, selected images, and
-preprocess preset parameters, then publishes image-level RabbitMQ messages for Worker execution.
+Job API는 대량 문서 이미지 전처리 작업을 등록합니다.
+프로젝트 접근 권한, 선택된 이미지, 전처리 프리셋 파라미터를 검증한 뒤 이미지 단위 RabbitMQ 메시지를 발행해 Worker가 처리하게 합니다.
 
-The API server does not execute OpenCV preprocessing. Worker execution and artifact upload are handled by later Worker
-tasks.
+API 서버는 OpenCV 전처리를 직접 실행하지 않습니다. 실제 이미지 처리와 artifact 저장은 preprocess-worker가 담당합니다.
 
-## State Model
+## 상태 모델
 
-### Job Status
+### Job 상태
 
-| Status | Meaning |
+| 상태 | 의미 |
 | --- | --- |
-| `CREATED` | Job entity was created before queueing |
-| `QUEUED` | JobItems were queued and messages were published |
-| `RUNNING` | At least one Worker is processing an item |
-| `PARTIAL_SUCCEEDED` | Some items succeeded and some failed |
-| `SUCCEEDED` | All items succeeded |
-| `FAILED` | Job failed without successful completion |
-| `CANCEL_REQUESTED` | User requested cancellation |
-| `CANCELLED` | Job was cancelled |
-| `RETRYING` | Failed or selected items were requeued |
+| `CREATED` | Job entity가 생성됨 |
+| `QUEUED` | JobItem이 queue에 등록되고 메시지가 발행됨 |
+| `RUNNING` | 하나 이상의 Worker가 item을 처리 중 |
+| `PARTIAL_SUCCEEDED` | 일부 item 성공, 일부 item 실패 |
+| `SUCCEEDED` | 모든 item 성공 |
+| `FAILED` | 성공 없이 Job 실패 |
+| `CANCEL_REQUESTED` | 사용자가 취소를 요청함 |
+| `CANCELLED` | Job이 취소됨 |
+| `RETRYING` | 실패 또는 선택된 item이 재등록됨 |
 
-### JobItem Status
+### JobItem 상태
 
-| Status | Meaning |
+| 상태 | 의미 |
 | --- | --- |
-| `PENDING` | Item exists but is not queued yet |
-| `QUEUED` | Item is ready for Worker consumption |
-| `PROCESSING` | Worker is processing the image |
-| `SUCCEEDED` | Worker completed successfully |
-| `FAILED` | Worker reported a retryable or final failure |
-| `SKIPPED` | Item was skipped intentionally |
-| `CANCELLED` | Item was cancelled before processing |
-| `RETRYING` | Item was requeued |
-| `DEAD_LETTERED` | Item exceeded retry handling and moved to DLQ |
+| `PENDING` | item은 있지만 아직 queue에 등록되지 않음 |
+| `QUEUED` | Worker가 소비할 수 있는 상태 |
+| `PROCESSING` | Worker가 이미지 처리 중 |
+| `SUCCEEDED` | Worker 처리 성공 |
+| `FAILED` | Worker가 실패 보고 |
+| `SKIPPED` | 의도적으로 건너뜀 |
+| `CANCELLED` | 처리 전 취소됨 |
+| `RETRYING` | 재등록됨 |
+| `DEAD_LETTERED` | 재시도 한도를 넘거나 DLQ로 이동 |
 
-## Endpoints
+## Endpoint
 
-All endpoints require `Authorization: Bearer <access-token>`.
+모든 사용자용 endpoint는 `Authorization: Bearer <access-token>`이 필요합니다.
 
-| Method | Path | Purpose |
+| Method | Path | 설명 |
 | --- | --- | --- |
-| `POST` | `/api/v1/jobs` | Create preprocessing job |
-| `GET` | `/api/v1/jobs` | List my jobs |
-| `GET` | `/api/v1/jobs/{jobId}` | Read job detail |
-| `GET` | `/api/v1/jobs/{jobId}/items` | List image-level job items |
-| `GET` | `/api/v1/jobs/{jobId}/items/{itemId}/download?type=processed` | Create processed image download URL |
-| `GET` | `/api/v1/jobs/{jobId}/items/{itemId}/download?type=preview` | Create preview image download URL |
-| `GET` | `/api/v1/jobs/{jobId}/items/{itemId}/download?type=report` | Create processing report download URL |
-| `GET` | `/api/v1/jobs/{jobId}/summary` | Read progress counters |
-| `GET` | `/api/v1/jobs/{jobId}/events` | Subscribe to progress SSE stream |
-| `POST` | `/api/v1/jobs/{jobId}/cancel` | Request cancellation |
-| `POST` | `/api/v1/jobs/{jobId}/retry` | Retry failed and dead-lettered items |
-| `POST` | `/api/v1/jobs/{jobId}/rerun` | Requeue all non-processing items |
-| `GET` | `/api/v1/jobs/{jobId}/artifacts` | List processed image artifacts |
-| `GET` | `/api/v1/jobs/{jobId}/download.zip` | Create processed image ZIP download URL |
+| `POST` | `/api/v1/jobs` | 전처리 Job 생성 |
+| `GET` | `/api/v1/jobs` | 내 Job 목록 |
+| `GET` | `/api/v1/jobs/{jobId}` | Job 상세 |
+| `GET` | `/api/v1/jobs/{jobId}/items` | 이미지 단위 JobItem 목록 |
+| `GET` | `/api/v1/jobs/{jobId}/items/{itemId}/download?type=processed` | 처리 결과 이미지 다운로드 URL |
+| `GET` | `/api/v1/jobs/{jobId}/items/{itemId}/download?type=preview` | preview 다운로드 URL |
+| `GET` | `/api/v1/jobs/{jobId}/items/{itemId}/download?type=report` | 처리 리포트 다운로드 URL |
+| `GET` | `/api/v1/jobs/{jobId}/summary` | 진행률 counter 조회 |
+| `GET` | `/api/v1/jobs/{jobId}/events` | 진행률 SSE stream |
+| `POST` | `/api/v1/jobs/{jobId}/cancel` | 취소 요청 |
+| `POST` | `/api/v1/jobs/{jobId}/retry` | 실패 item 재시도 |
+| `POST` | `/api/v1/jobs/{jobId}/rerun` | 처리 중이 아닌 item 전체 재등록 |
+| `GET` | `/api/v1/jobs/{jobId}/artifacts` | 처리 결과 artifact 목록 |
+| `GET` | `/api/v1/jobs/{jobId}/download.zip` | 처리 결과 ZIP 다운로드 URL |
 
-Internal Worker endpoints are not user-facing APIs. They require `X-Worker-Token` and are mounted under
-`/internal/v1/**`.
+Internal Worker API는 사용자용 API가 아닙니다. `/internal/v1/**` 하위에 있고 `X-Worker-Token`이 필요합니다.
 
-## Create Job
+## Job 생성
 
-Request:
+요청:
 
 ```json
 {
@@ -86,13 +84,13 @@ Request:
 }
 ```
 
-Response:
+응답:
 
 ```json
 {
   "isSuccess": true,
   "code": "common201",
-  "message": "Created.",
+  "message": "생성되었습니다.",
   "result": {
     "jobId": 1,
     "status": "QUEUED",
@@ -103,25 +101,25 @@ Response:
 }
 ```
 
-Rules:
+규칙:
 
-- `imageIds` must be non-empty and unique.
-- All images must belong to the requested project.
-- Deleted images are rejected.
-- Preset parameters are validated by `POST /api/v1/preprocess/presets/validate` logic before messages are published.
-- The API publishes one RabbitMQ message per image.
+- `imageIds`는 비어 있을 수 없고 중복될 수 없습니다.
+- 모든 이미지는 요청한 프로젝트에 속해야 합니다.
+- 삭제된 이미지는 거부합니다.
+- preset 파라미터는 메시지 발행 전에 preset validation 로직으로 검증합니다.
+- API는 이미지마다 RabbitMQ 메시지 하나를 발행합니다.
 
-## RabbitMQ Routing
+## RabbitMQ 라우팅
 
-| Priority | Queue |
+| 우선순위 | Queue |
 | --- | --- |
 | `HIGH` | `image.preprocess.high` |
 | `LOW` | `image.preprocess.normal` |
 | `NORMAL` | `image.preprocess.normal` |
 
-Retry requests publish to `image.preprocess.retry`.
+재시도 요청은 `image.preprocess.retry`로 발행합니다.
 
-## Message Contract
+## 메시지 계약
 
 ```json
 {
@@ -144,7 +142,7 @@ Retry requests publish to `image.preprocess.retry`.
 }
 ```
 
-## List And Detail
+## 목록과 상세
 
 ```text
 GET /api/v1/jobs?page=0&size=20
@@ -152,9 +150,9 @@ GET /api/v1/jobs/{jobId}
 GET /api/v1/jobs/{jobId}/items?page=0&size=50
 ```
 
-`GET /api/v1/jobs` lists jobs created by the current user. Detail and item APIs validate project read permission.
+`GET /api/v1/jobs`는 현재 사용자가 생성한 Job을 조회합니다. 상세와 item API는 프로젝트 조회 권한을 검증합니다.
 
-## JobItem Artifact Download
+## JobItem artifact 다운로드
 
 ```text
 GET /api/v1/jobs/{jobId}/items/{itemId}/download?type=processed
@@ -162,16 +160,15 @@ GET /api/v1/jobs/{jobId}/items/{itemId}/download?type=preview
 GET /api/v1/jobs/{jobId}/items/{itemId}/download?type=report
 ```
 
-The API validates that the current user can read the Job's project, finds the requested JobItem, maps the requested
-artifact type to the Worker-registered object key, and returns a temporary Object Storage download URL.
+API는 현재 사용자가 Job의 프로젝트를 조회할 수 있는지 확인하고, 요청한 JobItem에서 artifact type에 맞는 object key를 찾아 임시 다운로드 URL을 반환합니다.
 
-Response:
+응답:
 
 ```json
 {
   "isSuccess": true,
   "code": "common200",
-  "message": "Request succeeded.",
+  "message": "요청에 성공했습니다.",
   "result": {
     "jobId": 1,
     "itemId": 10,
@@ -183,29 +180,27 @@ Response:
 }
 ```
 
-Rules:
+규칙:
 
-- `type` must be one of `processed`, `preview`, or `report`.
-- If the Worker has not registered the requested object key yet, the API returns `common404`.
-- Debug artifact expansion remains separate from this JobItem-level result download flow.
+- `type`은 `processed`, `preview`, `report` 중 하나입니다.
+- Worker가 아직 object key를 등록하지 않았다면 `common404`를 반환합니다.
+- debug artifact 확장은 이 item-level 다운로드 흐름과 분리합니다.
 
-## Job Processed Artifact Listing
+## 처리 결과 artifact 목록
 
 ```text
 GET /api/v1/jobs/{jobId}/artifacts
 ```
 
-The API validates project read permission, scans JobItems for completed processed images, and returns processed-only
-artifact download URLs. Preview images, processing reports, and debug artifacts stay hidden from the MVP user-facing
-listing.
+API는 프로젝트 조회 권한을 확인하고, 성공한 JobItem 중 `processedObjectKey`가 있는 항목만 반환합니다. MVP 사용자 화면에서는 preview, report, debug artifact URL을 숨깁니다.
 
-Response:
+응답:
 
 ```json
 {
   "isSuccess": true,
   "code": "common200",
-  "message": "Request succeeded.",
+  "message": "요청에 성공했습니다.",
   "result": {
     "jobId": 1,
     "totalItems": 3,
@@ -224,22 +219,13 @@ Response:
 }
 ```
 
-Rules:
-
-- Only `SUCCEEDED` JobItems with a non-empty `processedObjectKey` are included.
-- If no processed images are ready, `processedArtifacts` is an empty list.
-- The endpoint does not expose preview, report, or debug artifact URLs.
-- Item-level artifact download remains available through `/items/{itemId}/download`.
-
-## Processed ZIP Download
+## 처리 결과 ZIP 다운로드
 
 ```text
 GET /api/v1/jobs/{jobId}/download.zip
 ```
 
-The API creates a ZIP archive from succeeded JobItems that have a `processedObjectKey`, uploads the archive to object
-storage, and returns a temporary download URL. The archive contains processed images only. Preview images, processing
-reports, and debug artifacts are intentionally excluded from this MVP download flow.
+API는 `SUCCEEDED` 상태이고 `processedObjectKey`가 있는 JobItem의 처리 결과 이미지만 ZIP으로 묶습니다. preview, report, debug artifact는 MVP ZIP 다운로드에 포함하지 않습니다.
 
 Archive object key:
 
@@ -247,13 +233,13 @@ Archive object key:
 archives/{projectId}/{jobId}/processed-results.zip
 ```
 
-Response:
+응답:
 
 ```json
 {
   "isSuccess": true,
   "code": "common200",
-  "message": "Request succeeded.",
+  "message": "요청에 성공했습니다.",
   "result": {
     "jobId": 1,
     "fileCount": 3,
@@ -264,22 +250,22 @@ Response:
 }
 ```
 
-Rules:
+규칙:
 
-- The current user must have read permission for the Job's project.
-- Only `SUCCEEDED` items with a non-empty `processedObjectKey` are included.
-- If no processed images are ready, the API returns `common404`.
-- The ZIP file is regenerated on request so the archive reflects the latest processed item set.
+- 현재 사용자가 Job의 프로젝트를 조회할 수 있어야 합니다.
+- 성공한 item 중 처리 결과 object key가 있는 항목만 포함합니다.
+- 처리된 이미지가 없으면 `common404`를 반환합니다.
+- ZIP은 요청 시점마다 다시 생성해 최신 결과를 반영합니다.
 
-## Summary
+## 요약
 
-Response:
+응답:
 
 ```json
 {
   "isSuccess": true,
   "code": "common200",
-  "message": "Request succeeded.",
+  "message": "요청에 성공했습니다.",
   "result": {
     "jobId": 1,
     "total": 1000,
@@ -292,28 +278,25 @@ Response:
 }
 ```
 
-`progressPercent` is calculated from `(succeeded + failed) / total * 100`.
+`progressPercent`는 `(succeeded + failed) / total * 100`으로 계산합니다.
 
-## SSE Progress Stream
+## SSE 진행률 stream
 
 ```text
 GET /api/v1/jobs/{jobId}/events
 Accept: text/event-stream
 ```
 
-The stream validates normal Job read permission before opening the connection. On subscribe, the API sends a heartbeat
-event and a current `JOB_PROGRESS` snapshot based on `GET /api/v1/jobs/{jobId}/summary`.
+연결 전에 일반 Job 조회 권한을 검증합니다. 구독이 시작되면 heartbeat event와 현재 `JOB_PROGRESS` snapshot을 전송합니다.
 
-Event types:
-
-| Event | Purpose |
+| Event | 설명 |
 | --- | --- |
-| `HEARTBEAT` | Keeps the stream alive and verifies the connection |
-| `JOB_PROGRESS` | Sends current progress counters |
-| `JOB_COMPLETED` | Reserved for completed Job transition |
-| `JOB_FAILED` | Reserved for failed Job transition |
+| `HEARTBEAT` | 연결 유지와 상태 확인 |
+| `JOB_PROGRESS` | 현재 진행률 counter 전송 |
+| `JOB_COMPLETED` | Job 완료 전환 예약 event |
+| `JOB_FAILED` | Job 실패 전환 예약 event |
 
-Example payload:
+예시 payload:
 
 ```json
 {
@@ -329,84 +312,52 @@ Example payload:
 }
 ```
 
-Worker state reports now refresh Job counters and publish SSE progress events through the Internal Worker API.
+Worker 상태 보고는 Internal Worker API를 통해 Job counter를 갱신하고 SSE 진행률 event를 발행합니다.
 
 ## Internal Worker API
 
-Authentication:
+인증:
 
 ```http
 X-Worker-Token: <WORKER_INTERNAL_TOKEN>
 ```
 
-| Method | Path | Purpose |
+| Method | Path | 설명 |
 | --- | --- | --- |
-| `POST` | `/internal/v1/jobs/{jobId}/items/{itemId}/started` | Mark item as `PROCESSING` |
-| `POST` | `/internal/v1/jobs/{jobId}/items/{itemId}/heartbeat` | Update processing heartbeat |
-| `POST` | `/internal/v1/jobs/{jobId}/items/{itemId}/succeeded` | Mark item as `SUCCEEDED` and store result keys |
-| `POST` | `/internal/v1/jobs/{jobId}/items/{itemId}/failed` | Mark item as `FAILED` and store error metadata |
-| `POST` | `/internal/v1/jobs/{jobId}/items/{itemId}/artifacts` | Register artifact object keys |
-| `GET` | `/internal/v1/preprocess/presets` | Return built-in presets for Worker |
+| `POST` | `/internal/v1/jobs/{jobId}/items/{itemId}/started` | item을 `PROCESSING`으로 변경 |
+| `POST` | `/internal/v1/jobs/{jobId}/items/{itemId}/heartbeat` | 처리 중 heartbeat 갱신 |
+| `POST` | `/internal/v1/jobs/{jobId}/items/{itemId}/succeeded` | item을 `SUCCEEDED`로 바꾸고 결과 key 저장 |
+| `POST` | `/internal/v1/jobs/{jobId}/items/{itemId}/failed` | item을 `FAILED`로 바꾸고 오류 정보 저장 |
+| `POST` | `/internal/v1/jobs/{jobId}/items/{itemId}/artifacts` | artifact object key 등록 |
+| `GET` | `/internal/v1/preprocess/presets` | Worker용 built-in preset 반환 |
 
-Started request:
+규칙:
 
-```json
-{
-  "workerId": "local-worker-1",
-  "attempt": 1
-}
-```
+- 사용자 Access Token은 `/internal/**`를 인증하지 못합니다.
+- `X-Worker-Token`이 없거나 틀리면 `WORKER401`을 반환합니다.
+- 잘못된 item 상태 전환은 `WORKER409`를 반환합니다.
+- API는 DB 상태만 갱신하고 실제 OpenCV 처리는 `preprocess-worker`가 수행합니다.
 
-Succeeded request:
-
-```json
-{
-  "workerId": "local-worker-1",
-  "processedObjectKey": "processed/1/1/10/processed.png",
-  "previewObjectKey": "processed/1/1/10/preview.png",
-  "reportObjectKey": "processed/1/1/10/processing-report.json"
-}
-```
-
-Failure request:
-
-```json
-{
-  "workerId": "local-worker-1",
-  "errorCode": "DECODE_FAILED",
-  "errorMessage": "Cannot decode image.",
-  "retryable": false
-}
-```
-
-Rules:
-
-- User access tokens do not authorize `/internal/**`.
-- Missing or invalid `X-Worker-Token` returns `WORKER401`.
-- Invalid item state transitions return `WORKER409`.
-- The API updates DB state only; actual OpenCV preprocessing stays in `preprocess-worker`.
-
-## Cancel
+## 취소
 
 ```text
 POST /api/v1/jobs/{jobId}/cancel
 ```
 
-Cancellation is cooperative. The API marks the Job as `CANCEL_REQUESTED` and cancels items that have not started.
-Processing items are left unchanged so the Worker can finish or stop at a safe checkpoint.
+취소는 cooperative 방식입니다. API는 Job을 `CANCEL_REQUESTED`로 바꾸고 아직 시작하지 않은 item만 취소합니다. 처리 중 item은 Worker가 안전한 지점에서 끝내거나 멈출 수 있도록 그대로 둡니다.
 
-## Retry
+## 재시도
 
 ```text
 POST /api/v1/jobs/{jobId}/retry
 POST /api/v1/jobs/{jobId}/rerun
 ```
 
-- `retry` requeues only `FAILED` and `DEAD_LETTERED` items.
-- `rerun` requeues all non-`PROCESSING` items.
-- Each retry increments `attempt`.
-- Retried messages are published to `image.preprocess.retry`.
+- `retry`는 `FAILED`, `DEAD_LETTERED` item만 재등록합니다.
+- `rerun`은 `PROCESSING`이 아닌 모든 item을 재등록합니다.
+- 재시도할 때마다 `attempt`가 증가합니다.
+- 재시도 메시지는 `image.preprocess.retry`로 발행합니다.
 
-## Current Limitations
+## 현재 제한
 
-- Detailed debug artifact row expansion is deferred to a later artifact domain task.
+- 세부 debug artifact row 확장은 후속 artifact domain 작업으로 남깁니다.

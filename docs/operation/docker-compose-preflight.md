@@ -1,48 +1,48 @@
-# Docker Compose Preflight
+# Docker Compose 사전 점검
 
-## Purpose
+## 목적
 
-Use this check after `docker compose up -d --build` and before browser or image-processing tests. It verifies that the
-local stack is reachable and that the main routes are wired correctly.
+`docker compose up -d --build` 이후 브라우저 테스트나 이미지 처리 테스트를 하기 전에 로컬 스택이 정상 연결됐는지 확인합니다.
 
-This is not the authenticated image processing E2E test. For that workflow, use `scripts/local-e2e-smoke.ps1`.
+이 점검은 인증이 필요한 이미지 처리 E2E 테스트가 아닙니다.
+인증 후 실제 업로드와 Worker 처리까지 확인하려면 `scripts/local-e2e-smoke.ps1`을 사용합니다.
 
-## Command
+## 실행 명령
 
-Run from the repository root:
+레포지토리 루트에서 실행합니다.
 
 ```powershell
 .\scripts\docker-compose-preflight.ps1
 ```
 
-The script automatically uses:
+스크립트는 기본적으로 아래 파일을 사용합니다.
 
 ```text
 infra/docker-compose/.env
 ```
 
-If `.env` is missing, it falls back to:
+파일이 없으면 아래 예시 파일로 대체합니다.
 
 ```text
 infra/docker-compose/.env.example
 ```
 
-## Checked Items
+## 점검 항목
 
-| Check | Purpose |
+| 점검 | 목적 |
 | --- | --- |
-| `docker compose config` | Validates Compose and environment interpolation |
-| Docker container state | Verifies required containers are running or completed successfully |
-| `GET /health` through NGINX | Confirms the single entry point is reachable |
-| `GET /` through NGINX | Confirms frontend static routing works |
-| `GET /v3/api-docs` through NGINX | Confirms backend Swagger/OpenAPI routing works |
-| `GET /actuator/health` direct backend | Confirms Spring Boot health endpoint works |
-| `GET /minio/health/live` direct MinIO | Confirms object storage API is reachable |
-| RabbitMQ management queue lookup | Confirms queue topology exists |
+| `docker compose config` | Compose 설정과 환경변수 치환이 유효한지 확인 |
+| Docker container state | 필수 컨테이너가 실행 중이거나 정상 종료됐는지 확인 |
+| NGINX 경유 `GET /health` | 단일 진입점이 응답하는지 확인 |
+| NGINX 경유 `GET /` | 프론트엔드 정적 routing이 동작하는지 확인 |
+| NGINX 경유 `GET /v3/api-docs` | Swagger/OpenAPI routing이 동작하는지 확인 |
+| backend 직접 `GET /actuator/health` | Spring Boot health endpoint 확인 |
+| MinIO 직접 `GET /minio/health/live` | Object Storage API 접근 확인 |
+| RabbitMQ queue 조회 | Queue topology가 생성됐는지 확인 |
 
-## Options
+## 옵션
 
-Direct backend mode or non-default ports:
+포트가 기본값이 아니거나 backend-api를 직접 확인하려면 아래 옵션을 사용합니다.
 
 ```powershell
 .\scripts\docker-compose-preflight.ps1 `
@@ -52,44 +52,44 @@ Direct backend mode or non-default ports:
   -RabbitManagementBaseUrl "http://localhost:15672"
 ```
 
-Use a specific env file:
+특정 env 파일을 사용합니다.
 
 ```powershell
 .\scripts\docker-compose-preflight.ps1 -EnvFile ".env.example"
 ```
 
-Skip Docker container checks and only check HTTP routes:
+Docker 컨테이너 상태 점검을 건너뛰고 HTTP route만 확인합니다.
 
 ```powershell
 .\scripts\docker-compose-preflight.ps1 -SkipDocker
 ```
 
-Wait longer for slow cold starts:
+cold start가 느린 환경에서는 timeout을 늘립니다.
 
 ```powershell
 .\scripts\docker-compose-preflight.ps1 -TimeoutSeconds 60
 ```
 
-## Expected Result
+## 기대 결과
 
 ```text
 Preflight passed. The stack is ready for browser login or scripts/local-e2e-smoke.ps1.
 ```
 
-## Failure Triage
+## 실패 대응
 
-| Failure | Check |
+| 실패 지점 | 확인 위치 |
 | --- | --- |
-| NGINX health fails | `image-preprocess-nginx` container, port 80 binding, `infra/nginx/conf.d/app.conf` |
-| Frontend route fails | `image-preprocess-frontend` build and NGINX upstream routing |
-| OpenAPI docs fail | `backend-api` container, `/v3/api-docs`, `infra/nginx/conf.d/api.conf` |
-| Backend health fails | PostgreSQL/RabbitMQ health, Spring startup logs |
-| MinIO health fails | `image-preprocess-minio`, port 9000 binding, bucket init container |
-| RabbitMQ queue check fails | `image-preprocess-rabbitmq`, management port 15672, `definitions.json` import |
+| NGINX health 실패 | `image-preprocess-nginx` 컨테이너, 80 포트 binding, `infra/nginx/conf.d/app.conf` |
+| Frontend route 실패 | `image-preprocess-frontend` build 상태와 NGINX upstream routing |
+| OpenAPI docs 실패 | `backend-api` 컨테이너, `/v3/api-docs`, `infra/nginx/conf.d/api.conf` |
+| Backend health 실패 | PostgreSQL/RabbitMQ health, Spring startup log |
+| MinIO health 실패 | `image-preprocess-minio`, 9000 포트 binding, bucket init 컨테이너 |
+| RabbitMQ queue 점검 실패 | `image-preprocess-rabbitmq`, 15672 management port, `definitions.json` import |
 
-## Follow-Up Test
+## 후속 테스트
 
-After preflight passes, run the authenticated E2E smoke flow:
+preflight가 통과하면 인증된 E2E 스모크 테스트를 실행합니다.
 
 ```powershell
 .\scripts\local-e2e-smoke.ps1 -AccessToken "<access-token>"

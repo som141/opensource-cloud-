@@ -1,60 +1,21 @@
-# Issue 112 - Production Environment And Secret Injection Docs
+# 이슈 112. 운영 환경변수와 Secrets
 
-## Purpose
+## 목적
 
-The project needs a clear production environment checklist before cloud deployment. Developers must know which values
-to issue, where to inject them, and which files must not be committed.
+운영 배포에 필요한 환경변수와 secret 주입 방식을 문서화합니다.
 
-## Scope
+## 작업 범위
 
-- Add a production env template with placeholders only.
-- Document Google OAuth redirect values.
-- Document JWT, DB, RabbitMQ, MinIO/S3, and Worker token requirements.
-- Document `.env.prod` local-host/server injection.
-- Document deployment validation and smoke-test order.
-- Keep production Compose implementation as a separate follow-up task.
+1. production `.env` 템플릿
+2. Google OAuth secret
+3. JWT secret
+4. DB credential
+5. RabbitMQ credential
+6. MinIO/S3 credential
+7. GitHub Actions secrets
 
-## Files
+## 완료 기준
 
-| File | Purpose |
-| --- | --- |
-| `infra/docker-compose/.env.prod.example` | Production env template without real secrets |
-| `docs/operation/production-env.md` | Required values and secret injection rules |
-| `docs/operation/deployment-checklist.md` | Step-by-step deployment gate |
-| `infra/docker-compose/docker-compose.local.yml` | Exposes backend auth/cookie env variables to the container |
-| `infra/nginx/conf.d/app.conf` | Allows the production MinIO bucket prefix through NGINX |
-| `infra/rabbitmq/definitions.json` | Keeps queue topology env-independent by removing pinned local credentials |
-
-## Required User-Provided Values
-
-| Area | Values |
-| --- | --- |
-| Domain | Public HTTPS domain |
-| Google OAuth | Client ID, client secret, JavaScript origin, redirect URI |
-| JWT | Random 32+ byte secret |
-| Database | PostgreSQL password |
-| Queue | RabbitMQ password |
-| Storage | MinIO/S3 access key, secret key, bucket endpoint |
-| Worker | Internal worker token |
-
-## Non-Goals
-
-- Do not add real secret values.
-- Do not introduce Kubernetes manifests.
-- Do not implement production HTTPS in this task.
-- Do not change the OAuth token flow.
-- Do not pin production RabbitMQ credentials inside `definitions.json`.
-
-## Validation
-
-1. `git diff --check`
-2. PowerShell-free docs review.
-3. Docker Compose config with `.env.prod.example`.
-4. Docker Compose config with local `.env.example`.
-
-## Follow-Up
-
-- Add `docker-compose.prod.yml` or `docker-compose.prod.override.yml`.
-- Restrict public port exposure.
-- Add HTTPS/TLS termination.
-- Add backup and migration policy.
+1. 실제 secret은 Git에 올라가지 않습니다.
+2. 사용자가 어떤 값을 발급받아야 하는지 알 수 있습니다.
+3. 로컬 값과 운영 값을 분리합니다.

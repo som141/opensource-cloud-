@@ -1,19 +1,15 @@
-# Auth API
+# 인증 API
 
-## Purpose
+## 목적
 
-Auth API supports Google OAuth login, short-lived JWT access tokens, HttpOnly refresh-token cookies, and current-user
-lookup for protected APIs.
+인증 API는 Google OAuth 로그인, 짧은 수명의 JWT Access Token, HttpOnly Refresh Token Cookie, 현재 사용자 조회를 제공합니다.
+토큰 발급, 재발급, 로그아웃의 자세한 흐름은 [인증 토큰 흐름](auth-token-flow.md)을 참고합니다.
 
-For the full implementation flow, token lifecycle, refresh rotation, and logout behavior, see
-`docs/api/auth-token-flow.md`.
+## 환경변수 주입
 
-## Environment Injection
+실제 값은 환경변수로 주입합니다. 저장소에는 `backend-api/.env.example`만 올리고, 실제 값은 `backend-api/.env`처럼 Git에서 제외된 파일에 둡니다.
 
-Runtime values are injected through environment variables. Use `backend-api/.env.example` as the committed template and
-create an ignored local file such as `backend-api/.env` for real values.
-
-Required local values:
+필수 로컬 값:
 
 ```env
 GOOGLE_CLIENT_ID=<google-oauth-client-id>
@@ -36,43 +32,48 @@ CORS_ALLOWED_ORIGINS=http://localhost:5173
 RABBIT_HEALTH_ENABLED=false
 ```
 
-## Google OAuth Flow
+## Google OAuth 로그인 흐름
 
-1. Browser opens `GET /oauth2/authorization/google`.
-2. Google redirects to `GET /login/oauth2/code/google`.
-3. Spring Security validates the OAuth response.
-4. Backend creates or finds `User`.
-5. Backend links `SocialAccount` for Google.
-6. Backend creates an access token and refresh token.
-7. Backend stores a hashed refresh token in DB.
-8. Backend sets the raw refresh token as an HttpOnly cookie.
-9. Backend redirects to `OAUTH2_SUCCESS_REDIRECT_URI` with the access token as a query parameter.
+1. 브라우저가 `GET /oauth2/authorization/google`로 이동합니다.
+2. Google 인증 후 `GET /login/oauth2/code/google`로 callback이 들어옵니다.
+3. Spring Security가 OAuth 응답을 검증합니다.
+4. backend-api가 `User`를 찾거나 생성합니다.
+5. backend-api가 Google `SocialAccount`를 연결합니다.
+6. backend-api가 Access Token과 Refresh Token을 발급합니다.
+7. Refresh Token은 hash로 DB에 저장합니다.
+8. 원본 Refresh Token은 HttpOnly Cookie로 내려줍니다.
+9. 브라우저는 `OAUTH2_SUCCESS_REDIRECT_URI`로 돌아갑니다.
+10. 프론트는 refresh API를 호출해 Access Token을 받습니다.
 
-Local Google Console redirect URI:
+로컬 Google Console redirect URI:
 
 ```text
 http://localhost:8080/login/oauth2/code/google
 ```
 
-## Endpoints
+## Endpoint
 
-| Method | Path | Auth | Purpose |
+| Method | Path | 인증 | 설명 |
 | --- | --- | --- | --- |
-| `GET` | `/oauth2/authorization/google` | Public | Start Google OAuth login |
-| `GET` | `/login/oauth2/code/google` | Public | Google OAuth callback |
-| `GET` | `/api/v1/auth/me` | Bearer access token | Read current user |
-| `POST` | `/api/v1/auth/refresh` | Refresh cookie | Rotate refresh token and issue a new access token |
-| `POST` | `/api/v1/auth/logout` | Refresh cookie | Revoke refresh token and expire cookie |
+| `GET` | `/oauth2/authorization/google` | 공개 | Google OAuth 로그인 시작 |
+| `GET` | `/login/oauth2/code/google` | 공개 | Google OAuth callback |
+| `GET` | `/api/v1/auth/me` | Bearer Access Token | 현재 사용자 조회 |
+| `POST` | `/api/v1/auth/refresh` | Refresh Cookie | Refresh Token 회전과 새 Access Token 발급 |
+| `POST` | `/api/v1/auth/logout` | Refresh Cookie | Refresh Token 폐기와 Cookie 만료 |
 
-## `GET /api/v1/auth/me`
+## 현재 사용자 조회
 
-Response:
+```text
+GET /api/v1/auth/me
+```
+
+응답:
 
 ```json
 {
   "isSuccess": true,
   "code": "common200",
-  "message": "Request succeeded.",
+  "message": "요청에 성공했습니다.",
   "result": {
     "id": 1,
     "email": "moonju@example.com",
@@ -84,18 +85,21 @@ Response:
 }
 ```
 
-## `POST /api/v1/auth/refresh`
+## Access Token 재발급
 
-The request uses the `refresh_token` HttpOnly cookie. The response body includes the new access token only. The new
-refresh token is returned as a rotated HttpOnly cookie.
+```text
+POST /api/v1/auth/refresh
+```
 
-Response:
+요청은 `refresh_token` HttpOnly Cookie를 사용합니다. 응답 body에는 새 Access Token만 포함하고, 새 Refresh Token은 회전된 HttpOnly Cookie로 내려줍니다.
+
+응답:
 
 ```json
 {
   "isSuccess": true,
   "code": "common200",
-  "message": "Request succeeded.",
+  "message": "요청에 성공했습니다.",
   "result": {
     "accessToken": "eyJhbGciOiJIUzI1NiJ9...",
     "accessTokenExpiresAt": "2026-05-03T09:00:00Z",
@@ -104,33 +108,36 @@ Response:
 }
 ```
 
-## `POST /api/v1/auth/logout`
+## 로그아웃
 
-The request uses the `refresh_token` HttpOnly cookie. Backend revokes the persisted refresh token and expires the
-browser cookie.
+```text
+POST /api/v1/auth/logout
+```
 
-Response:
+요청은 `refresh_token` HttpOnly Cookie를 사용합니다. backend-api는 DB에 저장된 Refresh Token을 폐기하고 브라우저 Cookie를 만료시킵니다.
+
+응답:
 
 ```json
 {
   "isSuccess": true,
   "code": "common200",
-  "message": "Request succeeded.",
+  "message": "요청에 성공했습니다.",
   "result": {
     "loggedOut": true
   }
 }
 ```
 
-## Protected API Usage
+## 보호 API 호출 방식
 
-Use the access token with the `Authorization` header:
+Access Token은 `Authorization` header에 넣습니다.
 
 ```text
 Authorization: Bearer <access-token>
 ```
 
-Controllers can resolve the current user ID with:
+Controller에서는 `@CurrentUser`로 현재 사용자 ID를 받을 수 있습니다.
 
 ```java
 public ApiResponse<?> handler(@CurrentUser Long currentUserId) {
@@ -138,10 +145,10 @@ public ApiResponse<?> handler(@CurrentUser Long currentUserId) {
 }
 ```
 
-## Security Notes
+## 보안 기준
 
-- Real secrets must never be committed.
-- Refresh tokens are stored only as SHA-256 hashes.
-- Access tokens are short-lived.
-- Local `REFRESH_TOKEN_COOKIE_SECURE=false` is for HTTP development only.
-- Production must set `REFRESH_TOKEN_COOKIE_SECURE=true` and use HTTPS.
+- 실제 secret은 Git에 커밋하지 않습니다.
+- Refresh Token은 SHA-256 hash로만 DB에 저장합니다.
+- Access Token은 짧게 유지합니다.
+- 로컬 HTTP 개발 환경에서만 `REFRESH_TOKEN_COOKIE_SECURE=false`를 사용합니다.
+- 운영에서는 반드시 `REFRESH_TOKEN_COOKIE_SECURE=true`와 HTTPS를 사용합니다.

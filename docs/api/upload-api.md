@@ -1,38 +1,36 @@
-# Upload API
+# 업로드 API
 
-## Purpose
+## 목적
 
-The upload API prepares large document image uploads without sending file bodies through the Spring API server.
-Clients create an upload session, request presigned object storage URLs, upload files directly to object storage, and
-then notify the API that the upload is complete.
+업로드 API는 대용량 문서 이미지 파일을 Spring API 서버가 직접 받지 않도록 준비합니다.
+클라이언트는 업로드 세션을 만들고, presigned URL을 받은 뒤 Object Storage에 직접 업로드하고, 마지막에 업로드 완료를 API에 알립니다.
 
-## Rules
+## 규칙
 
-- The Spring API must not receive large image file bodies.
-- Presigned upload URLs must include an expiration time.
-- Upload completion must verify object existence through `ObjectStoragePort`.
-- Upload completion must validate the stored object's image magic number against the declared file name and content type.
-- Upload completion extracts original image width, height, and optional DPI from supported image headers.
-- Image rows are not finalized before upload completion.
-- Upload session access is controlled by project membership, not only by the user who created the session.
-- Supported image extensions are `png`, `jpg`, `jpeg`, `tif`, `tiff`, `bmp`, and `webp`.
-- Checksums are collected as SHA-256 hex strings and are used for duplicate detection.
-- In the local frontend MVP, ZIP files are expanded in the browser before this API is called. The API still receives
-  image file entries through the normal upload session and presigned URL flow.
+- Spring API는 큰 이미지 파일 본문을 직접 받지 않습니다.
+- presigned upload URL에는 만료 시간이 있어야 합니다.
+- 업로드 완료 시 `ObjectStoragePort`로 object 존재 여부를 검증합니다.
+- 업로드 완료 시 저장된 object의 magic number를 파일명, content type과 비교합니다.
+- 업로드 완료 시 가능한 경우 원본 이미지의 width, height, DPI를 추출합니다.
+- 이미지 row는 업로드 완료 검증 후에만 확정합니다.
+- 업로드 세션 접근은 생성자만이 아니라 프로젝트 멤버십으로 제어합니다.
+- 지원 확장자는 `png`, `jpg`, `jpeg`, `tif`, `tiff`, `bmp`, `webp`입니다.
+- checksum은 SHA-256 hex 문자열로 받고 중복 감지에 사용합니다.
+- 로컬 프론트 MVP에서는 ZIP을 브라우저에서 풀고, 풀린 이미지 항목을 일반 업로드 API로 처리합니다.
 
-## Endpoints
+## Endpoint
 
-| Method | Path | Purpose |
+| Method | Path | 설명 |
 | --- | --- | --- |
-| `POST` | `/api/v1/projects/{projectId}/upload-sessions` | Create an upload session |
-| `GET` | `/api/v1/upload-sessions/{sessionId}` | Read an upload session |
-| `POST` | `/api/v1/upload-sessions/{sessionId}/files/presigned-url` | Issue presigned upload URLs |
-| `POST` | `/api/v1/upload-sessions/{sessionId}/complete` | Complete an upload session |
-| `DELETE` | `/api/v1/upload-sessions/{sessionId}` | Cancel an upload session |
+| `POST` | `/api/v1/projects/{projectId}/upload-sessions` | 업로드 세션 생성 |
+| `GET` | `/api/v1/upload-sessions/{sessionId}` | 업로드 세션 조회 |
+| `POST` | `/api/v1/upload-sessions/{sessionId}/files/presigned-url` | presigned upload URL 발급 |
+| `POST` | `/api/v1/upload-sessions/{sessionId}/complete` | 업로드 세션 완료 |
+| `DELETE` | `/api/v1/upload-sessions/{sessionId}` | 업로드 세션 취소 |
 
-## Create Upload Session
+## 업로드 세션 생성
 
-Request:
+요청:
 
 ```json
 {
@@ -41,13 +39,13 @@ Request:
 }
 ```
 
-Response:
+응답:
 
 ```json
 {
   "isSuccess": true,
   "code": "common201",
-  "message": "Created successfully.",
+  "message": "생성되었습니다.",
   "result": {
     "id": 1,
     "projectId": 10,
@@ -61,9 +59,9 @@ Response:
 }
 ```
 
-## Issue Presigned Upload URLs
+## presigned URL 발급
 
-Request:
+요청:
 
 ```json
 {
@@ -78,13 +76,13 @@ Request:
 }
 ```
 
-Response:
+응답:
 
 ```json
 {
   "isSuccess": true,
   "code": "common200",
-  "message": "Request succeeded.",
+  "message": "요청에 성공했습니다.",
   "result": {
     "sessionId": 1,
     "uploadTargets": [
@@ -102,15 +100,13 @@ Response:
 }
 ```
 
-The response uses `uploadFileId`, not `imageId`, because the image metadata row should be finalized only after
-object storage verification succeeds.
+응답은 `imageId`가 아니라 `uploadFileId`를 사용합니다. 이미지 메타데이터 row는 Object Storage 검증이 끝난 뒤 확정되기 때문입니다.
 
-Repeated presigned URL requests for the same session cannot exceed the session's expected file count or expected total
-size. This prevents clients from issuing more object keys than the upload session originally declared.
+같은 세션에서 presigned URL을 반복 발급해도 세션이 선언한 예상 파일 수와 총 크기를 넘을 수 없습니다.
 
-## Complete Upload Session
+## 업로드 세션 완료
 
-Request:
+요청:
 
 ```json
 {
@@ -118,13 +114,13 @@ Request:
 }
 ```
 
-Response:
+응답:
 
 ```json
 {
   "isSuccess": true,
   "code": "common200",
-  "message": "Request succeeded.",
+  "message": "요청에 성공했습니다.",
   "result": {
     "sessionId": 1,
     "status": "COMPLETED",
@@ -133,19 +129,19 @@ Response:
 }
 ```
 
-Completion verification:
+완료 검증 순서:
 
-1. The requested upload file IDs must match the session's expected file count.
-2. Each object key must exist in Object Storage.
-3. Each stored object is downloaded through `ObjectStoragePort`.
-4. The API validates the image magic number.
-5. The detected image type must match the original file extension and content type.
-6. The API extracts width, height, and DPI metadata when available.
-7. Only then does the API mark files as uploaded and create finalized image rows.
+1. 요청된 upload file ID 수가 세션의 예상 파일 수와 맞아야 합니다.
+2. 각 object key가 Object Storage에 존재해야 합니다.
+3. API가 `ObjectStoragePort`로 원본 object를 다운로드합니다.
+4. API가 이미지 magic number를 검증합니다.
+5. 감지된 이미지 타입이 원본 확장자와 content type과 맞아야 합니다.
+6. 가능한 경우 width, height, DPI 메타데이터를 추출합니다.
+7. 검증 후 upload file을 `UPLOADED`로 바꾸고 image row를 생성합니다.
 
-Supported signatures:
+지원 signature:
 
-| Format | Extensions | Content types |
+| 포맷 | 확장자 | Content type |
 | --- | --- | --- |
 | PNG | `.png` | `image/png` |
 | JPEG | `.jpg`, `.jpeg` | `image/jpeg` |
@@ -153,16 +149,16 @@ Supported signatures:
 | BMP | `.bmp` | `image/bmp`, `image/x-ms-bmp` |
 | TIFF | `.tif`, `.tiff` | `image/tiff` |
 
-## Status
+## 상태
 
-| Status | Meaning |
+| 상태 | 의미 |
 | --- | --- |
-| `CREATED` | Session exists but no upload URL has been issued yet |
-| `UPLOAD_URL_ISSUED` | One or more presigned upload URLs have been issued |
-| `COMPLETED` | All expected files have been verified in object storage |
-| `CANCELLED` | User cancelled the upload session |
+| `CREATED` | 세션은 있지만 아직 upload URL이 발급되지 않음 |
+| `UPLOAD_URL_ISSUED` | 하나 이상의 presigned upload URL이 발급됨 |
+| `COMPLETED` | 모든 예상 파일이 Object Storage에서 검증됨 |
+| `CANCELLED` | 사용자가 업로드 세션을 취소함 |
 
-## Next Work
+## 후속 작업
 
-- Replace the local presigned URL generator with a MinIO/S3 adapter.
-- Add server-side ZIP extraction only if browser-side extraction becomes too slow for the expected batch size.
+- 로컬 presigned URL generator를 MinIO/S3 adapter로 교체합니다.
+- 브라우저 ZIP 해제가 예상 batch 크기에서 느려질 경우에만 서버 측 ZIP 해제를 별도 검토합니다.

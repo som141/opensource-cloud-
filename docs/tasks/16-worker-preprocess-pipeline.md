@@ -1,15 +1,13 @@
-# 16. Worker Preprocess Pipeline
+# 16. Worker 전처리 파이프라인
 
-## Goal
+## 목표
 
-Implement the Worker preprocessing pipeline toward the OpenCV document-image preprocessing mechanism from the
-`image-test` repository.
+`image-test` 레포의 OpenCV 문서 이미지 전처리 메커니즘을 Worker pipeline으로 구현합니다.
 
-This task is not a resize service and does not add OCR text extraction. The Worker prepares scanned document images
-before OCR through decode, color normalization, orientation normalization, deskew, crop, denoise, contrast
-normalization, binarization, morphology cleanup, DPI normalization, and optional sharpening.
+이 작업은 resize 서비스가 아니며 OCR 텍스트 추출도 하지 않습니다.
+Worker는 OCR 전에 스캔 문서를 더 안정적인 이미지 상태로 만드는 역할만 담당합니다.
 
-## Read First
+## 먼저 읽을 문서
 
 1. `README.md`
 2. `docs/implementation-plan.md`
@@ -17,180 +15,62 @@ normalization, binarization, morphology cleanup, DPI normalization, and optional
 4. `docs/worker/preprocess-pipeline.md`
 5. `docs/worker/image-test-integration.md`
 
-## Scope
+## 필수 단계
 
-1. `PreprocessStep` interface
-2. Pipeline runner
-3. Context and result
-4. Required document preprocessing steps
-5. Timing, fallback, debug, and failure-report hooks
-6. Step-level tests
+1. `DecodeStep`
+2. `ColorNormalizeStep`
+3. `OrientationNormalizeStep`
+4. `DeskewStep`
+5. `CropStep`
+6. `DenoiseStep`
+7. `ContrastNormalizeStep`
+8. `BinarizationStep`
+9. `MorphologyCleanupStep`
+10. `DpiNormalizeStep`
+11. `SharpenStep`
 
-## Incremental Order
+## 구현 순서
 
-1. Add pipeline timing and failure-report hook.
-2. Add fallback note collection.
-3. Add debug artifact hook contract.
-4. Add image codec adapter and OpenCV loader.
-5. Replace `DecodeStep` skeleton with actual image decode.
-6. Add `ImageMatHolder` and resource cleanup rules.
-7. Implement document steps one by one:
-   - `DecodeStep`
-   - `ColorNormalizeStep`
-   - `OrientationNormalizeStep`
-   - `DeskewStep`
-   - `CropStep`
-   - `DenoiseStep`
-   - `ContrastNormalizeStep`
-   - `BinarizationStep`
-   - `MorphologyCleanupStep`
-   - `DpiNormalizeStep`
-   - `SharpenStep`
-8. Add report generation per step.
-9. Add artifact save integration.
-10. Add Worker success callback after processed output exists.
+1. pipeline timing과 실패 report hook을 추가합니다.
+2. fallback note 수집 구조를 추가합니다.
+3. debug artifact hook 계약을 추가합니다.
+4. OpenCV loader와 image codec adapter를 추가합니다.
+5. `DecodeStep`을 실제 이미지 decode로 교체합니다.
+6. `ImageMatHolder`와 Mat resource 정리 규칙을 추가합니다.
+7. 문서 전처리 단계를 하나씩 구현합니다.
+8. 단계별 report 생성을 연결합니다.
+9. artifact 저장을 연결합니다.
+10. 처리 결과가 저장된 뒤 Worker success callback을 보냅니다.
 
-## Current Issue 59 Scope
+## 완료된 세부 범위
 
-Issue 59 implements only the timing and failure-report hook:
+| 이슈 | 내용 |
+| --- | --- |
+| #59 | timing, 실패 report hook, fallback note |
+| #61 | debug artifact hook 계약 |
+| #63 | OpenCV loader와 codec boundary |
+| #65 | 실제 `DecodeStep` 연결 |
+| #67 | Object Storage download bytes 연결 |
+| #69 | `ColorNormalizeStep` 구현 |
+| #71 | orientation normalize와 deskew 구현 |
+| #73 | crop과 DPI normalize 구현 |
+| #75 | denoise, contrast, binarization 구현 |
+| #77 | morphology cleanup과 sharpen 구현 |
+| #79 | processed image, preview, report 저장과 success callback |
+| #118 | 전처리 품질 파라미터 튜닝 |
 
-1. `PreprocessStepExecution` records start time, end time, wall time, success flag, and error message.
-2. `PreprocessContext` collects fallback notes.
-3. `PreprocessPipelineRunner` records each step execution and stops on first failed step.
-4. `PreprocessResult` exposes total wall time, success flag, error message, and fallback notes.
-5. `ProcessingReportFactory` maps pipeline timing/fallback data into report DTOs.
-6. `WorkerJobService` maps failed pipeline results to `PIPELINE_EXECUTION_FAILED`.
+## 완료 기준
 
-## Current Issue 61 Scope
+1. 단순 resize-only step이 존재하지 않습니다.
+2. `DpiNormalizeStep`은 thumbnail resize가 아니라 OCR 품질 보정 단계로 유지됩니다.
+3. 각 step 실행 결과가 context/result/report에 기록됩니다.
+4. 실패 step은 report와 Worker callback에 반영됩니다.
+5. API 서버는 pipeline을 실행하지 않습니다.
+6. step 단위 테스트와 Worker 테스트가 통과합니다.
 
-Issue 61 implements only the debug artifact hook contract:
+## 금지 사항
 
-1. `DebugArtifactDescriptor` records step name, file name, object key, and content type.
-2. `PreprocessContext` exposes `recordDebugArtifact`.
-3. `debug=false` ignores debug artifact records.
-4. `debug=true` records deterministic object keys under `processed/{projectId}/{jobId}/{itemId}/debug/`.
-5. `PreprocessResult` exposes debug artifact descriptors.
-6. `ProcessingReportFactory` carries debug artifact metadata into report DTOs.
-7. Actual debug image generation and upload remain out of scope.
-
-## Current Issue 63 Scope
-
-Issue 63 implements only the OpenCV loader and codec boundary:
-
-1. Worker-only OpenCV dependency.
-2. Idempotent native OpenCV loading through `OpenCvLoader`.
-3. Image byte decode through `ImageCodecAdapter`.
-4. `ImageMatHolder` with OpenCV `Mat`, dimensions, color space, and release state.
-5. `MatResourceCleaner` release hook.
-6. Decode failure handling for empty or unsupported image bytes.
-7. Actual `DecodeStep` replacement and downstream image processing remain out of scope.
-
-## Current Issue 65 Scope
-
-Issue 65 connects `DecodeStep` to the codec boundary:
-
-1. `ImageDecodePort` is the domain port used by `DecodeStep`.
-2. `ImageCodecAdapter` implements the port.
-3. `PreprocessContext` can receive source image bytes.
-4. `PreprocessContext` stores the decoded `ImageMatHolder`.
-5. `PreprocessPipelineRunner` releases decoded Mat resources after pipeline completion.
-6. `DecodeStep` records decoded width, height, and color space when bytes are attached.
-7. Missing source bytes are deferred until the Object Storage download task.
-8. Invalid attached bytes fail the decode step.
-
-## Current Issue 67 Scope
-
-Issue 67 connects Object Storage download bytes to the pipeline:
-
-1. `ObjectStoragePort.downloadBytes` returns original object bytes.
-2. `MinioObjectStorageClient` downloads bytes from the configured bucket.
-3. `WorkerJobService` passes downloaded bytes to `PreprocessContext.withSourceImageBytes`.
-4. Storage download failures still report `STORAGE_DOWNLOAD_FAILED`.
-5. Decode or later pipeline failures still report `PIPELINE_EXECUTION_FAILED`.
-6. Artifact upload and success callback remain out of scope.
-
-## Current Issue 69 Scope
-
-Issue 69 implements the first downstream OpenCV preprocessing step:
-
-1. `ColorNormalizeStep` converts `GRAY` input to `BGR`.
-2. `ColorNormalizeStep` converts `BGRA` input to `BGR`.
-3. `BGR` input is treated as normalized and remains no-op.
-4. `PreprocessContext` replaces the decoded holder after conversion and releases the previous Mat.
-5. Missing decoded image data is deferred for skeleton compatibility.
-6. Unsupported channel layouts fail the step.
-7. Downstream orientation, deskew, crop, denoise, contrast, binarization, morphology, DPI, and sharpen steps remain out of scope.
-
-## Current Issue 71 Scope
-
-Issue 71 implements Geometry 1:
-
-1. `OrientationNormalizeStep` rotates landscape inputs to portrait orientation.
-2. Portrait or square inputs remain no-op.
-3. `DeskewStep` estimates correction angle using grayscale, Otsu inverse threshold, foreground points, and `minAreaRect`.
-4. `DeskewStep` applies `warpAffine` only when angle is within `maxDeskewAngle`.
-5. Low foreground or excessive angle cases record fallback notes and skip.
-6. Crop, DPI normalization, quality steps, artifact upload, and success callback remain out of scope.
-
-## Current Issue 73 Scope
-
-Issue 73 implements Geometry 2:
-
-1. `CropStep` detects foreground bounds using grayscale conversion, inverse Otsu thresholding, and bounding rectangles.
-2. `CropStep` applies a configurable `cropMarginPixels` margin and clamps the crop area to the image dimensions.
-3. Invalid or low-foreground crop detections record fallback notes and keep the current image unchanged.
-4. `DpiNormalizeStep` reads `sourceDpi`, `sourceDpiX/sourceDpiY`, or compatible aliases from context parameters.
-5. `DpiNormalizeStep` resizes toward `targetDpi` with safe min/max scale bounds.
-6. Missing source DPI metadata records a fallback note and keeps the current image unchanged.
-7. Quality steps, artifact upload, and success callback remain out of scope.
-
-## Current Issue 75 Scope
-
-Issue 75 implements Quality 1:
-
-1. `DenoiseStep` supports median blur by default.
-2. `DenoiseStep` supports bilateral filtering when `denoiseMode=bilateral`.
-3. Unsupported denoise modes record a fallback and use median blur.
-4. `ContrastNormalizeStep` applies CLAHE to grayscale input or BGR luminance.
-5. `BinarizationStep` supports Otsu and adaptive thresholding.
-6. Unsupported binarization modes record a fallback and use Otsu thresholding.
-7. Morphology cleanup, optional sharpen, artifact upload, and success callback remain out of scope.
-
-## Current Issue 77 Scope
-
-Issue 77 implements Quality 2:
-
-1. `MorphologyCleanupStep` supports `open`, `close`, and `open_close` cleanup.
-2. `MorphologyCleanupStep` inverts binary images internally so black strokes are treated as foreground.
-3. Unsupported morphology modes record a fallback and use `open_close`.
-4. `SharpenStep` applies unsharp mask only when `sharpen` is enabled.
-5. `SharpenStep` skips by default when the preset does not explicitly request sharpening.
-6. Processed image upload, preview upload, report upload, and success callback remain out of scope.
-
-## Current Issue 79 Scope
-
-Issue 79 connects the finished pipeline to required artifacts:
-
-1. The final output `ImageMatHolder` is handed to artifact services before runner cleanup.
-2. The Worker uploads `processed.png`.
-3. The Worker uploads `preview.png`.
-4. The Worker uploads `processing-report.json`.
-5. The Worker reports success with processed, preview, and report object keys.
-6. Artifact upload failures are reported as `ARTIFACT_UPLOAD_FAILED`.
-7. Real debug artifact image generation remains out of scope.
-
-## Done Criteria
-
-1. A simple resize-only step does not exist.
-2. `DPI_NORMALIZE` remains an OCR-quality normalization step, not a thumbnail resize shortcut.
-3. Each step execution is recorded in context/result.
-4. Failed steps are recorded in the result and report path.
-5. API server does not execute the pipeline.
-6. Tests pass.
-
-## Forbidden
-
-1. Do not execute the pipeline in `backend-api`.
-2. Do not add OCR text extraction.
-3. Do not collapse all presets into the same unparameterized behavior.
-4. Do not bypass timing/failure reporting for future OpenCV steps.
+1. `backend-api`에서 OpenCV pipeline을 실행하지 않습니다.
+2. OCR 텍스트 추출 기능을 추가하지 않습니다.
+3. 모든 preset을 같은 무파라미터 동작으로 합치지 않습니다.
+4. timing/failure reporting을 우회하지 않습니다.

@@ -1,55 +1,21 @@
-# Issue 51 Frontend Skeleton
+# 이슈 51. 프론트엔드 skeleton
 
-## Goal
+## 목적
 
-Add a React + Vite frontend skeleton that can be built into static files and served by a frontend NGINX container behind
-the root NGINX reverse proxy.
+로컬 MVP를 테스트할 수 있는 React/Vite 화면 구조를 만듭니다.
 
-## Work Units
+## 작업 범위
 
-1. Add Vite, TypeScript, React, and package scripts.
-2. Add app route skeleton without adding a routing library.
-3. Add placeholder pages for login, dashboard, project, upload, job, image, preprocessing quality, and admin.
-4. Add feature folders for auth and job progress.
-5. Add entity type placeholders.
-6. Add shared API client and Job SSE client placeholders.
-7. Add frontend Dockerfile and frontend NGINX config.
-8. Update local Docker Compose and root NGINX to route `/` and `/assets` to the frontend container.
+1. 앱 routing
+2. 공통 API client
+3. 로그인 진입
+4. 프로젝트 화면
+5. 업로드 화면
+6. Job 상세 화면
+7. 이미지 상세 화면
 
-## Route Placeholders
+## 완료 기준
 
-| Path | Purpose |
-| --- | --- |
-| `/` | Dashboard placeholder |
-| `/login` | Google login entry |
-| `/oauth2/success` | OAuth success callback placeholder |
-| `/projects` | Project list placeholder |
-| `/projects/:projectId` | Project detail placeholder |
-| `/upload` | Upload session placeholder |
-| `/jobs/:jobId` | Job detail and SSE path placeholder |
-| `/images/:imageId` | Image detail placeholder |
-| `/benchmarks` | Preprocessing quality placeholder, not OCR product workflow |
-| `/admin` | Admin placeholder |
-
-## Non-Goals
-
-- No completed product UI.
-- No backend API implementation in the frontend.
-- No image preprocessing logic in the frontend.
-- No Object Storage direct secret access.
-- No Bootstrap, jQuery, or AdminLTE.
-
-## Verification
-
-Run from `frontend/`:
-
-```bash
-npm install
-npm run build
-```
-
-Run from `infra/docker-compose/`:
-
-```bash
-docker compose -f docker-compose.local.yml --env-file .env.example config
-```
+1. `npm run build`가 통과합니다.
+2. 임의 UI 템플릿을 추가하지 않습니다.
+3. Access Token을 URL에 노출하지 않는 구조로 개선할 수 있습니다.

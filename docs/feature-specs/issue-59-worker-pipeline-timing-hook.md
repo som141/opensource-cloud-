@@ -1,56 +1,20 @@
-# Issue 59. Worker Pipeline Timing And Failure Hook
+# 이슈 59. Pipeline timing hook
 
-## Feature Summary
+## 목적
 
-This task adds execution metadata to the Worker preprocessing pipeline. It prepares the pipeline for actual OpenCV
-implementation by recording per-step timing, fallback notes, and failed-step metadata.
+전처리 pipeline의 각 step 실행 시간과 실패 정보를 기록합니다.
 
-## Implemented Units
+## 작업 범위
 
-1. `PreprocessStepExecution` now records:
-   - step name
-   - note
-   - startedAt
-   - endedAt
-   - wallTime
-   - success
-   - errorMessage
-2. `PreprocessContext` collects pending step notes, completed step executions, and fallback notes.
-3. `PreprocessPipelineRunner` measures per-step and total wall time.
-4. `PreprocessPipelineRunner` stops on the first failed step and returns a failed `PreprocessResult`.
-5. `PreprocessResult` exposes `wallTime`, `success`, `errorMessage`, and `fallbackNotes`.
-6. `ProcessingReportFactory` maps result timing and fallback data into report DTOs.
-7. `WorkerJobService` reports failed pipeline results as `PIPELINE_EXECUTION_FAILED`.
+1. `PreprocessStepExecution`
+2. 시작/종료 시간 기록
+3. wall time 계산
+4. 성공 여부와 오류 메시지 기록
+5. fallback note 수집
+6. report DTO 연결
 
-## Runtime Behavior
+## 완료 기준
 
-```text
-PreprocessPipelineRunner.run
-  -> resolve preset
-  -> build pipeline
-  -> for each step
-       -> capture startedAt and nano start
-       -> execute step
-       -> consume step note
-       -> record success execution
-       -> on RuntimeException, record failed execution and stop
-  -> return PreprocessResult
-```
-
-## Failure Contract
-
-If a step throws an exception:
-
-1. The failed step is recorded with `success=false`.
-2. `PreprocessResult.success=false`.
-3. `PreprocessResult.errorMessage` contains the exception message.
-4. `WorkerJobService` reports `PIPELINE_EXECUTION_FAILED` to backend-api.
-5. The failure is retryable at the Worker result level.
-
-## Out Of Scope
-
-1. Actual OpenCV implementation
-2. Real image decode
-3. Object upload
-4. Debug artifact image files
-5. OCR text extraction
+1. 실패한 step에서 pipeline이 중단됩니다.
+2. 결과와 report에 실패 정보가 남습니다.
+3. Worker 실패 callback이 `PIPELINE_EXECUTION_FAILED`를 사용할 수 있습니다.

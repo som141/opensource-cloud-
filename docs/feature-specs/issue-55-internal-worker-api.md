@@ -1,130 +1,20 @@
-# Issue 55. Internal Worker API Skeleton
+# 이슈 55. Worker internal API
 
-## Feature Summary
+## 목적
 
-This task adds internal-only Worker report APIs to the backend API. The Worker can report item lifecycle state and
-artifact object keys while the API server updates PostgreSQL state and publishes SSE progress events.
+Worker가 JobItem 처리 상태를 backend-api에 보고할 수 있는 내부 API를 구현합니다.
 
-## Implemented Units
+## 작업 범위
 
-1. Worker internal token configuration
-2. `X-Worker-Token` authentication filter for `/internal/**`
-3. Internal item state report endpoints
-4. Internal Worker preset lookup endpoint
-5. `JobItem` state transition methods for processing, heartbeat, success, failure, and artifacts
-6. `Job` progress counter refresh from item status
-7. Unit tests for filter, entity transitions, service logic, and controllers
+1. 시작 보고
+2. heartbeat 보고
+3. 성공 보고
+4. 실패 보고
+5. artifact key 등록
+6. Worker token 인증
 
-## API Contract
+## 완료 기준
 
-### Authentication
-
-```http
-X-Worker-Token: <WORKER_INTERNAL_TOKEN>
-```
-
-`WORKER_INTERNAL_TOKEN` is supplied to both `backend-api` and `preprocess-worker` through local env or deployment
-secrets.
-
-### Started
-
-```http
-POST /internal/v1/jobs/{jobId}/items/{itemId}/started
-```
-
-```json
-{
-  "workerId": "local-worker-1",
-  "attempt": 1
-}
-```
-
-### Heartbeat
-
-```http
-POST /internal/v1/jobs/{jobId}/items/{itemId}/heartbeat
-```
-
-```json
-{
-  "workerId": "local-worker-1"
-}
-```
-
-### Succeeded
-
-```http
-POST /internal/v1/jobs/{jobId}/items/{itemId}/succeeded
-```
-
-```json
-{
-  "workerId": "local-worker-1",
-  "processedObjectKey": "processed/1/1/10/processed.png",
-  "previewObjectKey": "processed/1/1/10/preview.png",
-  "reportObjectKey": "processed/1/1/10/processing-report.json"
-}
-```
-
-### Failed
-
-```http
-POST /internal/v1/jobs/{jobId}/items/{itemId}/failed
-```
-
-```json
-{
-  "workerId": "local-worker-1",
-  "errorCode": "DECODE_FAILED",
-  "errorMessage": "Cannot decode image.",
-  "retryable": false
-}
-```
-
-### Artifacts
-
-```http
-POST /internal/v1/jobs/{jobId}/items/{itemId}/artifacts
-```
-
-```json
-{
-  "processedObjectKey": "processed/1/1/10/processed.png",
-  "previewObjectKey": "processed/1/1/10/preview.png",
-  "reportObjectKey": "processed/1/1/10/processing-report.json"
-}
-```
-
-## State Rules
-
-1. `started` accepts `PENDING`, `QUEUED`, `RETRYING`, or already `PROCESSING` items.
-2. `heartbeat`, `succeeded`, and `failed` accept only `PROCESSING` items.
-3. `artifacts` accepts `PROCESSING` or `SUCCEEDED` items.
-4. Invalid state transitions return `WORKER409`.
-5. After report handling, the API refreshes `Job` counters from all related `JobItem` rows.
-
-## Environment
-
-Backend API:
-
-```env
-WORKER_INTERNAL_TOKEN=local-worker-token
-```
-
-Docker Compose passes the same token to both services:
-
-```yaml
-backend-api:
-  environment:
-    WORKER_INTERNAL_TOKEN: ${WORKER_INTERNAL_TOKEN:-local-worker-token}
-
-preprocess-worker:
-  environment:
-    WORKER_INTERNAL_TOKEN: ${WORKER_INTERNAL_TOKEN:-local-worker-token}
-```
-
-## Out Of Scope
-
-1. Actual image preprocessing execution remains in `preprocess-worker`.
-2. RabbitMQ consumer-to-internal-API wiring is handled by the Worker implementation task.
-3. Debug artifact detail rows are not expanded in this skeleton.
+1. Worker 내부 API는 일반 사용자 API와 분리됩니다.
+2. 실패 callback은 error code와 message를 저장합니다.
+3. 성공 callback은 artifact key를 포함합니다.

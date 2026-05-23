@@ -1,90 +1,58 @@
-# image-test Integration Boundary
+# image-test 통합 경계
 
-## Purpose
+## 목적
 
-The Worker will integrate the document image preprocessing mechanism from `som141/image-test`.
-The integration target is OCR preprocessing only, not OCR text extraction.
+Worker는 `som141/image-test`의 문서 이미지 전처리 메커니즘을 통합합니다.
+통합 대상은 OCR 전처리이며, OCR 텍스트 추출이 아닙니다.
 
-## In Scope
+## 포함 범위
 
-- Decode source image bytes into an OpenCV image representation.
-- Normalize color input into a predictable processing format.
-- Normalize orientation and deskew scanned document images.
-- Crop document regions from scanner borders or background.
-- Denoise scan artifacts.
-- Normalize contrast for low-contrast scans.
-- Binarize document images for OCR readiness.
-- Run morphology cleanup to reduce small noise and repair strokes.
-- Normalize DPI for OCR quality consistency.
-- Optionally sharpen final document images.
-- Produce processed image, preview image, debug artifacts, and processing report metadata.
+- 원본 이미지 bytes를 OpenCV 이미지 표현으로 decode
+- 입력 색상 형식 정규화
+- 스캔 문서 방향 보정과 deskew
+- scanner border 또는 배경에서 문서 영역 crop
+- 스캔 노이즈 제거
+- 저대비 스캔본 대비 정규화
+- OCR 준비를 위한 이진화
+- 작은 노이즈 제거와 획 보정을 위한 morphology cleanup
+- OCR 품질 일관성을 위한 DPI 정규화
+- 필요 시 최종 문서 이미지 sharpen
+- 처리 이미지, preview 이미지, debug artifact, processing report metadata 생성
 
-## Out of Scope
+## 제외 범위
 
-- Running Tesseract or any OCR engine as a product feature.
-- Returning recognized text to users.
-- Persisting OCR text results.
-- Searching or correcting OCR text.
-- Providing OCR billing, language packs, or text-review workflows.
+- Tesseract 또는 다른 OCR 엔진 실행
+- 인식 텍스트 반환
+- OCR 텍스트 저장
+- OCR 텍스트 검색 또는 교정
+- OCR 과금, 언어팩, 텍스트 검수 workflow
 
-## Current Skeleton
+## 현재 통합 상태
 
-Issue 49 completes the missing Worker skeleton boundaries:
+| 이슈 | 통합 상태 |
+| --- | --- |
+| `#49` | Worker skeleton 경계 완성. `domain/preprocess/model`, `domain/artifact`, `domain/report`, `infra/opencv`, tracing, metrics 추가 |
+| `#63` | OpenCV runtime 경계 추가. `OpenCvLoader`, `ImageCodecAdapter`, `ImageMatHolder`, `MatResourceCleaner` 추가 |
+| `#65` | source bytes가 있을 때 `DecodeStep`이 실제 decode 수행 |
+| `#67` | Object Storage 다운로드 bytes를 pipeline context에 연결 |
+| `#69` | decoded image 색상 형식을 BGR로 정규화 |
+| `#71` | 방향 보정과 deskew 구현 |
+| `#73` | crop과 DPI normalize 구현 |
+| `#75` | denoise, contrast normalize, binarization 구현 |
+| `#77` | morphology cleanup과 optional sharpen 구현 |
+| `#79` | 최종 Mat을 `processed.png`, `preview.png`, `processing-report.json`로 저장하고 backend에 성공 보고 |
+| `#81` | `debug=true`일 때 단계별 PNG snapshot 저장 |
 
-- `domain/preprocess/model`
-- `domain/artifact`
-- `domain/report`
-- `infra/opencv`
-- `infra/tracing`
-- `infra/metrics`
+## 통합 원칙
 
-These classes are intentionally lightweight. They define integration seams for later OpenCV work without adding native
-OpenCV dependencies or OCR runtime behavior in the skeleton PR.
+- Worker는 API DB에 직접 접근하지 않습니다.
+- Worker는 backend internal API로 상태를 보고합니다.
+- API 서버는 OpenCV 처리를 수행하지 않습니다.
+- OCR 텍스트 추출 기능은 제품 runtime에서 제외합니다.
+- OpenCV `Mat`은 context와 holder 소유권 기준으로 명확하게 release합니다.
 
-Issue 63 adds the first real OpenCV runtime boundary:
+## 후속 구현 포인트
 
-- `OpenCvLoader` loads the native OpenCV library through the Worker runtime.
-- `ImageCodecAdapter` decodes image bytes into an OpenCV `Mat`.
-- `ImageMatHolder` exposes source key, dimensions, color space, loaded/released state, and the owned `Mat`.
-- `MatResourceCleaner` releases holder-owned Mat resources.
-
-This still does not replace the pipeline `DecodeStep`. The next task should connect Object Storage download bytes to
-`DecodeStep` and store the decoded holder in the preprocessing context.
-
-Issue 65 connects the `DecodeStep` to the codec boundary when source bytes are available. The pipeline context now owns
-the decoded holder during execution and releases it when the runner finishes.
-
-Issue 67 connects Object Storage download bytes to the context before pipeline execution. A valid Worker message can now
-fetch the original object and feed those bytes into `DecodeStep`.
-
-Issue 69 normalizes decoded image color layout to BGR. This keeps downstream OpenCV document preprocessing steps from
-handling multiple input channel layouts.
-
-Issue 71 adds the first geometry corrections. Orientation normalization handles obvious landscape scans, and deskew
-uses foreground geometry to correct moderate scan tilt.
-
-Issue 73 adds the second geometry increment. Crop uses foreground bounds to remove surrounding border/background where
-safe, and DPI normalization scales the current Mat only when source DPI metadata is available. Missing source DPI is a
-fallback no-op because OCR-oriented DPI normalization should be based on real metadata, not guessed values.
-
-Issue 75 adds the first quality-processing increment. Denoise removes scan noise with median or bilateral filtering,
-contrast normalization applies CLAHE, and binarization produces a single-channel binary image using Otsu or adaptive
-thresholding.
-
-Issue 77 completes the currently planned quality-processing steps. Morphology cleanup applies open/close operations with
-black document strokes treated as foreground, and optional sharpen applies unsharp masking only for presets that enable
-`sharpen`.
-
-Issue 79 persists the pipeline output. The Worker encodes the final Mat as `processed.png`, creates a bounded
-`preview.png`, writes `processing-report.json`, uploads all three artifacts to Object Storage, and then calls the Backend
-Internal Worker API success endpoint with the object keys.
-
-Issue 81 persists real debug images when the job request has `debug=true`. The runner clones the current Mat after each
-successful preprocessing step, the Worker uploads those snapshots as PNG files, and the processing report keeps the
-debug artifact object keys.
-
-## Future Implementation Points
-
-1. Expand report fields with detected image-processing facts.
-2. Add an end-to-end MinIO smoke check for all artifact types.
-3. Keep OCR text extraction outside the product runtime.
+1. 처리 리포트에 실제 이미지 처리 결과값을 더 풍부하게 기록합니다.
+2. 모든 artifact type을 검증하는 MinIO E2E smoke를 추가합니다.
+3. OCR 텍스트 추출은 계속 제품 범위 밖에 둡니다.

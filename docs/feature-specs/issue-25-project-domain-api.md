@@ -1,48 +1,20 @@
-# Issue 25. Project Domain CRUD And Permission API
+# 이슈 25. 프로젝트 도메인 API
 
-## Issue
+## 목적
 
-- Issue: `#25`
-- Title: `Project domain CRUD and permission validation`
+대량 이미지 작업을 묶는 프로젝트 단위를 제공합니다.
 
-## Goal
+## 작업 범위
 
-Implement the Project domain as the authorization boundary for future image, upload, and job APIs. A project has one
-owner, multiple members, role-based permissions, soft deletion, and a summary endpoint.
+1. 프로젝트 생성
+2. 내 프로젝트 목록 조회
+3. 프로젝트 상세 조회
+4. 프로젝트 수정
+5. 프로젝트 삭제 또는 비활성화
+6. 프로젝트 접근 권한 검증
 
-## Work Order
+## 완료 기준
 
-1. Enable JPA auditing for `BaseEntity` timestamps.
-2. Add `Project`, `ProjectMember`, `ProjectRole`, and `ProjectStatus`.
-3. Add project repositories.
-4. Add project DTOs.
-5. Add project CRUD services.
-6. Add project member services.
-7. Add `ProjectPermissionService`.
-8. Add project and member controllers.
-9. Add Project API documentation.
-10. Add unit tests.
-
-## Functional Scope
-
-- `OWNER` can read, update, manage members, and soft delete.
-- `EDITOR` can read and update.
-- `VIEWER` can read only.
-- Project deletion uses `ProjectStatus.DELETED`.
-- Member removal deletes the membership row.
-- Project summary returns member count now and reserves image/job counts for later domains.
-
-## Out Of Scope
-
-- Project ownership transfer.
-- Email invitation.
-- Image and Job count integration.
-- Team invitation by email before account creation.
-- Audit logging.
-
-## Verification
-
-- Entity tests cover create/update/delete.
-- Permission tests cover editor/viewer/member missing cases.
-- Service tests cover create/update/invite/remove flows.
-- Backend `test` and `build` must pass.
+1. 사용자는 자신의 프로젝트만 조회할 수 있습니다.
+2. 업로드와 Job 생성은 프로젝트 권한 검증을 거칩니다.
+3. 프로젝트 도메인은 upload/job 내부 상태를 직접 수정하지 않습니다.

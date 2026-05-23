@@ -1,17 +1,17 @@
-# Processing Report JSON Spec
+# 처리 리포트 JSON 명세
 
-## Purpose
+## 목적
 
-`processing-report.json` records how the Worker transformed one document image before OCR. It is an operational and
-debugging artifact, not an OCR text result.
+`processing-report.json`은 Worker가 OCR 전에 문서 이미지를 어떻게 변환했는지 기록합니다.
+이 파일은 운영/디버깅용 artifact이며 OCR 텍스트 결과가 아닙니다.
 
-## Object Key
+## Object key
 
 ```text
 processed/{projectId}/{jobId}/{itemId}/processing-report.json
 ```
 
-## Envelope
+## 전체 구조
 
 ```json
 {
@@ -32,29 +32,29 @@ processed/{projectId}/{jobId}/{itemId}/processing-report.json
 }
 ```
 
-## Step Report
+## 단계별 리포트
 
-Each step entry contains:
+각 step entry는 아래 필드를 가집니다.
 
-| Field | Meaning |
-|---|---|
-| `stepName` | Pipeline step enum such as `DESKEW` or `BINARIZATION` |
-| `note` | Human-readable execution note |
-| `timing.wallTime` | Step wall-clock duration |
-| `timing.cpuTime` | Reserved CPU duration field, currently zero when not sampled |
+| 필드 | 의미 |
+| --- | --- |
+| `stepName` | `DESKEW`, `BINARIZATION` 같은 pipeline step enum |
+| `note` | 사람이 읽을 수 있는 실행 설명 |
+| `timing.wallTime` | step wall-clock duration |
+| `timing.cpuTime` | CPU duration 예약 필드. 현재 sampling하지 않으면 `0` |
 
-## Fallback Summary
+## Fallback summary
 
-Fallback notes are emitted when a step intentionally chooses a safe fallback instead of failing the whole item.
+step이 전체 item을 실패시키지 않고 안전한 대체 전략을 선택하면 fallback note를 남깁니다.
 
-Examples:
+예시:
 
-- Source DPI is missing, so DPI normalization is skipped.
-- Unsupported binarization mode falls back to Otsu.
-- Insufficient foreground points cause deskew or crop to skip.
+- source DPI가 없어 DPI normalization을 건너뜀
+- 지원하지 않는 binarization mode를 Otsu로 대체
+- foreground point가 부족해 deskew 또는 crop을 건너뜀
 
-## Current Limits
+## 현재 제한
 
-1. Memory usage is currently not sampled and remains `0`.
-2. Debug artifact entries point to uploaded PNG snapshots only when the job request has `debug=true`.
-3. OCR text, confidence, CER, WER, and recognized text are out of scope.
+1. memory usage는 아직 sampling하지 않으므로 `0`입니다.
+2. debug artifact entry는 job 요청이 `debug=true`일 때만 업로드된 PNG snapshot을 가리킵니다.
+3. OCR text, confidence, CER, WER, 인식 텍스트는 범위 밖입니다.

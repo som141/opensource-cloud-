@@ -1,56 +1,19 @@
-# Issue 53 Job SSE Progress
+# 이슈 53. Job SSE 진행률
 
-## Goal
+## 목적
 
-Add a backend SSE skeleton for Job progress streaming.
+Job 진행률을 프론트엔드에 실시간으로 전달합니다.
 
-The endpoint lets the frontend subscribe to `/api/v1/jobs/{jobId}/events`. This PR does not connect Worker callbacks yet;
-it sends an initial heartbeat and current Job summary snapshot after validating the user's read access through the
-existing Job query flow.
+## 작업 범위
 
-## API
+1. SSE endpoint 추가
+2. Job progress 계산
+3. 진행률 이벤트 DTO
+4. NGINX SSE 설정
+5. 프론트엔드 수신 처리
 
-```text
-GET /api/v1/jobs/{jobId}/events
-Accept: text/event-stream
-Authorization: Bearer <access-token>
-```
+## 완료 기준
 
-Initial events:
-
-```text
-event: HEARTBEAT
-data: {"eventType":"HEARTBEAT","jobId":1,...}
-
-event: JOB_PROGRESS
-data: {"eventType":"JOB_PROGRESS","jobId":1,"total":100,"queued":10,...}
-```
-
-## Added Components
-
-- `JobEventController`
-- `JobEventService`
-- `SseEmitterRegistry`
-- `JobEventType`
-- `JobProgressEvent`
-
-## Event Types
-
-- `HEARTBEAT`
-- `JOB_PROGRESS`
-- `JOB_COMPLETED`
-- `JOB_FAILED`
-
-## Non-Goals
-
-- No Worker callback API.
-- No direct Worker-to-frontend connection.
-- No OpenCV preprocessing in the API server.
-- No WebSocket implementation.
-- No frontend UI completion.
-
-## Follow-Up
-
-1. Internal Worker API reports item start/success/failure.
-2. Job state transitions publish progress events through `JobEventService`.
-3. Frontend Job detail page consumes the SSE stream and renders counters.
+1. 작업 진행률이 새로고침 없이 갱신됩니다.
+2. SSE 연결 실패 시 화면이 명확한 상태를 보여줍니다.
+3. NGINX가 이벤트를 buffering하지 않습니다.

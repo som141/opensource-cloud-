@@ -1,67 +1,20 @@
-# Issue 37. Preprocess Preset Domain
+# 이슈 37. 전처리 프리셋
 
-## Goal
+## 목적
 
-Implement the backend preset contract used by future Job creation and Worker execution. The API server owns preset
-metadata and validation. Actual OpenCV processing remains Worker responsibility.
+Worker에 전달할 문서 이미지 전처리 preset과 파라미터를 관리합니다.
 
-## Overall Order
+## 작업 범위
 
-1. Define shared built-in preset names.
-2. Define built-in preset metadata, steps, and parameter definitions.
-3. Expose preset list API.
-4. Expose preset detail API.
-5. Expose parameter validation API.
-6. Add custom preset skeleton entity.
-7. Add custom preset create/list/delete APIs.
-8. Document API and Worker preset contract.
-9. Add service/controller/entity tests.
+1. `A4_SCAN_300DPI`
+2. `LOW_CONTRAST_SCAN`
+3. `RECEIPT`
+4. `NOISY_SCAN`
+5. preset 조회 API
+6. 파라미터 검증
 
-## Functional Units
+## 완료 기준
 
-### Built-In Presets
-
-- `A4_SCAN_300DPI`
-- `LOW_CONTRAST_SCAN`
-- `RECEIPT`
-- `NOISY_SCAN`
-- `AUTO`
-
-### Parameter Validation
-
-- Unknown parameters are rejected.
-- Missing parameters are resolved from defaults when defaults exist.
-- Integer/decimal parameters validate range.
-- Boolean parameters accept only `true` or `false`.
-- Enum parameters validate allowed values.
-
-### Custom Presets
-
-- Custom presets belong to the current user.
-- Custom presets are derived from a built-in base preset.
-- Custom preset parameters are validated against the base preset.
-- Delete is a soft delete.
-- Job/Worker connection for custom presets is intentionally deferred.
-
-## API Surface
-
-- `GET /api/v1/preprocess/presets`
-- `GET /api/v1/preprocess/presets/{presetName}`
-- `POST /api/v1/preprocess/presets/validate`
-- `POST /api/v1/preprocess/presets/custom`
-- `GET /api/v1/preprocess/presets/custom`
-- `DELETE /api/v1/preprocess/presets/custom/{presetId}`
-
-## Out Of Scope
-
-- API-side OpenCV execution.
-- Worker preset registry implementation.
-- Job creation integration.
-- Frontend custom preset UI.
-
-## Verification
-
-- Registry tests cover required built-in preset names.
-- Validator tests cover defaults, unknown parameters, range errors, and enum errors.
-- Service tests cover list/detail/validate and custom preset lifecycle.
-- Controller tests cover common response codes for custom create/delete.
+1. 프리셋은 단순 resize 옵션이 아닙니다.
+2. denoise, contrast, binarization, morphology, sharpen 파라미터를 표현할 수 있습니다.
+3. Worker와 API가 같은 preset 이름을 사용합니다.

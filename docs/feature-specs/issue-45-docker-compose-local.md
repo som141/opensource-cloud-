@@ -1,61 +1,23 @@
-# Issue 45. Docker Compose Local Environment
+# 이슈 45. Docker Compose local
 
-## Goal
+## 목적
 
-Provide a local Docker Compose environment for the current backend and Worker development stage. The environment runs
-PostgreSQL, RabbitMQ, MinIO, backend-api, and preprocess-worker with safe placeholder values only.
+로컬에서 API, Worker, 프론트엔드, DB, queue, storage, NGINX를 한 번에 실행할 수 있게 합니다.
 
-## Overall Order
+## 작업 범위
 
-1. Add Compose `.env.example`.
-2. Add PostgreSQL service.
-3. Add RabbitMQ service and queue definitions.
-4. Add MinIO service and bucket initialization.
-5. Add backend-api service connected to PostgreSQL, RabbitMQ, and MinIO.
-6. Add preprocess-worker service connected to backend-api, RabbitMQ, and MinIO.
-7. Keep Worker listener disabled by default.
-8. Add operation documentation.
-9. Validate Compose syntax with `docker compose config`.
+1. `docker-compose.local.yml`
+2. `.env.example`
+3. PostgreSQL
+4. RabbitMQ
+5. MinIO
+6. backend-api
+7. preprocess-worker
+8. frontend
+9. NGINX
 
-## Services
+## 완료 기준
 
-| Service | Purpose | Local Port |
-| --- | --- | --- |
-| `postgres` | Relational metadata DB | `5432` |
-| `rabbitmq` | Job queue and management UI | `5672`, `15672` |
-| `minio` | S3-compatible object storage | `9000`, `9001` |
-| `minio-bucket-init` | Creates local bucket | none |
-| `backend-api` | Spring REST API | `8080` |
-| `preprocess-worker` | RabbitMQ Worker skeleton | none |
-
-## Queue Defaults
-
-- `image.preprocess.high`
-- `image.preprocess.normal`
-- `image.preprocess.retry`
-- `image.preprocess.dlq`
-- `image.benchmark.normal`
-
-## Safe Placeholder Values
-
-The committed values are local placeholders:
-
-- PostgreSQL: `postgres` / `postgres`
-- RabbitMQ: `local` / `local`
-- MinIO: `minioadmin` / `minioadmin`
-- Worker token: `local-worker-token`
-- Google OAuth: `local-google-client-id` / `local-google-client-secret`
-
-Real secrets must be placed in an ignored `.env` file or an external secret manager, never committed.
-
-## Out Of Scope
-
-- NGINX reverse proxy routing.
-- Frontend service wiring.
-- Observability stack.
-- Kubernetes/KEDA manifests.
-- Production-grade secret handling.
-
-## Verification
-
-`docker compose -f docker-compose.local.yml --env-file .env.example config` validates the composed configuration.
+1. `docker compose up -d --build`로 로컬 스택이 실행됩니다.
+2. 기본 secret은 로컬 전용 값으로만 사용합니다.
+3. 실제 secret은 `.env`에 주입하고 커밋하지 않습니다.

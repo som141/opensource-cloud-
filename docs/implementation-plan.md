@@ -944,11 +944,11 @@ processed/{projectId}/{jobId}/{itemId}/debug/{step}.png
 6. Job 생성
 7. RabbitMQ 메시지 발행
 8. Worker 메시지 consume
-9. Worker 전처리 pipeline skeleton
-10. processed image 저장 skeleton
+9. Worker 전처리 pipeline 골격
+10. 처리 이미지 저장 골격
 11. 작업 상태 조회
-12. Docker Compose local skeleton
-13. NGINX routing skeleton
+12. Docker Compose 로컬 골격
+13. NGINX routing 골격
 
 제외:
 

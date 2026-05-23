@@ -2,7 +2,8 @@
 
 ## 목적
 
-backend-api의 모든 REST API 응답 형식을 통일한다.
+`backend-api`의 모든 REST API 응답 형식을 통일합니다.
+프론트엔드와 Swagger 문서는 이 형식을 기준으로 처리합니다.
 
 ## 기본 응답 형식
 
@@ -48,12 +49,10 @@ public record ApiResponse<T>(
 }
 ```
 
-## 코드 규칙
-
-공통 코드:
+## 공통 코드 규칙
 
 | 코드 | 의미 |
-|---|---|
+| --- | --- |
 | `common200` | 요청 성공 |
 | `common201` | 생성 성공 |
 | `common204` | 삭제 또는 응답 본문 없는 성공 |
@@ -64,10 +63,10 @@ public record ApiResponse<T>(
 | `common409` | 상태 충돌 |
 | `common500` | 서버 오류 |
 
-도메인별 코드 prefix:
+도메인별 error code prefix:
 
 | Prefix | 도메인 |
-|---|---|
+| --- | --- |
 | `AUTH` | 인증 |
 | `TOKEN` | 토큰 |
 | `USER` | 사용자 |
@@ -77,13 +76,11 @@ public record ApiResponse<T>(
 | `JOB` | 작업 |
 | `PRESET` | 전처리 프리셋 |
 | `WORKER` | Worker internal API |
-| `BENCHMARK` | OCR 벤치마크 |
-| `ADMIN` | 관리자 |
 
 예시:
 
 | 코드 | 의미 |
-|---|---|
+| --- | --- |
 | `AUTH401` | OAuth2 로그인 실패 |
 | `TOKEN401` | Access Token 만료 |
 | `PROJECT403` | 프로젝트 접근 권한 없음 |
@@ -93,7 +90,7 @@ public record ApiResponse<T>(
 
 ## 페이지 응답
 
-목록 조회는 `PageResponse` 또는 `SliceResponse`를 사용한다.
+목록 조회는 `PageResponse` 또는 `SliceResponse`를 사용합니다.
 
 ```json
 {
@@ -113,18 +110,18 @@ public record ApiResponse<T>(
 
 ## 예외 처리 규칙
 
-1. controller에서 try-catch로 반복 처리하지 않는다.
-2. 도메인 예외는 `BusinessException` 계열로 변환한다.
-3. `GlobalExceptionHandler`에서 공통 실패 응답으로 변환한다.
-4. validation 오류는 필드 오류 정보를 포함할 수 있다.
-5. 내부 에러 메시지나 stack trace를 사용자 응답에 노출하지 않는다.
+1. Controller에서 반복적인 `try-catch`를 작성하지 않습니다.
+2. 도메인 예외는 `BusinessException` 계열로 변환합니다.
+3. `GlobalExceptionHandler`에서 공통 실패 응답으로 변환합니다.
+4. Validation 오류는 필요한 경우 field 오류 정보를 포함합니다.
+5. 내부 오류 메시지나 stack trace를 사용자 응답에 노출하지 않습니다.
 
 ## Swagger 문서화 규칙
 
-API를 추가하거나 수정하면 Swagger에서 아래를 확인한다.
+API를 추가하거나 수정하면 Swagger에서 아래를 확인합니다.
 
-1. endpoint가 노출되는지
-2. 인증이 필요한 API에 JWT Bearer 설정이 있는지
-3. 성공 응답 예시가 있는지
-4. 실패 응답 예시가 있는지
-5. DTO 필드 설명이 있는지
+1. Endpoint가 노출되는지 확인합니다.
+2. 인증이 필요한 API에 JWT Bearer 설정이 있는지 확인합니다.
+3. 성공 응답 예시가 있는지 확인합니다.
+4. 실패 응답 예시가 있는지 확인합니다.
+5. DTO 필드 설명이 있는지 확인합니다.

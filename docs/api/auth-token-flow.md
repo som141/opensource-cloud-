@@ -596,18 +596,18 @@ Frontend
 - frontend의 access token 저장 위치는 backend에서 강제하지 않는다.
 - cross-origin 환경에서는 refresh/logout 요청 시 cookie 전달 설정을 frontend와 CORS 정책에서 맞춰야 한다.
 
-## API 401 And Refresh Retry
+## API 401과 Refresh 재시도
 
-`/api/**` and `/internal/**` requests must not redirect to Google OAuth when authentication is missing or expired.
-Those paths return JSON `401 common401` through `RestAuthenticationEntryPoint`.
+`/api/**`와 `/internal/**` 요청은 인증이 없거나 만료되었을 때 Google OAuth 화면으로 redirect하면 안 됩니다.
+해당 경로는 `RestAuthenticationEntryPoint`를 통해 JSON `401 common401` 응답을 반환합니다.
 
-Frontend behavior:
+프론트엔드 동작:
 
-1. A protected API request receives `401`.
-2. The frontend calls `POST /api/v1/auth/refresh` with `credentials: include`.
-3. If the HttpOnly refresh cookie is valid, the response body returns a new short-lived access token.
-4. The frontend stores the new access token and retries the original request once.
-5. If refresh fails, the stored access token is cleared and the user must log in again.
+1. 보호된 API 요청에서 `401`을 받습니다.
+2. 프론트엔드는 `credentials: include` 옵션으로 `POST /api/v1/auth/refresh`를 호출합니다.
+3. `HttpOnly` refresh cookie가 유효하면 응답 body로 짧은 수명의 새 access token을 받습니다.
+4. 프론트엔드는 새 access token을 저장하고 원래 요청을 한 번만 재시도합니다.
+5. refresh가 실패하면 저장된 access token을 지우고 사용자가 다시 로그인하게 합니다.
 
-This prevents browser `fetch` from following a backend `302` redirect to `accounts.google.com`, which would fail with a
-CORS error and surface only as `Failed to fetch` in the upload UI.
+이 정책은 브라우저 `fetch`가 backend의 `302` redirect를 따라 `accounts.google.com`으로 이동하는 문제를 막습니다.
+그 redirect가 발생하면 CORS 오류로 실패하고 업로드 화면에는 `Failed to fetch`만 표시될 수 있습니다.

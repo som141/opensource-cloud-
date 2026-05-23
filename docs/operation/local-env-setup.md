@@ -1,25 +1,26 @@
-# Local Environment Setup
+# 로컬 환경변수 설정
 
-## Secret Handling Rule
+## Secret 관리 규칙
 
-Do not commit real secrets. The repository tracks only templates and documentation. Put real local values in ignored
-files:
+실제 secret은 Git에 커밋하지 않습니다.
+레포지토리에는 템플릿과 설명 문서만 올리고, 실제 로컬 값은 Git에서 제외되는 파일에 둡니다.
 
 - `backend-api/.env`
+- `infra/docker-compose/.env`
 - `LOCAL_CONFIG.md`
 - `*.local.md`
 
-The `.gitignore` file excludes these paths.
+위 경로는 `.gitignore`에서 제외 대상으로 관리합니다.
 
-## Backend `.env` Template
+## backend-api `.env` 작성
 
-Create `backend-api/.env` from `backend-api/.env.example`:
+`backend-api/.env.example`을 복사해 로컬 전용 `.env`를 만듭니다.
 
 ```powershell
 Copy-Item backend-api\.env.example backend-api\.env
 ```
 
-Then fill in real values:
+필요한 값을 채웁니다.
 
 ```env
 GOOGLE_CLIENT_ID=<google-oauth-client-id>
@@ -48,29 +49,29 @@ MINIO_BUCKET=image-preprocess-local
 MINIO_REGION=us-east-1
 ```
 
-## Google Console
+## Google Console 설정
 
-Register this redirect URI for local backend execution:
+backend-api를 직접 실행할 때는 아래 redirect URI를 등록합니다.
 
 ```text
 http://localhost:8080/login/oauth2/code/google
 ```
 
-If NGINX later becomes the local entry point, add this URI too:
+NGINX를 로컬 단일 진입점으로 사용할 때는 아래 URI도 등록합니다.
 
 ```text
 http://localhost/login/oauth2/code/google
 ```
 
-## Docker Compose `.env` Template
+## Docker Compose `.env` 작성
 
-For the full local MVP stack, copy the Compose template and inject local secrets there:
+전체 로컬 MVP 스택은 Compose env 파일을 사용합니다.
 
 ```powershell
 Copy-Item infra/docker-compose/.env.example infra/docker-compose/.env
 ```
 
-Required values:
+필수 값은 다음과 같습니다.
 
 ```env
 GOOGLE_CLIENT_ID=<google-oauth-client-id>
@@ -78,17 +79,17 @@ GOOGLE_CLIENT_SECRET=<google-oauth-client-secret>
 JWT_SECRET=<at-least-32-byte-secret>
 OAUTH2_SUCCESS_REDIRECT_URI=http://localhost/oauth2/success
 
-MINIO_PUBLIC_ENDPOINT=http://localhost:9000
+MINIO_PUBLIC_ENDPOINT=http://localhost
 MINIO_REGION=us-east-1
 MINIO_API_CORS_ALLOW_ORIGIN=http://localhost,http://localhost:5173
 WORKER_LISTENER_ENABLED=true
 ```
 
-Do not commit `infra/docker-compose/.env`.
+`infra/docker-compose/.env`는 커밋하지 않습니다.
 
-## Docker PostgreSQL
+## Docker PostgreSQL 단독 실행
 
-Start a local PostgreSQL container:
+backend-api만 로컬에서 실행하고 DB만 Docker로 띄우려면 아래 명령을 사용합니다.
 
 ```powershell
 docker run --name image-preprocess-postgres `
@@ -99,21 +100,21 @@ docker run --name image-preprocess-postgres `
   -d postgres:16-alpine
 ```
 
-If the container already exists:
+컨테이너가 이미 존재하면 시작만 합니다.
 
 ```powershell
 docker start image-preprocess-postgres
 ```
 
-Stop it:
+중지합니다.
 
 ```powershell
 docker stop image-preprocess-postgres
 ```
 
-## Running Backend With Local Env
+## 로컬 env로 backend-api 실행
 
-PowerShell example:
+PowerShell에서 `.env`를 현재 프로세스 환경변수로 주입합니다.
 
 ```powershell
 Get-Content backend-api\.env | ForEach-Object {
@@ -127,7 +128,7 @@ Set-Location backend-api
 gradle bootRun
 ```
 
-With Docker Gradle image:
+Docker Gradle image로 테스트할 때는 아래처럼 실행합니다.
 
 ```powershell
 $backendPath = Join-Path (Get-Location) "backend-api"
@@ -139,10 +140,10 @@ docker run --rm `
   gradle test --no-daemon
 ```
 
-When the Gradle container needs to connect to PostgreSQL running on the host, set:
+Gradle 컨테이너에서 호스트 PostgreSQL에 접근해야 하면 `DB_URL`을 아래처럼 바꿉니다.
 
 ```env
 DB_URL=jdbc:postgresql://host.docker.internal:5432/image_preprocess
 ```
 
-`RABBIT_HEALTH_ENABLED=false` keeps `/actuator/health` usable before the RabbitMQ task is implemented.
+`RABBIT_HEALTH_ENABLED=false`는 RabbitMQ 없이 backend-api health를 먼저 확인해야 하는 로컬 상황에서 사용합니다.
