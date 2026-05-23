@@ -1,37 +1,37 @@
-# Project API
+# 프로젝트 API
 
-## Purpose
+## 목적
 
-Project API manages the unit that groups uploaded document images and preprocessing jobs. Future image, upload, and job
-APIs should authorize access through project membership.
+프로젝트 API는 업로드된 문서 이미지와 전처리 Job을 묶는 작업 단위를 관리합니다.
+이미지, 업로드, Job API는 프로젝트 멤버십을 기준으로 접근 권한을 확인합니다.
 
-## Roles
+## 역할
 
-| Role | Read | Update Project | Manage Members | Delete Project |
+| 역할 | 조회 | 프로젝트 수정 | 멤버 관리 | 프로젝트 삭제 |
 | --- | --- | --- | --- | --- |
-| `OWNER` | Yes | Yes | Yes | Yes |
-| `EDITOR` | Yes | Yes | No | No |
-| `VIEWER` | Yes | No | No | No |
+| `OWNER` | 가능 | 가능 | 가능 | 가능 |
+| `EDITOR` | 가능 | 가능 | 불가 | 불가 |
+| `VIEWER` | 가능 | 불가 | 불가 | 불가 |
 
-## Endpoints
+## Endpoint
 
-All endpoints require `Authorization: Bearer <access-token>`.
+모든 endpoint는 `Authorization: Bearer <access-token>`이 필요합니다.
 
-| Method | Path | Purpose |
+| Method | Path | 설명 |
 | --- | --- | --- |
-| `POST` | `/api/v1/projects` | Create a project |
-| `GET` | `/api/v1/projects` | List projects for the current user |
-| `GET` | `/api/v1/projects/{projectId}` | Read project detail |
-| `PATCH` | `/api/v1/projects/{projectId}` | Update project metadata |
-| `DELETE` | `/api/v1/projects/{projectId}` | Soft delete project |
-| `GET` | `/api/v1/projects/{projectId}/summary` | Read project summary |
-| `POST` | `/api/v1/projects/{projectId}/members` | Invite project member |
-| `GET` | `/api/v1/projects/{projectId}/members` | List project members |
-| `DELETE` | `/api/v1/projects/{projectId}/members/{userId}` | Remove project member |
+| `POST` | `/api/v1/projects` | 프로젝트 생성 |
+| `GET` | `/api/v1/projects` | 현재 사용자의 프로젝트 목록 조회 |
+| `GET` | `/api/v1/projects/{projectId}` | 프로젝트 상세 조회 |
+| `PATCH` | `/api/v1/projects/{projectId}` | 프로젝트 메타데이터 수정 |
+| `DELETE` | `/api/v1/projects/{projectId}` | 프로젝트 soft delete |
+| `GET` | `/api/v1/projects/{projectId}/summary` | 프로젝트 요약 조회 |
+| `POST` | `/api/v1/projects/{projectId}/members` | 프로젝트 멤버 초대 |
+| `GET` | `/api/v1/projects/{projectId}/members` | 프로젝트 멤버 목록 조회 |
+| `DELETE` | `/api/v1/projects/{projectId}/members/{userId}` | 프로젝트 멤버 제거 |
 
-## Create Project
+## 프로젝트 생성
 
-Request:
+요청:
 
 ```json
 {
@@ -41,13 +41,13 @@ Request:
 }
 ```
 
-Response:
+응답:
 
 ```json
 {
   "isSuccess": true,
   "code": "common201",
-  "message": "Created.",
+  "message": "생성되었습니다.",
   "result": {
     "id": 1,
     "name": "Library Scan Batch",
@@ -63,21 +63,21 @@ Response:
 }
 ```
 
-## List Projects
+## 프로젝트 목록
 
-Query parameters follow Spring pageable conventions:
+Spring pageable query를 사용합니다.
 
 ```text
 GET /api/v1/projects?page=0&size=20
 ```
 
-The response result is `PageResponse<ProjectResponse>`.
+응답의 `result`는 `PageResponse<ProjectResponse>`입니다.
 
-## Update Project
+## 프로젝트 수정
 
-`OWNER` and `EDITOR` can update project metadata.
+`OWNER`와 `EDITOR`가 수정할 수 있습니다.
 
-Request:
+요청:
 
 ```json
 {
@@ -87,15 +87,15 @@ Request:
 }
 ```
 
-## Delete Project
+## 프로젝트 삭제
 
-Only `OWNER` can delete a project. Deletion is soft delete through `ProjectStatus.DELETED`.
+`OWNER`만 삭제할 수 있습니다. 실제 row를 바로 삭제하지 않고 `ProjectStatus.DELETED`로 soft delete합니다.
 
-## Invite Member
+## 멤버 초대
 
-Only `OWNER` can invite members. `OWNER` cannot be invited through this API.
+`OWNER`만 멤버를 초대할 수 있습니다. `OWNER` 역할은 이 API로 초대하지 않습니다.
 
-Request:
+요청:
 
 ```json
 {
@@ -104,15 +104,15 @@ Request:
 }
 ```
 
-## Project Summary
+## 프로젝트 요약
 
-Response:
+응답:
 
 ```json
 {
   "isSuccess": true,
   "code": "common200",
-  "message": "Request succeeded.",
+  "message": "요청에 성공했습니다.",
   "result": {
     "projectId": 1,
     "name": "Library Scan Batch",
@@ -123,4 +123,4 @@ Response:
 }
 ```
 
-`imageCount` counts non-deleted `Image` rows. `jobCount` counts preprocessing jobs attached to the project.
+`imageCount`는 삭제되지 않은 `Image` row 수입니다. `jobCount`는 프로젝트에 연결된 전처리 Job 수입니다.

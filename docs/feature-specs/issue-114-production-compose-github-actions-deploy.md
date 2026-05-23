@@ -1,70 +1,20 @@
-# Issue 114 - Production Compose And GitHub Actions Deployment
+# 이슈 114. Production Compose와 GitHub Actions 배포
 
-## Purpose
+## 목적
 
-Prepare the MVP for cloud deployment by separating production Compose behavior, documenting HTTPS/domain policy,
-adding GitHub Actions deployment automation, and defining final E2E verification.
+운영 서버에 Docker Compose 기반으로 배포하고 GitHub Actions에서 배포 workflow를 실행할 수 있게 합니다.
 
-## Scope
+## 작업 범위
 
-- Add `infra/docker-compose/docker-compose.prod.yml`.
-- Add `.github/workflows/deploy-production.yml`.
-- Document GitHub Actions secrets and server prerequisites.
-- Document HTTPS/domain policy.
-- Document backup and restore operations.
-- Document final local and production E2E verification order.
+1. 운영용 Compose override
+2. image build/push
+3. SSH 배포 workflow
+4. 서버 디렉터리 구조
+5. `.env.prod` 주입
+6. 배포 후 health check
 
-## Production Compose Behavior
+## 완료 기준
 
-The production override is used with the existing local Compose file:
-
-```bash
-docker compose \
-  -f infra/docker-compose/docker-compose.local.yml \
-  -f infra/docker-compose/docker-compose.prod.yml \
-  --env-file infra/docker-compose/.env.prod \
-  up -d --build
-```
-
-It applies:
-
-- `restart: unless-stopped` to long-running services.
-- Direct port reset for backend-api, PostgreSQL, RabbitMQ, and MinIO.
-- NGINX remains the single public entry point.
-
-## GitHub Actions Deployment Flow
-
-1. Validate production Compose template.
-2. Create a repository archive.
-3. Upload archive to the deployment server over SSH.
-4. Extract into `${DEPLOY_PATH}/current`.
-5. Copy `${DEPLOY_PATH}/shared/.env.prod` into the release.
-6. Run Compose config validation on the server.
-7. Run Compose `up -d --build`.
-8. Check `${PROD_BASE_URL}/health`.
-9. Check `${PROD_BASE_URL}/v3/api-docs`.
-
-## Required GitHub Secrets
-
-| Secret | Purpose |
-| --- | --- |
-| `DEPLOY_HOST` | SSH host/IP |
-| `DEPLOY_USER` | SSH user |
-| `DEPLOY_SSH_PRIVATE_KEY` | SSH private key |
-| `DEPLOY_SSH_PORT` | Optional SSH port |
-| `DEPLOY_PATH` | Deployment directory |
-| `PROD_BASE_URL` | Public HTTPS base URL |
-
-## Out Of Scope
-
-- Creating real production secrets.
-- Running Google OAuth automatically in CI.
-- Implementing TLS certificates inside Compose NGINX.
-- Implementing timestamped rollback releases.
-
-## Validation
-
-- `docker compose` config with local and production files.
-- JSON/YAML/document syntax sanity checks.
-- Deployment workflow dry validation by reviewing generated Compose config.
-- Actual deployment requires GitHub Actions secrets and a prepared server.
+1. GitHub Actions에서 운영 배포 절차가 문서화됩니다.
+2. 배포 실패 시 rollback 또는 로그 확인 지점이 명확합니다.
+3. 운영 secret은 GitHub Environment secrets로 관리합니다.

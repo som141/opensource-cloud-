@@ -1,42 +1,42 @@
-# Image API
+# 이미지 API
 
-## Purpose
+## 목적
 
-Image API manages finalized image metadata after upload completion. The API exposes project image lists, image detail,
-soft delete, original/processed/preview download URLs, processing report lookup, and debug artifact lookup.
+이미지 API는 업로드 완료 후 확정된 이미지 메타데이터를 관리합니다.
+프로젝트 이미지 목록, 이미지 상세, soft delete, 원본/처리 결과/preview 다운로드 URL, 처리 리포트, debug artifact 조회를 제공합니다.
 
-## Rules
+## 규칙
 
-- `Image` rows are created only after upload completion verifies object existence.
-- The Spring API does not expose public object storage URLs.
-- Download endpoints return temporary signed URLs through `PresignedDownloadUrlGenerator`.
-- Original files and preprocessing artifacts are stored separately as `ImageArtifact` rows.
-- Access is controlled by project membership through `ProjectPermissionService`.
-- Deleting an image is a soft delete and does not immediately remove Object Storage objects.
-- Upload completion extracts original width, height, and DPI when the source format exposes those values.
+- `Image` row는 업로드 완료 검증 이후에만 생성합니다.
+- Spring API는 공개 Object Storage URL을 직접 노출하지 않습니다.
+- 다운로드 endpoint는 `PresignedDownloadUrlGenerator`를 통해 임시 signed URL을 반환합니다.
+- 원본 파일과 전처리 결과 artifact는 `ImageArtifact`로 분리해 저장합니다.
+- 접근 권한은 `ProjectPermissionService`의 프로젝트 멤버십 기준으로 확인합니다.
+- 이미지 삭제는 soft delete이며 Object Storage object를 즉시 삭제하지 않습니다.
+- 업로드 완료 시 원본 width, height, DPI를 가능한 범위에서 추출합니다.
 
-## Endpoints
+## Endpoint
 
-| Method | Path | Purpose |
+| Method | Path | 설명 |
 | --- | --- | --- |
-| `GET` | `/api/v1/projects/{projectId}/images` | List project images |
-| `GET` | `/api/v1/images/{imageId}` | Read image detail |
-| `DELETE` | `/api/v1/images/{imageId}` | Soft delete image |
-| `GET` | `/api/v1/images/{imageId}/download?type=original` | Get original download URL |
-| `GET` | `/api/v1/images/{imageId}/download?type=processed` | Get processed download URL |
-| `GET` | `/api/v1/images/{imageId}/download?type=preview` | Get preview download URL |
-| `GET` | `/api/v1/images/{imageId}/report` | Get processing report download URL |
-| `GET` | `/api/v1/images/{imageId}/debug-artifacts` | List debug artifact download URLs |
+| `GET` | `/api/v1/projects/{projectId}/images` | 프로젝트 이미지 목록 |
+| `GET` | `/api/v1/images/{imageId}` | 이미지 상세 |
+| `DELETE` | `/api/v1/images/{imageId}` | 이미지 soft delete |
+| `GET` | `/api/v1/images/{imageId}/download?type=original` | 원본 다운로드 URL |
+| `GET` | `/api/v1/images/{imageId}/download?type=processed` | 처리 결과 다운로드 URL |
+| `GET` | `/api/v1/images/{imageId}/download?type=preview` | preview 다운로드 URL |
+| `GET` | `/api/v1/images/{imageId}/report` | 처리 리포트 다운로드 URL |
+| `GET` | `/api/v1/images/{imageId}/debug-artifacts` | debug artifact 다운로드 URL 목록 |
 
-## List Images
+## 이미지 목록
 
-Response:
+응답:
 
 ```json
 {
   "isSuccess": true,
   "code": "common200",
-  "message": "Request succeeded.",
+  "message": "요청에 성공했습니다.",
   "result": {
     "content": [
       {
@@ -59,15 +59,15 @@ Response:
 }
 ```
 
-## Image Detail
+## 이미지 상세
 
-Response:
+응답:
 
 ```json
 {
   "isSuccess": true,
   "code": "common200",
-  "message": "Request succeeded.",
+  "message": "요청에 성공했습니다.",
   "result": {
     "id": 200,
     "projectId": 10,
@@ -90,30 +90,29 @@ Response:
 }
 ```
 
-Metadata values may be `null` when the uploaded file does not expose reliable dimensions or DPI in the supported
-header fields. The API treats metadata extraction failure as non-fatal after the magic number validation succeeds.
+업로드 파일이 신뢰할 수 있는 크기나 DPI 정보를 header에 제공하지 않으면 메타데이터 값은 `null`일 수 있습니다. magic number 검증이 성공했다면 메타데이터 추출 실패는 치명 오류로 보지 않습니다.
 
-## Download URL
+## 다운로드 URL
 
-Request:
+요청:
 
 ```text
 GET /api/v1/images/200/download?type=original
 ```
 
-Supported `type` values:
+지원 `type`:
 
 - `original`
 - `processed`
 - `preview`
 
-Response:
+응답:
 
 ```json
 {
   "isSuccess": true,
   "code": "common200",
-  "message": "Request succeeded.",
+  "message": "요청에 성공했습니다.",
   "result": {
     "imageId": 200,
     "type": "ORIGINAL",
@@ -125,30 +124,28 @@ Response:
 }
 ```
 
-## Report And Debug Artifacts
+## 리포트와 debug artifact
 
-`/report` returns the latest `PROCESSING_REPORT` artifact download URL.
+- `/report`는 최신 `PROCESSING_REPORT` artifact 다운로드 URL을 반환합니다.
+- `/debug-artifacts`는 이미지의 모든 `DEBUG` artifact 다운로드 URL을 반환합니다.
+- debug artifact는 Worker/report 통합 이후 생성되며, 생성 전에는 빈 결과일 수 있습니다.
 
-`/debug-artifacts` returns all `DEBUG` artifacts for the image. Debug artifacts are expected to be created later by the
-worker/report task and are empty until worker integration exists.
+## 업로드 완료 연동
 
-## Upload Completion Integration
+`POST /api/v1/upload-sessions/{sessionId}/complete`가 성공하면 다음 순서로 image row가 생성됩니다.
 
-When `POST /api/v1/upload-sessions/{sessionId}/complete` succeeds:
+1. API가 원본 object 존재 여부를 확인합니다.
+2. API가 각 원본 object를 다운로드하고 magic number를 검증합니다.
+3. byte signature가 선언된 확장자나 content type과 맞지 않으면 거부합니다.
+4. PNG, JPEG, WEBP, BMP, TIFF header에서 width, height, DPI를 추출합니다.
+5. upload file을 `UPLOADED`로 변경합니다.
+6. upload session을 `COMPLETED`로 변경합니다.
+7. 업로드 파일마다 `Image` row를 생성합니다.
+8. 이미지마다 `ORIGINAL` `ImageArtifact` row를 생성합니다.
 
-1. API verifies the original objects exist.
-2. API downloads each original object and validates the image magic number.
-3. API rejects files whose byte signature does not match the declared extension or content type.
-4. API extracts width, height, and optional DPI from PNG, JPEG, WEBP, BMP, or TIFF headers.
-5. API marks upload files as `UPLOADED`.
-6. API marks the upload session as `COMPLETED`.
-7. API creates one `Image` row per uploaded file with extracted metadata.
-8. API creates one `ORIGINAL` `ImageArtifact` row per image.
+`Image` row는 `uploadSessionFileId` 기준으로 멱등 처리하므로 내부 재시도 시 중복 생성되지 않습니다.
 
-The `Image` row is idempotent by `uploadSessionFileId`, so repeated internal finalization does not create duplicate
-images.
+## 후속 작업
 
-## Next Work
-
-- Replace local download URL generator with a MinIO/S3 adapter.
-- Add worker internal artifact registration for processed, preview, report, and debug files.
+- 로컬 download URL generator를 MinIO/S3 adapter로 교체합니다.
+- Worker internal artifact 등록으로 processed, preview, report, debug 파일을 연결합니다.

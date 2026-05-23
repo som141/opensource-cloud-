@@ -1,69 +1,20 @@
-# Issue 23. Google OAuth Login Flow And JWT Auth
+# 이슈 23. Google OAuth와 JWT 흐름
 
-## Issue
+## 목적
 
-- Issue: `#23`
-- Title: `Google OAuth 로그인 flow와 JWT 인증 구현`
+Google OAuth 로그인 후 Access Token과 Refresh Token을 발급하고, 프론트엔드가 인증 상태를 유지할 수 있게 합니다.
 
-## Goal
+## 작업 범위
 
-Replace the previous OAuth skeleton with a functional Google-only login flow. The backend should identify or create a
-service user, link the Google social account, issue JWT access tokens, persist refresh-token hashes, and resolve
-`@CurrentUser` for protected APIs.
+1. Google OAuth2 client 설정
+2. OAuth success handler
+3. 사용자 자동 가입 또는 기존 계정 연결
+4. Access Token 발급
+5. Refresh Token `HttpOnly` cookie 저장
+6. `/api/v1/auth/me`와 `/api/v1/auth/refresh` 제공
 
-## Work Order
+## 보안 기준
 
-1. Add environment variable contract for Google OAuth, DB, JWT, refresh cookie, and CORS.
-2. Keep real secret files ignored by Git.
-3. Add Google OAuth user-info adapter.
-4. Add OAuth success handler that provisions the user.
-5. Add access-token generation and validation.
-6. Add refresh-token generation, hashing, persistence, rotation, and revocation.
-7. Add refresh-token HttpOnly cookie helper.
-8. Add `GET /api/v1/auth/me`.
-9. Add `POST /api/v1/auth/refresh`.
-10. Add `POST /api/v1/auth/logout`.
-11. Add JWT filter.
-12. Add `@CurrentUser` argument resolver.
-13. Add DB datasource config for Docker PostgreSQL.
-14. Add docs and tests.
-
-## Functional Scope
-
-### OAuth Login
-
-- Provider is Google only.
-- `SocialProvider` keeps only `GOOGLE`.
-- Existing user is found by linked social account first.
-- If no social account exists, existing email user is reused or a new user is created.
-- Google social account is linked if missing.
-
-### Tokens
-
-- Access token is HMAC-SHA256 JWT.
-- Refresh token is random raw token returned only by HttpOnly cookie.
-- Refresh token hash is stored in DB.
-- Refresh endpoint rotates the refresh token.
-- Logout revokes the current refresh token.
-
-### Current User
-
-- JWT filter reads `Authorization: Bearer <access-token>`.
-- Security context stores `CustomUserPrincipal`.
-- `@CurrentUser Long currentUserId` resolves the authenticated user ID.
-
-## Out Of Scope
-
-- Frontend OAuth success page.
-- Swagger UI manual OAuth test.
-- Production secret manager.
-- Multi-provider account linking.
-- Other OAuth providers.
-
-## Verification
-
-- Unit tests cover Google user-info parsing.
-- Unit tests cover JWT create/parse.
-- Unit tests cover refresh cookie behavior.
-- Unit tests cover token issuance/refresh.
-- Docker PostgreSQL is used for local boot verification where possible.
+1. Refresh Token은 JavaScript에서 읽을 수 없는 cookie로 저장합니다.
+2. Access Token을 URL에 노출하는 방식은 장기적으로 제거합니다.
+3. OAuth redirect URI는 NGINX 기준과 backend 직접 기준을 구분합니다.

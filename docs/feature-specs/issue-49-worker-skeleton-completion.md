@@ -1,75 +1,19 @@
-# Issue 49 Worker Skeleton Completion
+# 이슈 49. Worker skeleton 보강
 
-## Goal
+## 목적
 
-Complete the missing preprocess-worker skeleton packages required by `docs/tasks/03-worker-skeleton.md`.
-This PR is structural only. It does not implement actual OpenCV preprocessing and does not add OCR text extraction.
+초기 Worker skeleton을 실제 전처리 pipeline과 storage 연동을 붙일 수 있는 수준으로 보강합니다.
 
-## Work Units
+## 작업 범위
 
-1. Add preprocessing model skeletons.
-2. Add artifact type, path, upload request/result, and save service skeletons.
-3. Add processing report DTO, model, factory, and writer skeletons.
-4. Add OpenCV infra skeletons for loader, codec adapter, and Mat cleanup.
-5. Add tracing and metrics integration seams.
-6. Add focused tests for artifact paths, report creation, codec placeholder, and trace extraction.
-7. Document that OCR runtime is out of scope.
+1. Worker 설정 기본값 정리
+2. listener/service 책임 분리
+3. 실패 코드 enum 정리
+4. backend callback port 정리
+5. storage port 정리
 
-## Added Boundaries
+## 완료 기준
 
-### `domain/preprocess/model`
-
-- `ImageMatHolder`
-- `CropBounds`
-- `DeskewResult`
-- `DpiInfo`
-- `FallbackNote`
-- `ProcessingParameter`
-
-### `domain/artifact`
-
-- `ArtifactType`
-- `ArtifactPath`
-- `ArtifactUploadRequest`
-- `ArtifactUploadResult`
-- `ArtifactSaveService`
-- `ProcessedImageSaveService`
-- `PreviewImageSaveService`
-- `DebugArtifactSaveService`
-
-### `domain/report`
-
-- `ProcessingReport`
-- `ProcessingStepReport`
-- `ProcessingReportJson`
-- `ProcessingTiming`
-- `ProcessingMemoryUsage`
-- `ProcessingFallbackSummary`
-- `ProcessingReportFactory`
-- `ProcessingReportWriter`
-
-### `infra`
-
-- `opencv/OpenCvLoader`
-- `opencv/ImageCodecAdapter`
-- `opencv/MatResourceCleaner`
-- `tracing/WorkerTraceContext`
-- `tracing/RabbitTraceContextExtractor`
-- `metrics/WorkerMetricsRecorder`
-
-## Explicit Non-Goals
-
-- No Tesseract integration.
-- No OCR API.
-- No OCR result storage.
-- No OCR benchmark implementation.
-- No real OpenCV native library loading.
-- No actual Object Storage upload.
-
-## Follow-Up Tasks
-
-1. Implement `13-sse-progress`.
-2. Implement `14-internal-worker-api`.
-3. Complete `15-worker-message-consume` with ack, retry, DLQ, and Backend reporting.
-4. Implement `18-artifact-report` using the skeleton introduced here.
-5. Implement real image-test/OpenCV preprocessing inside `16-worker-preprocess-pipeline`.
+1. Worker가 인증 도메인이나 화면용 API를 갖지 않습니다.
+2. 후속 OpenCV step 구현이 가능한 구조입니다.
+3. 실패 처리와 retry 판단 위치가 분명합니다.

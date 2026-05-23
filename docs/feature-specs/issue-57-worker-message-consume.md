@@ -1,72 +1,20 @@
-# Issue 57. Worker Message Consume And Internal Report
+# 이슈 57. Worker 메시지 소비
 
-## Feature Summary
+## 목적
 
-This task connects the Worker RabbitMQ listener to the backend Internal Worker API. It gives the Worker a concrete
-state-reporting path without adding actual OpenCV image processing yet.
+RabbitMQ 메시지를 실제 Worker 작업으로 소비하고 처리 결과를 backend-api로 보고합니다.
 
-## Implemented Units
+## 작업 범위
 
-1. `BackendApiClient` internal report contract
-2. `WorkerJobReportClient` HTTP implementation
-3. `WorkerRuntimeProperties` for `worker.id`
-4. `WorkerJobResult.retryable`
-5. Listener-level requeue/reject decision
-6. Worker service started/heartbeat/failure report flow
-7. Tests for Worker service, listener decisions, and HTTP client request behavior
+1. queue listener 연결
+2. 메시지 검증
+3. 원본 object download 호출
+4. pipeline 실행 호출
+5. 성공/실패 callback 호출
+6. retry 가능 오류 분류
 
-## Internal API Calls
+## 완료 기준
 
-All calls include:
-
-```http
-X-Worker-Token: <WORKER_INTERNAL_TOKEN>
-Content-Type: application/json
-```
-
-| Worker method | Backend endpoint |
-| --- | --- |
-| `reportStarted` | `POST /internal/v1/jobs/{jobId}/items/{itemId}/started` |
-| `reportHeartbeat` | `POST /internal/v1/jobs/{jobId}/items/{itemId}/heartbeat` |
-| `reportSucceeded` | `POST /internal/v1/jobs/{jobId}/items/{itemId}/succeeded` |
-| `reportFailed` | `POST /internal/v1/jobs/{jobId}/items/{itemId}/failed` |
-| `registerArtifacts` | `POST /internal/v1/jobs/{jobId}/items/{itemId}/artifacts` |
-
-## Current Processing Result
-
-The Worker still runs the pipeline skeleton only. After the skeleton executes, the Worker reports:
-
-```text
-PIPELINE_NOT_IMPLEMENTED
-```
-
-This result is non-retryable because retrying cannot make an unimplemented pipeline succeed.
-
-## Retry Policy
-
-| Failure | Retryable | RabbitMQ behavior |
-| --- | --- | --- |
-| Invalid message | No | Reject without requeue |
-| Backend internal API unavailable | Yes | Immediate requeue |
-| Temporary storage download failure | Yes | Immediate requeue |
-| Pipeline execution exception | Yes | Immediate requeue after failure report attempt |
-| Pipeline skeleton not implemented | No | Reject without requeue |
-
-## Environment
-
-```env
-BACKEND_API_INTERNAL_URL=http://backend-api:8080
-WORKER_INTERNAL_TOKEN=local-worker-token
-WORKER_ID=local-worker-1
-WORKER_LISTENER_ENABLED=false
-```
-
-`WORKER_INTERNAL_TOKEN` must match backend-api's `WORKER_INTERNAL_TOKEN`.
-
-## Out Of Scope
-
-1. Actual OpenCV processing
-2. Real object download/upload
-3. Artifact report generation
-4. Success callback from a real processed output
-5. OCR text extraction
+1. Worker는 DB에 직접 접근하지 않습니다.
+2. 메시지 처리 실패는 명확한 실패 코드로 보고됩니다.
+3. RabbitMQ ack는 처리 결과에 맞게 수행합니다.

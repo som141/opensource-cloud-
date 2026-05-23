@@ -1,46 +1,19 @@
-# Issue 69. Worker ColorNormalizeStep
+# 이슈 69. ColorNormalizeStep
 
-## Feature Summary
+## 목적
 
-This task replaces the Worker `ColorNormalizeStep` skeleton with OpenCV-backed color normalization.
+입력 이미지 색상 channel을 pipeline이 처리하기 쉬운 BGR 형태로 정규화합니다.
 
-The step normalizes decoded images into BGR so downstream document preprocessing steps can work with a predictable color
-layout.
+## 작업 범위
 
-## Implemented Units
+1. Gray 입력을 BGR로 변환
+2. BGRA 입력을 BGR로 변환
+3. BGR 입력은 no-op 처리
+4. 변환 후 이전 Mat release
+5. 지원하지 않는 channel layout 실패 처리
 
-1. `GRAY -> BGR` conversion
-2. `BGRA -> BGR` conversion
-3. `BGR` no-op path
-4. Context holder replacement after conversion
-5. Previous Mat release when holder is replaced
-6. Step notes for before/after color space
-7. Unit tests for GRAY, BGRA, BGR, missing holder, and unsupported channel layout
+## 완료 기준
 
-## Runtime Behavior
-
-After `DecodeStep` stores an `ImageMatHolder`, `ColorNormalizeStep` checks the holder color space:
-
-```text
-GRAY -> BGR
-BGRA -> BGR
-BGR  -> BGR no-op
-```
-
-When conversion creates a new Mat, the context replaces the previous holder and releases the old Mat. If decoded image
-data is not available yet, the step records a deferred note and keeps the current skeleton-compatible pipeline behavior.
-
-Unsupported channel layouts fail the step and are reported by the Worker as `PIPELINE_EXECUTION_FAILED`.
-
-## Out Of Scope
-
-1. Orientation normalization
-2. Deskew
-3. Crop
-4. Denoise
-5. Contrast normalization
-6. Binarization
-7. Morphology cleanup
-8. DPI normalization
-9. Artifact upload
-10. OCR text extraction
+1. downstream step은 BGR 기준으로 동작할 수 있습니다.
+2. resource leak 없이 이전 Mat을 정리합니다.
+3. orientation, deskew, crop 등 후속 단계는 별도 이슈에서 구현합니다.

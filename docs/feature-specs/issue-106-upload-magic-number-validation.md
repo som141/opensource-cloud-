@@ -1,66 +1,19 @@
-# Issue 106 - Upload Magic Number Validation
+# 이슈 106. 업로드 magic number 검증
 
-## Purpose
+## 목적
 
-Add server-side image signature validation to the upload completion flow. Frontend file filters and client-provided
-content types are not security boundaries, so the API must inspect the bytes stored in Object Storage before finalizing
-image metadata.
+확장자만 이미지처럼 보이는 위장 파일을 업로드 단계에서 차단합니다.
 
-## End-To-End Flow
+## 작업 범위
 
-1. The frontend creates an upload session.
-2. The frontend requests presigned upload URLs with file name, content type, size, and checksum metadata.
-3. The frontend uploads each original file directly to Object Storage.
-4. The frontend calls `POST /api/v1/upload-sessions/{sessionId}/complete`.
-5. The API validates the requested upload file IDs and object existence.
-6. The API downloads each uploaded object through `ObjectStoragePort`.
-7. The API detects the actual image format from the magic number.
-8. The detected format must match the stored file name extension and content type.
-9. Only valid files are marked as uploaded and converted into finalized `Image` rows.
+1. content type 검증
+2. 확장자 검증
+3. magic number 검증
+4. ZIP 내부 파일 검증
+5. 실패 코드와 메시지 정리
 
-## Supported Signatures
+## 완료 기준
 
-| Format | Magic number rule | Extensions | Content types |
-| --- | --- | --- | --- |
-| PNG | `89 50 4E 47 0D 0A 1A 0A` | `.png` | `image/png` |
-| JPEG | `FF D8 FF` prefix | `.jpg`, `.jpeg` | `image/jpeg` |
-| WEBP | `RIFF` at offset 0 and `WEBP` at offset 8 | `.webp` | `image/webp` |
-| BMP | `42 4D` prefix | `.bmp` | `image/bmp`, `image/x-ms-bmp` |
-| TIFF | `49 49 2A 00` or `4D 4D 00 2A` | `.tif`, `.tiff` | `image/tiff` |
-
-## Functional Units
-
-### 1. Signature Validator
-
-- `UploadedImageMagicNumberValidator` detects the actual image format from bytes.
-- It compares detected format against `UploadSessionFile.originalFileName`.
-- It compares detected format against `UploadSessionFile.contentType`.
-- It throws `InvalidUploadFileException` when the signature is unsupported or mismatched.
-
-### 2. Upload Complete Integration
-
-- `UploadCompleteService` still verifies object existence first.
-- After existence verification, it downloads object bytes.
-- The validator runs before `UploadSessionFile.markUploaded()`.
-- Invalid files prevent session completion and image row creation.
-
-### 3. Tests
-
-- Validator accepts PNG, JPEG, WEBP, BMP, and TIFF signatures.
-- Validator rejects extension mismatches.
-- Validator rejects content type mismatches.
-- Validator rejects unsupported/corrupted signatures.
-- Upload completion rejects invalid uploaded object bytes before image finalization.
-
-## Out Of Scope
-
-- Server-side ZIP extraction.
-- Width, height, and DPI extraction.
-- Full checksum recomputation.
-- Antivirus scanning.
-
-## Verification
-
-- Backend test/build passes.
-- `docs/api/upload-api.md` describes completion-time signature validation.
-- `docs/api/image-api.md` describes magic validation before image row creation.
+1. 지원하지 않는 파일 형식은 presigned upload 또는 complete 단계에서 거절됩니다.
+2. ZIP 내부 위장 파일도 검증 대상입니다.
+3. 오류 메시지는 사용자가 조치할 수 있게 작성합니다.

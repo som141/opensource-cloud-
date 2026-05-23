@@ -1,80 +1,45 @@
-# 15. Worker Message Consume
+# 15. Worker 메시지 소비
 
-## Goal
+## 목표
 
-Connect `preprocess-worker` RabbitMQ message consumption to the backend Internal Worker API.
+RabbitMQ에 발행된 전처리 메시지를 Worker가 소비하고, 이미지 하나를 처리하는 작업 단위로 실행합니다.
 
-The Worker must consume image-level preprocessing messages, validate the message, report processing state to
-`backend-api`, and decide whether RabbitMQ should requeue or reject the message. This task does not implement actual
-OpenCV image preprocessing. The current pipeline still runs the skeleton and reports `PIPELINE_NOT_IMPLEMENTED`.
+## 먼저 읽을 문서
 
-## Read First
+1. `docs/worker/listener-skeleton.md`
+2. `docs/worker/retry-policy.md`
+3. `docs/api/job-api.md`
 
-1. `README.md`
-2. `docs/implementation-plan.md`
-3. `docs/tasks/03-worker-skeleton.md`
-4. `docs/tasks/14-internal-worker-api.md`
-5. `docs/worker/retry-policy.md`
-6. `docs/worker/preprocess-pipeline.md`
+## 작업 범위
 
-## Scope
+1. `PreprocessJobListener` 구현
+2. queue별 listener 연결
+3. 메시지 필수 필드 검증
+4. 처리 시작 callback
+5. Object Storage 원본 다운로드
+6. 전처리 pipeline 실행
+7. 성공 또는 실패 callback
+8. ack/nack/retry 정책 적용
 
-1. RabbitMQ listener result handling
-2. Message validation before external calls
-3. Backend Internal Worker API HTTP client
-4. Started, heartbeat, failed, succeeded, and artifact report client methods
-5. Retryable vs non-retryable result model
-6. RabbitMQ requeue/reject skeleton
-7. Tests for listener, WorkerJobService, and Backend API client
+## 메시지 계약
 
-## Order
-
-1. Extend `BackendApiClient` with internal report methods.
-2. Implement `WorkerJobReportClient` with `X-Worker-Token`.
-3. Add `WorkerRuntimeProperties` for `worker.id`.
-4. Extend `WorkerJobResult` with `retryable`.
-5. Update `WorkerJobService` flow:
-   - validate message
-   - report started
-   - prepare storage download
-   - report heartbeat
-   - run pipeline skeleton
-   - report non-retryable `PIPELINE_NOT_IMPLEMENTED`
-6. Update listener behavior:
-   - success returns normally and auto-acks
-   - retryable failure throws `ImmediateRequeueAmqpException`
-   - non-retryable failure throws `AmqpRejectAndDontRequeueException`
-7. Add unit tests.
-8. Update docs.
-
-## Runtime Flow
-
-```text
-RabbitMQ message
-  -> PreprocessJobListener.handle
-  -> WorkerJobService.process
-  -> validate message
-  -> POST /internal/v1/jobs/{jobId}/items/{itemId}/started
-  -> ObjectStoragePort.prepareDownload
-  -> POST /internal/v1/jobs/{jobId}/items/{itemId}/heartbeat
-  -> PreprocessPipelineRunner.run
-  -> POST /internal/v1/jobs/{jobId}/items/{itemId}/failed
-  -> listener reject or requeue based on retryable flag
+```json
+{
+  "messageId": "msg-uuid",
+  "jobId": 1,
+  "itemId": 10,
+  "projectId": 1,
+  "imageId": 100,
+  "originalObjectKey": "originals/1/1/100/scan.png",
+  "preset": "A4_SCAN_300DPI",
+  "debug": false,
+  "priority": "NORMAL",
+  "attempt": 1
+}
 ```
 
-## Done Criteria
+## 완료 기준
 
-1. Worker does not connect directly to the backend database.
-2. Worker calls backend internal APIs with `X-Worker-Token`.
-3. Invalid messages are rejected without backend/storage calls.
-4. Backend internal API failure is retryable.
-5. Temporary storage download failure is retryable.
-6. Current pipeline skeleton failure is non-retryable and reported as `PIPELINE_NOT_IMPLEMENTED`.
-7. Tests pass.
-
-## Forbidden
-
-1. Do not implement OpenCV processing in this task.
-2. Do not add OCR text extraction.
-3. Do not call user-facing APIs from Worker.
-4. Do not acknowledge failed retryable messages as if they succeeded.
+1. Worker가 API DB에 직접 접속하지 않습니다.
+2. 메시지 실패가 무조건 성공 ack로 숨겨지지 않습니다.
+3. retry 가능한 오류와 불가능한 오류를 구분합니다.

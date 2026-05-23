@@ -1,69 +1,29 @@
-# 03. preprocess-worker Spring skeleton
+# 03. Worker 골격
 
-## Goal
+## 목표
 
-Create the Spring Boot Worker skeleton that consumes RabbitMQ messages and executes an OpenCV-based document image
-preprocessing pipeline.
+`preprocess-worker`를 `backend-api`와 분리된 Spring Boot 애플리케이션으로 구성합니다.
+Worker는 RabbitMQ 메시지를 소비하고 문서 이미지 전처리만 담당합니다.
 
-The Worker is for OCR preprocessing only. It does not run OCR engines and does not return or store recognized text.
-
-## Documents To Read First
+## 먼저 읽을 문서
 
 1. `README.md`
-2. `docs/implementation-plan.md`
-3. `docs/tasks/02-backend-api-skeleton.md`
-4. `docs/worker/preprocess-pipeline.md`
-5. `docs/worker/image-test-integration.md`
+2. `docs/architecture/system-overview.md`
+3. `docs/worker/listener-skeleton.md`
 
-## Scope
+## 작업 범위
 
-1. Worker Gradle project
-2. Worker application entrypoint
-3. Message consume domain
-4. Preprocess pipeline domain
-5. Preprocess model domain
-6. Artifact/report domain
-7. Storage/API/OpenCV/tracing/metrics infra boundaries
+1. `PreprocessWorkerApplication` 생성
+2. Worker 도메인형 패키지 구조 생성
+3. RabbitMQ listener 패키지 생성
+4. Object Storage port 생성
+5. backend internal API client port 생성
+6. 전처리 pipeline 패키지 골격 생성
+7. 안전한 로컬 기본 설정 추가
 
-## Work Order
+## 완료 기준
 
-1. Create `preprocess-worker/build.gradle`.
-2. Create `PreprocessWorkerApplication.java`.
-3. Create `domain/workerjob`.
-4. Create `domain/preprocess/pipeline`.
-5. Create `domain/preprocess/preset`.
-6. Create `domain/preprocess/step`.
-7. Create `domain/preprocess/model`.
-8. Create `domain/artifact`.
-9. Create `domain/report`.
-10. Create `infra/rabbitmq`.
-11. Create `infra/storage`.
-12. Create `infra/api`.
-13. Create `infra/opencv`.
-14. Create `infra/tracing`.
-15. Create `infra/metrics`.
-
-## Deliverables
-
-1. Worker Spring Boot skeleton
-2. `PreprocessStep` based package structure
-3. Worker Dockerfile placeholder
-4. Worker application config file
-5. Artifact/report skeleton boundaries
-6. OpenCV integration seam without native runtime dependency
-
-## Completion Criteria
-
-1. Worker has no OAuth login logic.
-2. Worker does not connect directly to the API database.
-3. Worker has the preprocessing structure from `DecodeStep` to `SharpenStep`.
-4. Worker has model/report/artifact skeletons for future processing results.
-5. Worker has an explicit image-test integration seam.
-6. Worker has no OCR text extraction runtime.
-
-## Forbidden
-
-1. Do not reduce the Worker to a simple resize job.
-2. Do not add public external controllers to the Worker.
-3. Do not put user authorization decisions in the Worker.
-4. Do not add Tesseract or OCR text extraction logic in this skeleton task.
+1. Worker가 API 서버 패키지 안에 들어가지 않습니다.
+2. Worker에 OAuth 로그인이나 사용자 화면용 API가 없습니다.
+3. RabbitMQ, storage, backend API 접근은 `infra` adapter 또는 port로 분리됩니다.
+4. `preprocess-worker` build/test가 통과합니다.

@@ -1,70 +1,33 @@
-# 05. Frontend Skeleton
+# 05. 프론트엔드 골격
 
-## Goal
+## 목표
 
-Create the frontend skeleton that is built as static files and served through NGINX.
+React/Vite 기반 프론트엔드 구조를 만들고 NGINX에서 정적 파일로 제공할 수 있게 합니다.
 
-The frontend only renders screens and calls APIs. It must not contain image preprocessing business logic, Object Storage
-secrets, or backend-only security decisions.
-
-## Documents To Read First
+## 먼저 읽을 문서
 
 1. `README.md`
-2. `docs/implementation-plan.md`
-3. `docs/tasks/04-infra-directory-skeleton.md`
-4. `docs/api/auth-api.md`
-5. `docs/api/job-api.md`
-6. `docs/architecture/nginx-routing.md`
+2. `docs/architecture/nginx-routing.md`
+3. `docs/operation/docker-compose-local.md`
 
-## Scope
+## 작업 범위
 
-1. React + Vite + TypeScript project structure
-2. App routes
-3. Page placeholders
-4. Feature and entity folders
-5. API client skeleton
-6. SSE client skeleton
-7. Static deployment Dockerfile and frontend NGINX config
+1. `frontend` 앱 구조 생성
+2. routing 구성
+3. API client 공통 모듈 생성
+4. 인증 상태 처리 골격 생성
+5. 프로젝트, 업로드, Job, 이미지 상세 화면 진입점 생성
+6. Dockerfile과 frontend `nginx.conf` 생성
 
-## Work Order
+## UI 원칙
 
-1. Add `frontend/package.json`.
-2. Add Vite and TypeScript config.
-3. Add `frontend/src/app`.
-4. Add `frontend/src/pages`.
-5. Add `frontend/src/features`.
-6. Add `frontend/src/entities`.
-7. Add `frontend/src/shared`.
-8. Add `frontend/src/styles`.
-9. Add Google login placeholder.
-10. Add dashboard placeholder.
-11. Add project list/detail placeholders.
-12. Add upload placeholder.
-13. Add job detail placeholder.
-14. Add image detail placeholder.
-15. Add preprocessing quality placeholder.
-16. Add admin placeholder.
-17. Add frontend Dockerfile and NGINX config.
-18. Connect the root reverse proxy to the frontend container.
+1. Bootstrap, jQuery, AdminLTE를 추가하지 않습니다.
+2. 화면은 프론트엔드 책임에만 집중합니다.
+3. Object Storage secret을 브라우저에 노출하지 않습니다.
+4. API 호출은 NGINX의 `/api` reverse proxy를 전제로 합니다.
 
-## Deliverables
+## 완료 기준
 
-1. Frontend directory structure
-2. Route placeholders
-3. API/SSE client placeholders
-4. Static file deployment skeleton
-
-## Completion Criteria
-
-1. Frontend is not mixed into the API server.
-2. `/api`, `/oauth2`, and `/login/oauth2` calls go through NGINX.
-3. No arbitrary UI template library is added.
-4. `npm run build` passes.
-5. Docker Compose config includes a frontend service.
-
-## Forbidden
-
-1. Do not add Bootstrap, jQuery, or AdminLTE.
-2. Do not execute image preprocessing business logic in the frontend.
-3. Do not expose Object Storage secrets in the frontend.
-4. Do not implement OCR text extraction screens as a product feature.
+1. `npm run build`가 통과합니다.
+2. Docker Compose에서 `http://localhost`로 화면이 열립니다.
+3. Access Token 값이 URL이나 화면에 직접 노출되지 않습니다.

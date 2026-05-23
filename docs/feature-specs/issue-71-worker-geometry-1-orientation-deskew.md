@@ -1,61 +1,22 @@
-# Issue 71. Worker Geometry 1 Orientation And Deskew
+# 이슈 71. Geometry 1: 방향 보정과 기울기 보정
 
-## Feature Summary
+## 목적
 
-This task implements the first geometry stage of the Worker preprocessing pipeline.
+문서 이미지의 큰 방향과 기울기를 보정합니다.
 
-`OrientationNormalizeStep` and `DeskewStep` are now backed by OpenCV operations. The goal is to make downstream crop,
-quality, and binarization steps operate on a more predictable document geometry.
-
-## Implemented Units
+## 작업 범위
 
 1. `OrientationNormalizeStep`
-2. Landscape-to-portrait 90-degree rotation
-3. Orientation skip/deferred step notes
-4. `DeskewStep`
-5. Foreground extraction with grayscale + Otsu inverse threshold
-6. `minAreaRect` skew correction angle estimation
-7. Max deskew angle guard
-8. Low foreground fallback
-9. Context holder replacement and previous Mat release on applied transforms
-10. Unit tests for orientation rotate/no-op/deferred
-11. Unit tests for deskew applied/blank fallback/deferred
+2. 가로 이미지의 세로 방향 회전
+3. `DeskewStep`
+4. grayscale 변환
+5. Otsu inverse threshold
+6. foreground point 기반 `minAreaRect`
+7. 허용 각도 내 `warpAffine`
+8. fallback note 기록
 
-## Orientation Behavior
+## 완료 기준
 
-If the decoded image is landscape, the step rotates it 90 degrees clockwise:
-
-```text
-width > height -> rotate 90 degrees clockwise
-width <= height -> no-op
-```
-
-This is intentionally simple. EXIF orientation and content-aware orientation detection remain out of scope.
-
-## Deskew Behavior
-
-Deskew uses a conservative OpenCV flow:
-
-```text
-BGR/BGRA/GRAY -> grayscale
-grayscale -> Otsu inverse threshold
-foreground mask -> findNonZero
-points -> minAreaRect
-angle -> normalize to correction angle
-correction angle within maxDeskewAngle -> warpAffine
-```
-
-If there are not enough foreground points, the step records a fallback note and skips deskew. If the detected correction
-angle exceeds `maxDeskewAngle`, the step also records a fallback note and skips.
-
-## Out Of Scope
-
-1. Crop
-2. DPI normalization
-3. Denoise
-4. Contrast normalization
-5. Binarization
-6. Morphology cleanup
-7. Sharpen
-8. Artifact upload
-9. OCR text extraction
+1. foreground가 부족하면 안전하게 skip합니다.
+2. `maxDeskewAngle`을 넘으면 보정을 적용하지 않습니다.
+3. crop, DPI, 품질 step은 후속 이슈에서 구현합니다.

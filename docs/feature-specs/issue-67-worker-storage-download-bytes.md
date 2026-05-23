@@ -1,53 +1,19 @@
-# Issue 67. Worker Object Storage Download Bytes
+# 이슈 67. Object Storage 다운로드 연결
 
-## Feature Summary
+## 목적
 
-This task connects Worker object storage download to the preprocessing context. The Worker can now fetch original object
-bytes through `ObjectStoragePort.downloadBytes` and pass them to `PreprocessContext.withSourceImageBytes` before running
-the pipeline.
+Worker가 Object Storage에서 원본 이미지를 다운로드해 pipeline에 전달합니다.
 
-This enables the `DecodeStep` path from issue 65 to decode actual downloaded bytes when a real object exists in storage.
+## 작업 범위
 
-## Implemented Units
+1. `ObjectStoragePort.downloadBytes`
+2. `MinioObjectStorageClient` 다운로드 구현
+3. `WorkerJobService`에서 source bytes 주입
+4. storage 실패 코드 분리
+5. decode 이후 실패 코드 분리
 
-1. Worker-only MinIO SDK dependency: `io.minio:minio:9.0.0`
-2. `ObjectStoragePort.downloadBytes`
-3. `MinioObjectStorageClient.downloadBytes`
-4. `ObjectStorageDownloadFailedException`
-5. `WorkerJobService` download bytes -> `PreprocessContext.withSourceImageBytes`
-6. Storage failure still maps to `STORAGE_DOWNLOAD_FAILED`
-7. Pipeline failure still maps to `PIPELINE_EXECUTION_FAILED`
-8. Worker service tests for download invocation and context byte propagation
+## 완료 기준
 
-## Runtime Flow
-
-```text
-WorkerJobService
-  -> ObjectStoragePort.downloadBytes(originalObjectKey)
-  -> PreprocessContext.fromMessage(message).withSourceImageBytes(bytes)
-  -> PreprocessPipelineRunner.run(context)
-  -> DecodeStep decodes bytes through ImageDecodePort
-```
-
-## Failure Behavior
-
-If storage download fails, the Worker reports:
-
-```text
-STORAGE_DOWNLOAD_FAILED, retryable=true
-```
-
-If storage download succeeds but decode or a later pipeline step fails, the Worker reports:
-
-```text
-PIPELINE_EXECUTION_FAILED, retryable=true
-```
-
-## Out Of Scope
-
-1. Processed image upload
-2. Preview image upload
-3. Processing report upload
-4. Debug artifact upload
-5. Worker success callback
-6. OCR text extraction
+1. 다운로드 실패는 `STORAGE_DOWNLOAD_FAILED`로 보고합니다.
+2. decode 또는 이후 step 실패는 `PIPELINE_EXECUTION_FAILED`로 보고합니다.
+3. artifact upload는 이 작업 범위에 포함하지 않습니다.

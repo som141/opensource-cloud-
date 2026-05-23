@@ -1,77 +1,19 @@
-# Issue 98 - Image Detail UI Flow
+# 이슈 98. 이미지 상세 UI
 
-## Goal
+## 목적
 
-Replace the `/images/{imageId}` placeholder with an API-backed image detail screen for the local MVP.
+이미지 원본 metadata와 처리 결과 다운로드 정보를 확인할 수 있는 화면을 제공합니다.
 
-The screen focuses on source image metadata and OCR preprocessing outputs related to that image.
+## 작업 범위
 
-## Scope
+1. 이미지 상세 조회
+2. 원본 파일 정보 표시
+3. 처리 결과 artifact 표시
+4. processed image 다운로드
+5. 권한 오류 표시
 
-Included:
+## 완료 기준
 
-- Original image metadata.
-- Original image download URL.
-- Project and upload session references.
-- Related JobItems that processed this image.
-- Processed image download through JobItem artifact APIs.
-- Links back to the owning project and related jobs.
-
-Excluded:
-
-- OCR text extraction.
-- Benchmark screens.
-- Full debug artifact browsing.
-- Inline image preview rendering.
-
-## Data Flow
-
-```text
-User opens /images/{imageId}
-  -> GET /api/v1/images/{imageId}
-  -> GET /api/v1/jobs?size=100
-  -> filter jobs by image.projectId
-  -> GET /api/v1/jobs/{jobId}/items?size=500 for each project job
-  -> filter JobItems by imageId
-```
-
-The current backend stores processed outputs on JobItems, not directly on Image rows. For the MVP UI, the frontend
-therefore resolves related processed results through JobItem APIs.
-
-## Download APIs
-
-Original image:
-
-```text
-GET /api/v1/images/{imageId}/download?type=original
-```
-
-Processed image:
-
-```text
-GET /api/v1/jobs/{jobId}/items/{itemId}/download?type=processed
-```
-
-Batch ZIP downloads stay on the Job detail screen:
-
-```text
-GET /api/v1/jobs/{jobId}/download.zip
-```
-
-## UI Behavior
-
-- Shows file name, status, project ID, upload session ID, object key, checksum, content type, size, dimensions, DPI, and
-  created time.
-- Shows `not extracted` when width, height, or DPI metadata is not available yet.
-- Enables original download when the image exists.
-- Lists related JobItems with status, preset, worker ID, error information, and processed object key.
-- Enables processed download only when `processedObjectKey` exists.
-- Provides navigation to `/projects/{projectId}`, `/jobs/{jobId}`, and `/upload`.
-
-## Completion Criteria
-
-- `/images/{imageId}` is no longer a placeholder.
-- Authenticated users can inspect original image metadata.
-- Original image download opens a signed URL.
-- Related processed outputs can be downloaded when available.
-- Frontend build passes.
+1. 사용자는 처리된 이미지를 다운로드할 수 있습니다.
+2. 내부 artifact는 필요한 범위만 노출합니다.
+3. 이미지 상세는 프로젝트 권한을 확인합니다.

@@ -1,13 +1,15 @@
-# Worker Listener Skeleton
+# Worker Listener 골격
 
-## Purpose
+## 목적
 
-The Worker listener consumes preprocessing messages produced by the backend Job domain. It is the boundary between
-RabbitMQ and the future OpenCV document image preprocessing pipeline.
+Worker listener는 backend Job 도메인이 발행한 전처리 메시지를 소비합니다.
+RabbitMQ와 OpenCV 문서 이미지 전처리 pipeline 사이의 경계입니다.
 
-## Current Scope
+## 현재 범위
 
-Implemented in issue 41:
+이 문서는 초기 Worker listener skeleton과 이후 구현 방향을 설명합니다.
+
+포함 구성:
 
 - `PreprocessWorkerApplication`
 - `PreprocessJobListener`
@@ -15,31 +17,31 @@ Implemented in issue 41:
 - `WorkerJobService`
 - `BackendApiClient` port
 - `ObjectStoragePort` port
-- safe local configuration defaults
+- 안전한 로컬 기본 설정
 
-## Listener Activation
+## Listener 활성화
 
-The listener is disabled by default:
+기본값은 비활성화입니다.
 
 ```text
 WORKER_LISTENER_ENABLED=false
 ```
 
-Enable it only when RabbitMQ is running and the team intentionally wants the Worker to consume messages:
+RabbitMQ가 실행 중이고 Worker가 실제로 메시지를 소비해야 할 때만 활성화합니다.
 
 ```text
 WORKER_LISTENER_ENABLED=true
 ```
 
-## Queues
+## Queue
 
-| Environment Variable | Default |
+| 환경변수 | 기본값 |
 | --- | --- |
 | `RABBITMQ_PREPROCESS_HIGH_QUEUE` | `image.preprocess.high` |
 | `RABBITMQ_PREPROCESS_NORMAL_QUEUE` | `image.preprocess.normal` |
 | `RABBITMQ_PREPROCESS_RETRY_QUEUE` | `image.preprocess.retry` |
 
-## Message Contract
+## 메시지 계약
 
 ```json
 {
@@ -62,21 +64,20 @@ WORKER_LISTENER_ENABLED=true
 }
 ```
 
-## Current Runtime Behavior
+## 실행 흐름
 
-Until the OpenCV preprocessing pipeline is fully implemented, a valid message follows this skeleton flow:
+유효한 메시지는 다음 순서로 처리합니다.
 
-1. Validate message identity fields.
-2. Report started through the backend API client boundary.
-3. Prepare object storage download through the storage port boundary.
-4. Execute the preprocessing pipeline skeleton.
-5. Report `PIPELINE_NOT_IMPLEMENTED`.
+1. 메시지 필수 식별자를 검증합니다.
+2. backend internal API로 처리 시작을 보고합니다.
+3. Object Storage port로 원본 다운로드를 준비합니다.
+4. 전처리 pipeline을 실행합니다.
+5. 결과 artifact를 저장합니다.
+6. 성공 또는 실패 상태를 backend internal API로 보고합니다.
 
-This prevents the skeleton Worker from pretending to process images successfully before the real pipeline exists.
+## 다음 작업
 
-## Next Work
-
-1. Add Worker internal API HTTP client implementation.
-2. Add MinIO/S3 SDK adapter implementation.
-3. Replace pipeline skeleton steps with image-test/OpenCV-backed implementations.
-4. Connect pipeline result to processed image, preview, report, and debug artifact upload.
+1. Worker internal API HTTP client 구현
+2. MinIO/S3 SDK adapter 구현
+3. OpenCV 기반 실제 pipeline step 연결
+4. processed image, preview, report, debug artifact 업로드 연결

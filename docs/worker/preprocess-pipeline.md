@@ -1,141 +1,33 @@
-# Worker Preprocess Pipeline
+# Worker 전처리 파이프라인
 
-## Purpose
+## 목적
 
-The Worker preprocessing pipeline models the OCR-oriented document image preprocessing mechanism that will be backed by
-OpenCV and the `image-test` repository logic. It is not a thumbnail or resize-only pipeline.
+Worker 전처리 파이프라인은 OCR 전에 문서 이미지를 정규화하는 OpenCV 기반 처리 흐름입니다.
+이 파이프라인은 썸네일 생성이나 단순 resize가 아니라, 스캔 품질, 방향, 기울기, crop, 노이즈, 대비, 이진화, morphology, DPI를 OCR에 맞게 보정하는 구조입니다.
 
-This platform does not provide an OCR text extraction service. The Worker prepares document images before OCR by
-normalizing scan quality, geometry, contrast, binarization, morphology, and DPI.
+이 플랫폼은 OCR 텍스트 추출 서비스를 제공하지 않습니다. Worker는 OCR 엔진에 넣기 전의 문서 이미지 전처리만 담당합니다.
 
-## Current Implementation
+## 현재 구현 요약
 
-Issue 43 added the initial pipeline skeleton:
+| 이슈 | 구현 내용 |
+| --- | --- |
+| `#43` | `PreprocessContext`, `PreprocessPipeline`, `PreprocessPipelineRunner`, `PreprocessResult`, step catalog, preset registry skeleton 추가 |
+| `#59` | 단계별 시작/종료 시각, wall time, 성공/실패, fallback note, 전체 처리 시간 hook 추가 |
+| `#61` | debug artifact metadata hook 추가 |
+| `#63` | OpenCV loader, image codec adapter, `ImageMatHolder`, Mat 정리 경계 추가 |
+| `#65` | source bytes가 있을 때 `DecodeStep`이 실제 decode 수행 |
+| `#67` | Object Storage에서 원본 bytes를 다운로드해 context에 연결 |
+| `#69` | `ColorNormalizeStep` 구현. `GRAY`, `BGRA` 입력을 `BGR` 처리 형식으로 정규화 |
+| `#71` | `OrientationNormalizeStep`, `DeskewStep` 구현 |
+| `#73` | `CropStep`, `DpiNormalizeStep` 구현 |
+| `#75` | `DenoiseStep`, `ContrastNormalizeStep`, `BinarizationStep` 구현 |
+| `#77` | `MorphologyCleanupStep`, `SharpenStep` 구현 |
+| `#79` | `processed.png`, `preview.png`, `processing-report.json` 저장과 success callback 연결 |
+| `#81` | `debug=true`일 때 단계별 debug PNG snapshot 저장 |
 
-- `PreprocessContext`
-- `PreprocessPipeline`
-- `PreprocessPipelineRunner`
-- `PreprocessResult`
-- `PreprocessStep`
-- `PreprocessStepCatalog`
-- built-in preset registry
+## 실행 순서
 
-Each step currently records a skeleton execution note. Actual image mutation is deferred.
-
-Issue 59 adds runtime metadata hooks:
-
-- per-step `startedAt`
-- per-step `endedAt`
-- per-step wall time
-- per-step success/failure flag
-- failed-step error message
-- total pipeline wall time
-- fallback note collection
-
-These hooks are required before implementing the OpenCV-backed steps because reports and debug artifacts need stable
-metadata regardless of which step succeeds or fails.
-
-Issue 61 adds the debug artifact metadata hook:
-
-- `DebugArtifactDescriptor`
-- `PreprocessContext.recordDebugArtifact`
-- `PreprocessResult.debugArtifacts`
-- `ProcessingReport.debugArtifacts`
-
-The hook is metadata-only. Actual debug image generation and upload are deferred to later OpenCV and artifact tasks.
-
-Issue 63 adds the OpenCV loader and image codec boundary:
-
-- `OpenCvLoader`
-- `ImageCodecAdapter.decode`
-- `ImageMatHolder`
-- `MatResourceCleaner`
-
-The pipeline steps still remain skeletons. The next implementation should replace `DecodeStep` with Object Storage
-download plus codec decode.
-
-Issue 65 connects `DecodeStep` to the codec boundary:
-
-- `ImageDecodePort`
-- `PreprocessContext.withSourceImageBytes`
-- `PreprocessContext.storeDecodedImage`
-- `PreprocessContext.releaseDecodedImage`
-- `DecodeStep` real decode path when bytes are attached
-
-The actual Object Storage download remains a later task. Until source bytes are attached, `DecodeStep` records a
-deferred note and lets the skeleton pipeline continue.
-
-Issue 67 connects Object Storage download to the context:
-
-- `ObjectStoragePort.downloadBytes`
-- `MinioObjectStorageClient.downloadBytes`
-- `WorkerJobService` attaches downloaded bytes through `PreprocessContext.withSourceImageBytes`
-
-The Worker can now decode real downloaded source bytes. Later steps after decode still remain skeleton implementations.
-
-Issue 69 implements `ColorNormalizeStep`:
-
-- `GRAY -> BGR`
-- `BGRA -> BGR`
-- `BGR` no-op
-
-The step replaces the context-owned Mat only when conversion is needed. The remaining downstream steps still remain
-skeleton implementations.
-
-Issue 71 implements Geometry 1:
-
-- `OrientationNormalizeStep`
-- `DeskewStep`
-
-Orientation normalization rotates landscape input to portrait orientation. Deskew estimates a correction angle from
-foreground pixels and applies `warpAffine` when the angle is within the configured safety bound.
-
-Issue 73 implements Geometry 2:
-
-- `CropStep`
-- `DpiNormalizeStep`
-
-Crop detects foreground bounds from an inverse Otsu mask and replaces the context-owned Mat only when a valid bounded
-crop is available. DPI normalization uses source DPI metadata and `targetDpi` to resize for OCR preprocessing; if source
-DPI metadata is missing, the step records a fallback and leaves the image unchanged.
-
-Issue 75 implements Quality 1:
-
-- `DenoiseStep`
-- `ContrastNormalizeStep`
-- `BinarizationStep`
-
-Denoise supports median and bilateral filtering. Contrast normalization applies CLAHE to grayscale input or to the
-luminance channel of BGR input. Binarization converts the current image to a single-channel binary image with Otsu or
-adaptive thresholding according to preset parameters.
-
-Issue 77 implements Quality 2:
-
-- `MorphologyCleanupStep`
-- `SharpenStep`
-
-Morphology cleanup treats black document strokes as foreground internally by inverting the binary image before open/close
-operations and then inverting back. Optional sharpen applies an unsharp mask only when the preset explicitly enables
-`sharpen`.
-
-Issue 79 connects the pipeline output to artifacts and success reporting:
-
-- final output Mat callback before runner cleanup
-- `processed.png` upload
-- `preview.png` upload
-- `processing-report.json` upload
-- Backend Internal Worker API success callback with artifact object keys
-
-Issue 81 connects debug artifact snapshots to Object Storage:
-
-- debug snapshots are captured after each successful step only when `debug=true`
-- snapshots clone the current OpenCV Mat so the final output Mat can continue mutating safely
-- debug images are encoded as PNG and uploaded under `processed/{projectId}/{jobId}/{itemId}/debug/`
-- cloned debug Mats are released in the runner cleanup path
-
-## Required Execution Order
-
-Every built-in document preset executes the following order:
+모든 built-in 문서 프리셋은 아래 순서로 실행됩니다.
 
 1. `DECODE`
 2. `COLOR_NORMALIZE`
@@ -149,11 +41,25 @@ Every built-in document preset executes the following order:
 10. `DPI_NORMALIZE`
 11. `OPTIONAL_SHARPEN`
 
-`DPI_NORMALIZE` is reserved for OCR quality normalization. It must not be reduced to a thumbnail resize shortcut.
+`DPI_NORMALIZE`는 OCR 품질을 위한 DPI 보정 단계입니다. 썸네일 resize로 축소해서 구현하면 안 됩니다.
 
-## Preset Registry
+## 주요 단계 설명
 
-Supported preset names:
+| 단계 | 설명 |
+| --- | --- |
+| `DECODE` | 원본 bytes를 OpenCV `Mat`으로 decode |
+| `COLOR_NORMALIZE` | 입력 channel을 downstream step이 처리하기 쉬운 형식으로 정규화 |
+| `ORIENTATION_NORMALIZE` | 가로로 누운 스캔본을 세로 방향으로 회전 |
+| `DESKEW` | foreground pixel geometry를 기준으로 기울기 보정 |
+| `CROP` | 문서 영역을 찾아 scanner border나 배경을 제거 |
+| `DENOISE` | median 또는 bilateral filter로 스캔 노이즈 완화 |
+| `CONTRAST_NORMALIZE` | CLAHE로 저대비 문서의 대비 개선 |
+| `BINARIZATION` | Otsu 또는 adaptive threshold로 단일 channel binary image 생성 |
+| `MORPHOLOGY_CLEANUP` | open/close 연산으로 작은 노이즈와 끊긴 획 보정 |
+| `DPI_NORMALIZE` | source DPI metadata가 있을 때 target DPI로 정규화 |
+| `OPTIONAL_SHARPEN` | preset이 켠 경우 unsharp mask 적용 |
+
+## 지원 프리셋
 
 - `A4_SCAN_300DPI`
 - `LOW_CONTRAST_SCAN`
@@ -161,17 +67,17 @@ Supported preset names:
 - `NOISY_SCAN`
 - `AUTO`
 
-Preset names must stay aligned with the backend `/api/v1/preprocess/presets` contract.
+프리셋 이름은 backend `/api/v1/preprocess/presets` 계약과 반드시 일치해야 합니다.
 
-## Worker Runtime Boundary
+## Worker 실행 경계
 
-The Worker now reports success only after these required artifacts are uploaded:
+Worker는 아래 artifact가 Object Storage에 업로드된 뒤에만 성공을 보고합니다.
 
 - `processed/{projectId}/{jobId}/{itemId}/processed.png`
 - `processed/{projectId}/{jobId}/{itemId}/preview.png`
 - `processed/{projectId}/{jobId}/{itemId}/processing-report.json`
 
-When `debug=true`, the Worker also uploads these optional debug artifacts before reporting success:
+`debug=true`인 경우 아래 debug artifact도 업로드합니다.
 
 - `processed/{projectId}/{jobId}/{itemId}/debug/00_decoded.png`
 - `processed/{projectId}/{jobId}/{itemId}/debug/01_normalized.png`
@@ -185,14 +91,17 @@ When `debug=true`, the Worker also uploads these optional debug artifacts before
 - `processed/{projectId}/{jobId}/{itemId}/debug/09_dpi.png`
 - `processed/{projectId}/{jobId}/{itemId}/debug/10_sharpen.png`
 
-If the pipeline finishes without a real output image, the Worker still reports `PIPELINE_NOT_IMPLEMENTED`. This keeps
-the deferred/no-source skeleton path explicit during tests and local smoke checks.
+## 오류 매핑
 
-If an OpenCV step fails, the Worker maps it to `PIPELINE_EXECUTION_FAILED`. If an artifact upload fails, the Worker maps
-it to `ARTIFACT_UPLOAD_FAILED`. Backend report failures remain `BACKEND_REPORT_FAILED`.
+| 상황 | Worker 실패 코드 |
+| --- | --- |
+| 실제 output image 없이 pipeline 종료 | `PIPELINE_NOT_IMPLEMENTED` |
+| OpenCV step 실행 실패 | `PIPELINE_EXECUTION_FAILED` |
+| artifact upload 실패 | `ARTIFACT_UPLOAD_FAILED` |
+| backend internal API 보고 실패 | `BACKEND_REPORT_FAILED` |
 
-## Next Implementation Steps
+## 후속 작업
 
-1. Add richer report fields for skew angle, crop bounds, binarization strategy, and DPI normalization.
-2. Add a local Docker smoke path that verifies stored artifacts in MinIO.
-3. Keep OCR text extraction out of the Worker runtime scope.
+1. skew angle, crop bounds, binarization strategy, DPI normalization 결과를 report에 더 자세히 남깁니다.
+2. MinIO에 저장된 artifact를 직접 확인하는 Docker smoke 검증을 보강합니다.
+3. OCR 텍스트 추출은 Worker runtime 범위에 넣지 않습니다.

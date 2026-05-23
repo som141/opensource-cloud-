@@ -1,50 +1,20 @@
-# Issue 47. NGINX Routing Skeleton
+# 이슈 47. NGINX routing skeleton
 
-## Goal
+## 목적
 
-Add the local NGINX single entry point skeleton. NGINX serves the frontend static placeholder and routes backend-related
-paths to `backend-api`.
+프론트엔드와 Spring API를 NGINX 단일 진입점으로 연결합니다.
 
-## Overall Order
+## 작업 범위
 
-1. Add `infra/nginx/nginx.conf`.
-2. Add `infra/nginx/conf.d/app.conf`.
-3. Add API and OAuth proxy rules.
-4. Add SSE proxy rule with buffering disabled.
-5. Add admin placeholder routes.
-6. Add shared proxy and security header snippets.
-7. Add a minimal frontend static placeholder.
-8. Add NGINX service to Docker Compose.
-9. Update local Compose environment values.
-10. Add architecture and operation documentation.
-11. Validate NGINX syntax.
-12. Validate Docker Compose config.
+1. `/`를 frontend로 proxy
+2. `/api/*`를 backend-api로 proxy
+3. `/oauth2/*`와 `/login/oauth2/*`를 backend-api로 proxy
+4. Swagger 경로 proxy
+5. SSE buffering 비활성화
+6. MinIO local upload 경로 proxy
 
-## Routing Units
+## 완료 기준
 
-| Route | Handling |
-| --- | --- |
-| `/` | Static frontend placeholder |
-| `/assets/*` | Static assets |
-| `/api/*` | Proxy to backend-api |
-| `/oauth2/*` | Proxy to backend-api |
-| `/login/oauth2/*` | Proxy to backend-api |
-| `/v3/api-docs` | Proxy to backend-api |
-| `/swagger-ui/*` | Proxy to backend-api |
-| `/api/v1/jobs/*/events` | Proxy to backend-api with SSE settings |
-| `/grafana/*` | Placeholder |
-| `/jaeger/*` | Placeholder |
-
-## Out Of Scope
-
-- React/Vite frontend implementation.
-- Production TLS certificates.
-- HSTS/CSP production hardening.
-- Grafana and Jaeger upstream services.
-- Kubernetes ingress.
-
-## Verification
-
-- `nginx -t` validates config syntax.
-- `docker compose config` validates local Compose integration.
-- Secret scan verifies no real OAuth or private key values are committed.
+1. 브라우저는 `http://localhost`만 진입점으로 사용합니다.
+2. Google OAuth callback이 NGINX 경유로 동작합니다.
+3. SSE 진행률이 buffering 없이 전달됩니다.

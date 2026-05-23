@@ -1,71 +1,42 @@
-# 작업 단위 문서 인덱스
+# 작업 단위 문서
 
-## 목적
+이 디렉터리는 프로젝트를 기능 단위로 쪼개 실행하기 위한 작업 목록입니다.
+각 문서는 한 이슈 또는 한 PR에서 다루기 좋은 범위로 작성합니다.
 
-이 디렉터리는 전체 구현 계획을 실제 실행 가능한 작은 작업 단위로 나눈 문서 모음이다. 작업자는 구현 전에 반드시 관련 작업 단위 문서를 읽고, 문서의 순서대로 진행한다.
+## 작성 기준
 
-## 공통 작업 규칙
+- 설명은 한글로 작성합니다.
+- 클래스명, API 경로, 환경변수명, queue 이름은 원문 그대로 둡니다.
+- API 서버, Worker, 프론트엔드, 인프라 책임을 섞지 않습니다.
+- Worker는 단순 resize가 아니라 OCR 전처리 파이프라인을 수행한다는 전제를 유지합니다.
 
-1. `README.md`를 먼저 읽는다.
-2. `docs/implementation-plan.md`를 읽는다.
-3. `.md`를 읽어 이슈, 브랜치, PR 규칙을 확인한다.
-4. `docs/conventions/github-workflow.md`를 읽는다.
-5. `docs/conventions/code-convention.md`를 읽는다.
-6. `docs/conventions/api-response-convention.md`를 읽는다.
-7. 현재 작업에 해당하는 `docs/tasks/*.md` 파일을 읽는다.
-8. 작업 대상 기능의 상세 문서가 있으면 함께 읽는다.
-9. 문서와 코드가 충돌하면 문서 기준으로 변경 방향을 먼저 정리한다.
-10. 구현 전에는 산출물과 완료 기준을 확인한다.
-11. 구현 후에는 해당 작업 문서의 체크리스트를 갱신하거나 결과를 요약한다.
+## 작업 순서
 
-## 권장 실행 순서
-
-1. `00-repository-baseline.md`
-2. `01-monorepo-skeleton.md`
-3. `02-backend-api-skeleton.md`
-4. `03-worker-skeleton.md`
-5. `04-infra-directory-skeleton.md`
-6. `05-frontend-skeleton.md`
-7. `06-global-error-response.md`
-8. `07-auth-user.md`
-9. `08-project.md`
-10. `09-upload.md`
-11. `10-image.md`
-12. `11-preprocess-preset.md`
-13. `12-job.md`
-14. `13-sse-progress.md`
-15. `14-internal-worker-api.md`
-16. `15-worker-message-consume.md`
-17. `16-worker-preprocess-pipeline.md`
-18. `17-worker-preset.md`
-19. `18-artifact-report.md`
-20. `19-nginx-docker-compose.md`
-21. `20-observability.md`
-22. `21-ocr-benchmark.md`
-23. `22-notification.md`
-24. `23-admin-audit.md`
-25. `24-kubernetes-keda.md`
-26. `25-final-docs-tests.md`
-
-## 작업 단위 작성 형식
-
-각 문서는 아래 항목을 가진다.
-
-1. 목표
-2. 먼저 읽을 문서
-3. 작업 범위
-4. 작업 순서
-5. 산출물
-6. 완료 기준
-7. 금지 사항
-
-## 핵심 원칙
-
-1. API 서버와 Worker를 분리한다.
-2. API 서버는 OpenCV 전처리를 하지 않는다.
-3. Worker는 OAuth 로그인 로직을 가지지 않는다.
-4. Worker는 단순 resize 서비스가 아니다.
-5. Spring 패키지는 도메인형 구조로 만든다.
-6. 외부 시스템 접근 코드는 `infra`에 둔다.
-7. NGINX는 단일 진입점으로 사용한다.
-8. 프론트엔드에는 Bootstrap, jQuery, AdminLTE 같은 임의 템플릿을 추가하지 않는다.
+| 번호 | 문서 | 목적 |
+| --- | --- | --- |
+| 00 | [레포지토리 기준](00-repository-baseline.md) | 작업 시작 전 기준 확인 |
+| 01 | [모노레포 골격](01-monorepo-skeleton.md) | 최상위 구조 생성 |
+| 02 | [backend-api 골격](02-backend-api-skeleton.md) | Spring API 기본 구조 |
+| 03 | [Worker 골격](03-worker-skeleton.md) | Worker 애플리케이션 구조 |
+| 04 | [인프라 골격](04-infra-directory-skeleton.md) | Docker/NGINX/DB 설정 위치 |
+| 05 | [프론트엔드 골격](05-frontend-skeleton.md) | React/Vite 화면 구조 |
+| 06 | [공통 응답과 예외](06-global-error-response.md) | API 응답 표준화 |
+| 07 | [인증/사용자](07-auth-user.md) | Google OAuth와 사용자 |
+| 08 | [프로젝트](08-project.md) | 프로젝트 관리 |
+| 09 | [업로드](09-upload.md) | 파일/ZIP 업로드 |
+| 10 | [이미지](10-image.md) | 이미지 메타데이터와 결과 |
+| 11 | [전처리 프리셋](11-preprocess-preset.md) | 프리셋 관리 |
+| 12 | [Job](12-job.md) | 작업 생성과 상태 |
+| 13 | [SSE 진행률](13-sse-progress.md) | 실시간 진행률 |
+| 14 | [Worker 내부 API](14-internal-worker-api.md) | Worker callback |
+| 15 | [Worker 메시지 소비](15-worker-message-consume.md) | RabbitMQ 소비 |
+| 16 | [Worker 전처리 파이프라인](16-worker-preprocess-pipeline.md) | OpenCV 단계 구현 |
+| 17 | [Worker 프리셋](17-worker-preset.md) | 프리셋별 파라미터 |
+| 18 | [Artifact와 Report](18-artifact-report.md) | 결과 저장과 리포트 |
+| 19 | [NGINX/Docker Compose](19-nginx-docker-compose.md) | 로컬 통합 실행 |
+| 20 | [관측성](20-observability.md) | Prometheus/Grafana/Trace |
+| 21 | [OCR 벤치마크](21-ocr-benchmark.md) | 보류 또는 제외 대상 |
+| 22 | [알림](22-notification.md) | 작업 완료/실패 알림 |
+| 23 | [Admin/Audit](23-admin-audit.md) | 보류 또는 제외 대상 |
+| 24 | [Kubernetes/KEDA](24-kubernetes-keda.md) | 운영 확장 |
+| 25 | [최종 문서/테스트](25-final-docs-tests.md) | 배포 전 검증 |

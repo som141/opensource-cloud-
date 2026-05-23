@@ -1,62 +1,37 @@
-# 13. SSE Progress
+# 13. SSE 진행률
 
-## Goal
+## 목표
 
-Expose a Server-Sent Events endpoint so the frontend can subscribe to Job progress without polling.
+프론트엔드가 반복 polling 없이 Job 진행률을 받을 수 있도록 SSE endpoint를 제공합니다.
 
-This task creates the SSE API skeleton. Actual Worker status callbacks and automatic publish on every state transition
-are connected after the Internal Worker API task.
+## 먼저 읽을 문서
 
-## Documents To Read First
+1. `docs/api/job-api.md`
+2. `docs/architecture/nginx-routing.md`
 
-1. `README.md`
-2. `docs/implementation-plan.md`
-3. `docs/tasks/12-job.md`
-4. `docs/api/job-api.md`
-5. `docs/architecture/nginx-routing.md`
+## 작업 범위
 
-## Scope
+1. `GET /api/v1/jobs/{jobId}/events` endpoint 추가
+2. Job 진행률 이벤트 DTO 정의
+3. Job 상태 변경 시 이벤트 발행
+4. NGINX SSE buffering 비활성화
+5. 프론트엔드 Job 상세 화면에서 SSE 연결
 
-1. Job event controller
-2. SSE emitter registry
-3. Job progress event DTO
-4. Heartbeat/progress/completed/failed event methods
-5. NGINX buffering-off alignment
-6. Tests for controller, service, registry, and event DTO
+## 이벤트 예시
 
-## Work Order
+```json
+{
+  "eventType": "JOB_PROGRESS",
+  "jobId": 1,
+  "total": 10,
+  "succeeded": 7,
+  "failed": 1,
+  "progressPercent": 80.0
+}
+```
 
-1. Create `JobEventController`.
-2. Create `JobEventService`.
-3. Create `JobProgressEvent` and `JobEventType`.
-4. Create `SseEmitterRegistry`.
-5. Configure connection timeout.
-6. Clean up emitters on completion, timeout, and error.
-7. Send initial heartbeat event.
-8. Send initial `JOB_PROGRESS` snapshot event.
-9. Add publish methods for `JOB_PROGRESS`, `JOB_COMPLETED`, and `JOB_FAILED`.
-10. Confirm NGINX SSE route keeps buffering disabled.
-11. Update Job API documentation.
-12. Add tests.
+## 완료 기준
 
-## Deliverables
-
-1. `GET /api/v1/jobs/{jobId}/events`
-2. Job progress event DTO
-3. SSE emitter registry skeleton
-4. Documentation updates
-
-## Completion Criteria
-
-1. The frontend can connect to a Job event stream path.
-2. Server resources are cleaned up when connections finish.
-3. NGINX does not buffer SSE responses.
-4. Unauthorized users cannot subscribe without passing normal Job readability validation.
-5. API server still does not execute image preprocessing logic.
-
-## Forbidden
-
-1. Do not replace SSE with polling-only progress.
-2. Do not leave unmanaged emitters for every connection.
-3. Do not allow a user to subscribe to another user's Job without permission validation.
-4. Do not implement Worker preprocessing or Worker callbacks in this task.
+1. SSE endpoint가 Swagger 또는 문서에 반영됩니다.
+2. NGINX 경유로도 이벤트가 지연 없이 전달됩니다.
+3. 연결 종료와 재연결 상황에서 화면이 깨지지 않습니다.

@@ -1,66 +1,20 @@
-# Issue 96 - Job Detail UI Flow
+# 이슈 96. Job 상세 UI
 
-## Goal
+## 목적
 
-Replace the `/jobs/{jobId}` placeholder with an API-backed Job detail screen for the local MVP.
+Job 진행률, 이미지별 상태, 결과 다운로드를 확인하는 화면을 제공합니다.
 
-The screen focuses on OCR preprocessing operations only:
+## 작업 범위
 
-- Job metadata
-- progress counters
-- image-level Worker item states
-- processed image download
-- processed-only ZIP download
+1. Job 상세 조회
+2. JobItem 목록 조회
+3. 상태 badge 표시
+4. 진행률 표시
+5. 결과 다운로드 링크
+6. 실패 메시지 표시
 
-OCR text extraction, benchmark screens, preview display, report display, and debug artifact browsing remain out of scope.
+## 완료 기준
 
-## User Flow
-
-```text
-User opens /jobs/{jobId}
-  -> frontend loads Job detail
-  -> frontend loads Job summary
-  -> frontend loads JobItems
-  -> while Job is not terminal, frontend refreshes every 2.5 seconds
-  -> user downloads one processed image or the processed ZIP
-```
-
-## API Calls
-
-```text
-GET /api/v1/jobs/{jobId}
-GET /api/v1/jobs/{jobId}/summary
-GET /api/v1/jobs/{jobId}/items?size=500
-GET /api/v1/jobs/{jobId}/items/{itemId}/download?type=processed
-GET /api/v1/jobs/{jobId}/download.zip
-```
-
-All calls use the existing access token and refresh-cookie behavior through the shared API client.
-
-## UI Behavior
-
-- Shows Job status, preset, priority, debug flag, created/started/completed timestamps.
-- Shows total, succeeded, failed, and processed-downloadable counts.
-- Shows a progress bar based on `progressPercent`.
-- Polls every `2.5s` until the Job reaches a terminal status.
-- Lists JobItems with status, image ID, attempt, worker ID, timestamps, errors, and processed object key.
-- Enables item download only when `processedObjectKey` exists.
-- Enables processed ZIP download only when at least one processed item exists.
-- Adds an "Open job detail" link from the upload result progress card.
-
-## Terminal Statuses
-
-```text
-SUCCEEDED
-FAILED
-PARTIAL_SUCCEEDED
-CANCELLED
-```
-
-## Completion Criteria
-
-- `/jobs/{jobId}` is no longer a placeholder.
-- Authenticated users can inspect Job progress and item results.
-- Processed image download opens a signed download URL.
-- Processed ZIP download opens a signed download URL.
-- Frontend build passes.
+1. 사용자는 어떤 이미지가 성공/실패했는지 확인할 수 있습니다.
+2. 처리 완료 후 결과 다운로드가 가능합니다.
+3. 불필요한 preview/report 노출은 기본 화면에서 줄입니다.

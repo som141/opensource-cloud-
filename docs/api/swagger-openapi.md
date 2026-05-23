@@ -1,38 +1,36 @@
-# Swagger And OpenAPI
+# Swagger와 OpenAPI
 
-## Purpose
+## 목적
 
-Swagger UI is enabled for local API testing and OpenAPI schema inspection. It is not a replacement for automated tests,
-but it is the fastest way to manually verify Auth and Project endpoints while the frontend is still incomplete.
+Swagger UI는 로컬 API 테스트와 OpenAPI schema 확인을 위해 사용합니다. 자동화 테스트를 대체하지는 않지만, 프론트엔드가 완성되기 전 인증/프로젝트 API를 빠르게 수동 확인하는 데 유용합니다.
 
-## Local URLs
+## 로컬 주소
 
 ```text
 Swagger UI: http://localhost:8080/swagger-ui/index.html
 OpenAPI JSON: http://localhost:8080/v3/api-docs
 ```
 
-## Dependency
+## 의존성
 
-The backend uses:
+backend-api는 아래 의존성을 사용합니다.
 
 ```gradle
 id 'org.springframework.boot' version '3.4.5'
 implementation 'org.springdoc:springdoc-openapi-starter-webmvc-ui:2.8.5'
 ```
 
-Spring Boot stays on `3.4.5`. `springdoc-openapi` uses the `2.8.x` line because it is the Spring Boot 3 compatible
-line. The locally verified Swagger UI version is `2.8.5`.
+Spring Boot는 `3.4.5`를 유지합니다. `springdoc-openapi`는 Spring Boot 3 호환 라인인 `2.8.x`를 사용하며, 로컬에서 확인한 Swagger UI 버전은 `2.8.5`입니다.
 
-## Local Docker Test
+## 로컬 Docker 테스트
 
-The local backend needs PostgreSQL. If the PostgreSQL container is already running, keep it running.
+backend-api는 PostgreSQL이 필요합니다. PostgreSQL 컨테이너가 이미 실행 중이면 그대로 둡니다.
 
 ```powershell
 docker ps
 ```
 
-Start the backend from the repository root:
+repository root에서 backend를 실행합니다.
 
 ```powershell
 $backendPath = Join-Path (Get-Location) 'backend-api'
@@ -47,7 +45,7 @@ docker run --rm `
   gradle:8.10-jdk21 gradle bootRun --no-daemon
 ```
 
-In another PowerShell window, verify the backend and Swagger endpoints:
+다른 PowerShell 창에서 확인합니다.
 
 ```powershell
 Invoke-RestMethod http://localhost:8080/actuator/health
@@ -55,30 +53,29 @@ Invoke-RestMethod http://localhost:8080/v3/api-docs
 Invoke-WebRequest http://localhost:8080/swagger-ui/index.html
 ```
 
-Expected result:
+기대 결과:
 
-- `/actuator/health` returns `status: UP`.
-- `/v3/api-docs` returns OpenAPI JSON with `bearerAuth`.
-- `/swagger-ui/index.html` returns HTTP `200`.
+- `/actuator/health`가 `status: UP`을 반환합니다.
+- `/v3/api-docs`가 `bearerAuth`가 포함된 OpenAPI JSON을 반환합니다.
+- `/swagger-ui/index.html`이 HTTP `200`을 반환합니다.
 
-## JWT Bearer Test Flow
+## JWT Bearer 테스트 흐름
 
-1. Start the backend.
-2. Open `http://localhost:8080/oauth2/authorization/google`.
-3. Complete Google login.
-4. The backend redirects to the configured OAuth success URL without exposing the access token in the URL.
-5. Use the frontend OAuth success page to refresh and store the short-lived access token, or call
-   `POST /api/v1/auth/refresh` from a client that includes the `refresh_token` cookie.
-6. Open `http://localhost:8080/swagger-ui/index.html`.
-7. Click `Authorize`.
-8. Paste only the access token value.
-9. Run protected endpoints such as `GET /api/v1/auth/me` or `GET /api/v1/projects`.
+1. backend를 실행합니다.
+2. `http://localhost:8080/oauth2/authorization/google`을 엽니다.
+3. Google 로그인을 완료합니다.
+4. backend가 Access Token을 URL에 노출하지 않고 OAuth success URL로 redirect하는지 확인합니다.
+5. 프론트 OAuth success page 또는 `POST /api/v1/auth/refresh`를 통해 Access Token을 받습니다.
+6. `http://localhost:8080/swagger-ui/index.html`을 엽니다.
+7. `Authorize`를 클릭합니다.
+8. Access Token 값만 붙여 넣습니다.
+9. `GET /api/v1/auth/me`, `GET /api/v1/projects` 같은 보호 API를 실행합니다.
 
-Do not paste the `Bearer ` prefix. Swagger applies the Bearer scheme automatically.
+`Bearer ` prefix는 붙이지 않습니다. Swagger가 Bearer scheme을 자동으로 적용합니다.
 
-## Public And Protected Endpoints
+## 공개 endpoint와 보호 endpoint
 
-Public endpoints:
+공개 endpoint:
 
 - `GET /swagger-ui/index.html`
 - `GET /v3/api-docs`
@@ -87,7 +84,7 @@ Public endpoints:
 - `POST /api/v1/auth/refresh`
 - `POST /api/v1/auth/logout`
 
-Protected endpoints:
+보호 endpoint:
 
 - `GET /api/v1/auth/me`
 - `POST /api/v1/projects`
@@ -96,12 +93,10 @@ Protected endpoints:
 - `PATCH /api/v1/projects/{projectId}`
 - `DELETE /api/v1/projects/{projectId}`
 - `GET /api/v1/projects/{projectId}/summary`
-- Project member APIs
+- 프로젝트 멤버 API
 
-## Notes
+## 참고
 
-- Refresh and logout use the HttpOnly refresh cookie, so they are easier to verify in a browser flow than with a raw
-  Swagger request.
-- `-parameters` is enabled in Gradle so Springdoc can infer method parameter names reliably on Spring Boot 3.4.
-- `springdoc.swagger-ui.path=/swagger-ui.html` is configured as the stable Swagger UI entry point. It also serves the
-  actual UI at `/swagger-ui/index.html`.
+- refresh와 logout은 HttpOnly refresh cookie를 사용하므로 raw Swagger 요청보다 브라우저 흐름에서 확인하기 쉽습니다.
+- Spring Boot 3.4에서 Springdoc이 메서드 파라미터 이름을 안정적으로 추론하도록 Gradle에 `-parameters`가 활성화되어 있습니다.
+- 안정적인 Swagger UI 진입점으로 `springdoc.swagger-ui.path=/swagger-ui.html`을 설정합니다. 실제 UI는 `/swagger-ui/index.html`에서도 제공됩니다.
