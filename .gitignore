@@ -50,7 +50,9 @@ frontend/vite.config.d.ts
 infra/docker-compose/.env.prod
 LOCAL_CONFIG.md
 *.local.md
+AGENTS.md
+CODEX_DIRECTORY_SPEC.md
+.codex/
 
 verbly-key.pem
 *.pem
-AGENTS.md
