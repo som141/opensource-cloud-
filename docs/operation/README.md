@@ -9,9 +9,10 @@
 2. [운영 환경변수와 Secret 주입](production-env.md)
 3. [GitHub Actions 배포](github-actions-deployment.md)
 4. [HTTPS와 도메인 정책](https-domain-policy.md)
-5. [배포 체크리스트](deployment-checklist.md)
-6. [최종 E2E 검증](final-e2e-verification.md)
-7. [백업/복구](backup-restore.md)
+5. [관측성 로컬 실행](observability.md)
+6. [배포 체크리스트](deployment-checklist.md)
+7. [최종 E2E 검증](final-e2e-verification.md)
+8. [백업/복구](backup-restore.md)
 
 ## 로컬 실행 문서
 
@@ -21,6 +22,7 @@
 | [Docker Compose local](docker-compose-local.md) | 로컬 stack 실행 방법 |
 | [Docker Compose preflight](docker-compose-preflight.md) | 컨테이너와 endpoint 점검 |
 | [Storage 운영](storage-operation.md) | MinIO bucket과 object 관리 |
+| [관측성 로컬 실행](observability.md) | Prometheus, Grafana, Jaeger 로컬 실행과 확인 |
 
 ## 운영 배포 문서
 
@@ -30,6 +32,7 @@
 | [운영 환경변수](production-env.md) | `.env.prod` 작성과 secret 관리 |
 | [GitHub Actions 배포](github-actions-deployment.md) | `Deploy Production` workflow 사용 |
 | [HTTPS/도메인 정책](https-domain-policy.md) | TLS 종료, OAuth redirect, cookie 정책 |
+| [관측성 로컬 실행](observability.md) | 배포 전 metric과 trace 검증 |
 | [배포 체크리스트](deployment-checklist.md) | 공개 전 확인 목록 |
 | [최종 E2E 검증](final-e2e-verification.md) | 로그인부터 결과 다운로드까지 검증 |
 | [백업/복구](backup-restore.md) | PostgreSQL과 Object Storage 백업 |

@@ -8,7 +8,7 @@
 - **대량 처리**: 여러 이미지 또는 ZIP 파일을 업로드하면 이미지 단위 `JobItem`으로 분리하고 큐 기반으로 처리합니다.
 - **OCR 전처리 특화**: Worker는 `decode`, 색상 정규화, 방향 보정, `deskew`, `crop`, `denoise`, 대비 정규화, 이진화, 형태학 정리, DPI 정규화, 선명화 단계를 수행합니다.
 - **API와 Worker 분리**: Spring REST API는 인증, 프로젝트, 업로드, 작업 등록/조회만 담당하고, 이미지 전처리는 Worker가 담당합니다.
-- **운영 가능한 구조**: NGINX 단일 진입점, PostgreSQL, MinIO/S3, RabbitMQ, Docker Compose, GitHub Actions 배포 흐름을 포함합니다.
+- **운영 가능한 구조**: NGINX 단일 진입점, PostgreSQL, MinIO/S3, RabbitMQ, Docker Compose, Prometheus/Grafana/Jaeger, GitHub Actions 배포 흐름을 포함합니다.
 - **보안 기본값**: Google OAuth 로그인, `HttpOnly` refresh token cookie, private object storage, 내부 Worker token 구조를 사용합니다.
 
 ## 현재 MVP 기능
@@ -21,7 +21,7 @@
 | 작업 | 전처리 Job 생성, JobItem 상태 관리, Worker callback, 실패 상태 저장 |
 | 결과 | 처리된 이미지 다운로드, Job 결과 ZIP 다운로드 |
 | 프론트엔드 | 프로젝트, 업로드, Job 상세, 이미지 상세, 대시보드 MVP 화면 |
-| 운영 | Docker Compose local/prod, NGINX routing, GitHub Actions production deploy workflow |
+| 운영 | Docker Compose local/prod, NGINX routing, Prometheus/Grafana/Jaeger 관측성, GitHub Actions production deploy workflow |
 
 ## 아키텍처
 
@@ -123,6 +123,7 @@ localStorage.getItem('doc-pipeline.access-token')
 | [API 문서](docs/api/api-index.md) | 도메인별 API 문서 진입점 |
 | [Worker 파이프라인](docs/worker/preprocess-pipeline.md) | OpenCV 전처리 단계 |
 | [로컬 실행](docs/operation/docker-compose-local.md) | Docker Compose 로컬 실행 |
+| [관측성 로컬 실행](docs/operation/observability.md) | Prometheus, Grafana, Jaeger 실행과 확인 |
 | [운영 배포](docs/operation/production-deployment-guide.md) | 운영 배포 전체 순서 |
 | [GitHub Actions 배포](docs/operation/github-actions-deployment.md) | CI/CD 배포 workflow |
 | [환경변수와 Secrets](docs/operation/production-env.md) | 운영 secret 주입 방식 |

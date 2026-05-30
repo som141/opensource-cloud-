@@ -11,8 +11,22 @@
 | `rabbitmq/` | Queue와 exchange 설정 |
 | `minio/` | Object Storage bucket 초기화 |
 | `postgres/` | DB 초기화와 백업 스크립트 |
-| `monitoring/` | Prometheus, Grafana, OpenTelemetry, Jaeger 설정 |
+| `monitoring/` | Prometheus, Grafana, OpenTelemetry Collector, Jaeger 설정 |
 | `k8s/` | Kubernetes와 KEDA 설정 |
+
+## 관측성 실행
+
+관측성 스택은 기본 로컬 Compose에 override 파일을 추가해서 실행한다.
+
+```powershell
+docker compose `
+  -f infra/docker-compose/docker-compose.local.yml `
+  -f infra/docker-compose/docker-compose.observability.yml `
+  --env-file infra/docker-compose/.env `
+  up -d --build
+```
+
+자세한 절차는 `docs/operation/observability.md`를 기준으로 한다.
 
 ## 금지 사항
 
