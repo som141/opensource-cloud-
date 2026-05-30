@@ -1,0 +1,7 @@
+apiVersion: v1
+kind: Namespace
+metadata:
+  name: docprep-cloud
+  labels:
+    app.kubernetes.io/name: docprep-cloud
+    app.kubernetes.io/part-of: docprep-cloud

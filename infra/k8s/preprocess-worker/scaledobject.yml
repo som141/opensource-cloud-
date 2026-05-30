@@ -1,0 +1,38 @@
+apiVersion: keda.sh/v1alpha1
+kind: ScaledObject
+metadata:
+  name: preprocess-worker
+  namespace: docprep-cloud
+  labels:
+    app.kubernetes.io/name: preprocess-worker
+    app.kubernetes.io/part-of: docprep-cloud
+spec:
+  scaleTargetRef:
+    name: preprocess-worker
+  pollingInterval: 10
+  cooldownPeriod: 300
+  minReplicaCount: 0
+  maxReplicaCount: 20
+  triggers:
+    - type: rabbitmq
+      name: normal-queue
+      metadata:
+        protocol: amqp
+        queueName: image.preprocess.normal
+        mode: QueueLength
+        value: "25"
+        activationValue: "1"
+        vhostName: /
+      authenticationRef:
+        name: preprocess-worker-rabbitmq-auth
+    - type: rabbitmq
+      name: high-queue
+      metadata:
+        protocol: amqp
+        queueName: image.preprocess.high
+        mode: QueueLength
+        value: "10"
+        activationValue: "1"
+        vhostName: /
+      authenticationRef:
+        name: preprocess-worker-rabbitmq-auth

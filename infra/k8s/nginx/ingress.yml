@@ -1,0 +1,29 @@
+apiVersion: networking.k8s.io/v1
+kind: Ingress
+metadata:
+  name: docprep-cloud
+  namespace: docprep-cloud
+  labels:
+    app.kubernetes.io/name: nginx
+    app.kubernetes.io/part-of: docprep-cloud
+  annotations:
+    nginx.ingress.kubernetes.io/proxy-body-size: "2g"
+    nginx.ingress.kubernetes.io/proxy-read-timeout: "3600"
+    nginx.ingress.kubernetes.io/proxy-send-timeout: "3600"
+spec:
+  ingressClassName: nginx
+  tls:
+    - hosts:
+        - YOUR_DOMAIN
+      secretName: docprep-cloud-tls
+  rules:
+    - host: YOUR_DOMAIN
+      http:
+        paths:
+          - path: /
+            pathType: Prefix
+            backend:
+              service:
+                name: nginx
+                port:
+                  name: http

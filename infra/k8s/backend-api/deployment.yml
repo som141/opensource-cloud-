@@ -1,0 +1,54 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: backend-api
+  namespace: docprep-cloud
+  labels:
+    app.kubernetes.io/name: backend-api
+    app.kubernetes.io/part-of: docprep-cloud
+spec:
+  replicas: 2
+  selector:
+    matchLabels:
+      app.kubernetes.io/name: backend-api
+  template:
+    metadata:
+      labels:
+        app.kubernetes.io/name: backend-api
+        app.kubernetes.io/part-of: docprep-cloud
+    spec:
+      containers:
+        - name: backend-api
+          image: YOUR_REGISTRY/docprep-backend-api:CHANGE_ME
+          imagePullPolicy: IfNotPresent
+          envFrom:
+            - configMapRef:
+                name: backend-api-config
+            - secretRef:
+                name: backend-api-secret
+          ports:
+            - name: http
+              containerPort: 8080
+          readinessProbe:
+            httpGet:
+              path: /actuator/health
+              port: http
+            initialDelaySeconds: 20
+            periodSeconds: 10
+            timeoutSeconds: 3
+            failureThreshold: 6
+          livenessProbe:
+            httpGet:
+              path: /actuator/health
+              port: http
+            initialDelaySeconds: 60
+            periodSeconds: 20
+            timeoutSeconds: 3
+            failureThreshold: 6
+          resources:
+            requests:
+              cpu: 250m
+              memory: 512Mi
+            limits:
+              cpu: "1"
+              memory: 1Gi

@@ -56,3 +56,8 @@ CODEX_DIRECTORY_SPEC.md
 
 verbly-key.pem
 *.pem
+
+# Kubernetes local secrets
+infra/k8s/**/secret.yml
+infra/k8s/**/*.local.yml
+!infra/k8s/**/secret.example.yml

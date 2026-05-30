@@ -1,0 +1,22 @@
+apiVersion: kustomize.config.k8s.io/v1beta1
+kind: Kustomization
+resources:
+  - namespace.yml
+  - backend-api/configmap.yml
+  - backend-api/deployment.yml
+  - backend-api/service.yml
+  - preprocess-worker/configmap.yml
+  - preprocess-worker/deployment.yml
+  - preprocess-worker/service.yml
+  - preprocess-worker/triggerauthentication.yml
+  - preprocess-worker/scaledobject.yml
+  - frontend/deployment.yml
+  - frontend/service.yml
+  - nginx/configmap.yml
+  - nginx/deployment.yml
+  - nginx/service.yml
+  - nginx/ingress.yml
+  - postgres/service-placeholder.yml
+  - rabbitmq/service-placeholder.yml
+  - minio/service-placeholder.yml
+  - monitoring/service-placeholder.yml

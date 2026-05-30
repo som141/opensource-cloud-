@@ -1,0 +1,54 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: preprocess-worker
+  namespace: docprep-cloud
+  labels:
+    app.kubernetes.io/name: preprocess-worker
+    app.kubernetes.io/part-of: docprep-cloud
+spec:
+  replicas: 0
+  selector:
+    matchLabels:
+      app.kubernetes.io/name: preprocess-worker
+  template:
+    metadata:
+      labels:
+        app.kubernetes.io/name: preprocess-worker
+        app.kubernetes.io/part-of: docprep-cloud
+    spec:
+      containers:
+        - name: preprocess-worker
+          image: YOUR_REGISTRY/docprep-preprocess-worker:CHANGE_ME
+          imagePullPolicy: IfNotPresent
+          envFrom:
+            - configMapRef:
+                name: preprocess-worker-config
+            - secretRef:
+                name: preprocess-worker-secret
+          ports:
+            - name: management
+              containerPort: 8081
+          readinessProbe:
+            httpGet:
+              path: /actuator/health
+              port: management
+            initialDelaySeconds: 20
+            periodSeconds: 10
+            timeoutSeconds: 3
+            failureThreshold: 6
+          livenessProbe:
+            httpGet:
+              path: /actuator/health
+              port: management
+            initialDelaySeconds: 60
+            periodSeconds: 20
+            timeoutSeconds: 3
+            failureThreshold: 6
+          resources:
+            requests:
+              cpu: 500m
+              memory: 1Gi
+            limits:
+              cpu: "2"
+              memory: 2Gi
