@@ -16,7 +16,10 @@ import com.moonju.preprocess.worker.domain.workerjob.dto.WorkerJobResult;
 import com.moonju.preprocess.worker.domain.workerjob.exception.InvalidWorkerMessageException;
 import com.moonju.preprocess.worker.domain.workerjob.status.WorkerFailureCode;
 import com.moonju.preprocess.worker.infra.api.BackendApiClient;
+import com.moonju.preprocess.worker.infra.metrics.WorkerMetricsRecorder;
 import com.moonju.preprocess.worker.infra.storage.ObjectStoragePort;
+import java.time.Duration;
+import java.time.Instant;
 import java.util.concurrent.atomic.AtomicReference;
 import org.springframework.stereotype.Service;
 
@@ -31,6 +34,7 @@ public class WorkerJobService {
     private final DebugArtifactSaveService debugArtifactSaveService;
     private final ProcessingReportFactory processingReportFactory;
     private final ProcessingReportSaveService processingReportSaveService;
+    private final WorkerMetricsRecorder workerMetricsRecorder;
 
     public WorkerJobService(
         BackendApiClient backendApiClient,
@@ -40,7 +44,8 @@ public class WorkerJobService {
         PreviewImageSaveService previewImageSaveService,
         DebugArtifactSaveService debugArtifactSaveService,
         ProcessingReportFactory processingReportFactory,
-        ProcessingReportSaveService processingReportSaveService
+        ProcessingReportSaveService processingReportSaveService,
+        WorkerMetricsRecorder workerMetricsRecorder
     ) {
         this.backendApiClient = backendApiClient;
         this.objectStoragePort = objectStoragePort;
@@ -50,9 +55,23 @@ public class WorkerJobService {
         this.debugArtifactSaveService = debugArtifactSaveService;
         this.processingReportFactory = processingReportFactory;
         this.processingReportSaveService = processingReportSaveService;
+        this.workerMetricsRecorder = workerMetricsRecorder;
     }
 
     public WorkerJobResult process(PreprocessJobMessage message) {
+        Instant startedAt = Instant.now();
+        WorkerJobResult result = processInternal(message);
+        workerMetricsRecorder.recordJobCompleted(
+            message == null ? null : message.preset(),
+            result.status(),
+            result.failureCode(),
+            result.retryable(),
+            Duration.between(startedAt, Instant.now())
+        );
+        return result;
+    }
+
+    private WorkerJobResult processInternal(PreprocessJobMessage message) {
         try {
             message.validateRequiredFields();
         } catch (InvalidWorkerMessageException exception) {
@@ -98,6 +117,12 @@ public class WorkerJobService {
                 ));
                 debugArtifactSaveService.saveAll(context.debugSnapshots());
             });
+            if (result.skeletonOnly()) {
+                workerMetricsRecorder.recordPipelineSkeletonExecution(
+                    result.presetName(),
+                    result.executedStepNames().size()
+                );
+            }
             if (!result.success()) {
                 return reportFailure(
                     message,

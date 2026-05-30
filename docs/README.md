@@ -17,7 +17,7 @@ AI/Codex 작업 규칙 문서는 로컬 전용 파일로 관리하고 원격 저
 
 | 문서 | 설명 |
 | --- | --- |
-| [API 인덱스](api/api-index.md) | API 문서入口 |
+| [API 인덱스](api/api-index.md) | API 문서 진입점 |
 | [인증 API](api/auth-api.md) | Google OAuth, 토큰 재발급, 현재 사용자 |
 | [프로젝트 API](api/project-api.md) | 프로젝트 생성/조회/수정 |
 | [업로드 API](api/upload-api.md) | 업로드 세션, presigned URL, 완료 처리 |
@@ -39,8 +39,9 @@ AI/Codex 작업 규칙 문서는 로컬 전용 파일로 관리하고 원격 저
 
 | 문서 | 설명 |
 | --- | --- |
-| [운영 문서 인덱스](operation/README.md) | 운영/배포 문서入口 |
+| [운영 문서 인덱스](operation/README.md) | 운영/배포 문서 진입점 |
 | [로컬 실행](operation/docker-compose-local.md) | Docker Compose local 실행 |
+| [관측성 로컬 실행](operation/observability.md) | Prometheus, Grafana, Jaeger 실행과 확인 |
 | [운영 배포 가이드](operation/production-deployment-guide.md) | 서버 준비부터 검증까지 전체 순서 |
 | [운영 환경변수](operation/production-env.md) | `.env.prod`와 secret 주입 방식 |
 | [GitHub Actions 배포](operation/github-actions-deployment.md) | production workflow 사용법 |

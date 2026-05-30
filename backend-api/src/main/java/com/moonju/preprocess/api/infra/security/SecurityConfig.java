@@ -46,6 +46,7 @@ public class SecurityConfig {
                     antMatcher("/error"),
                     antMatcher("/actuator/health"),
                     antMatcher("/actuator/info"),
+                    antMatcher("/actuator/prometheus"),
                     antMatcher("/oauth2/**"),
                     antMatcher("/login/oauth2/**"),
                     antMatcher("/api/v1/auth/refresh"),

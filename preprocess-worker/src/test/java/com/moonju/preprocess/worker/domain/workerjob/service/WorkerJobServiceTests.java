@@ -4,6 +4,7 @@ import static org.assertj.core.api.Assertions.assertThat;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.argThat;
 import static org.mockito.ArgumentMatchers.eq;
+import static org.mockito.ArgumentMatchers.isNull;
 import static org.mockito.Mockito.doAnswer;
 import static org.mockito.Mockito.doThrow;
 import static org.mockito.Mockito.mock;
@@ -33,6 +34,7 @@ import com.moonju.preprocess.worker.domain.workerjob.dto.WorkerJobResult;
 import com.moonju.preprocess.worker.domain.workerjob.status.WorkerFailureCode;
 import com.moonju.preprocess.worker.domain.workerjob.status.WorkerJobStatus;
 import com.moonju.preprocess.worker.infra.api.BackendApiClient;
+import com.moonju.preprocess.worker.infra.metrics.WorkerMetricsRecorder;
 import com.moonju.preprocess.worker.infra.opencv.OpenCvLoader;
 import com.moonju.preprocess.worker.infra.storage.ObjectStoragePort;
 import java.time.Duration;
@@ -61,6 +63,7 @@ class WorkerJobServiceTests {
     private final DebugArtifactSaveService debugArtifactSaveService = mock(DebugArtifactSaveService.class);
     private final ProcessingReportFactory processingReportFactory = new ProcessingReportFactory();
     private final ProcessingReportSaveService processingReportSaveService = mock(ProcessingReportSaveService.class);
+    private final WorkerMetricsRecorder workerMetricsRecorder = mock(WorkerMetricsRecorder.class);
     private final WorkerJobService service = new WorkerJobService(
         backendApiClient,
         objectStoragePort,
@@ -69,7 +72,8 @@ class WorkerJobServiceTests {
         previewImageSaveService,
         debugArtifactSaveService,
         processingReportFactory,
-        processingReportSaveService
+        processingReportSaveService,
+        workerMetricsRecorder
     );
 
     @Test
@@ -98,6 +102,13 @@ class WorkerJobServiceTests {
             "processed/3/1/2/processed.png",
             "processed/3/1/2/preview.png",
             "processed/3/1/2/processing-report.json"
+        );
+        verify(workerMetricsRecorder).recordJobCompleted(
+            eq("A4_SCAN_300DPI"),
+            eq(WorkerJobStatus.SUCCEEDED),
+            isNull(),
+            eq(false),
+            any(Duration.class)
         );
     }
 
@@ -177,6 +188,13 @@ class WorkerJobServiceTests {
         assertThat(result.failureCode()).isEqualTo(WorkerFailureCode.INVALID_MESSAGE);
         assertThat(result.retryable()).isFalse();
         verifyNoInteractions(backendApiClient, objectStoragePort);
+        verify(workerMetricsRecorder).recordJobCompleted(
+            isNull(),
+            eq(WorkerJobStatus.FAILED),
+            eq(WorkerFailureCode.INVALID_MESSAGE),
+            eq(false),
+            any(Duration.class)
+        );
     }
 
     @Test

@@ -1,0 +1,90 @@
+services:
+  backend-api:
+    environment:
+      OTEL_TRACES_SAMPLER_PROBABILITY: ${OTEL_TRACES_SAMPLER_PROBABILITY:-1.0}
+      OTEL_EXPORTER_OTLP_ENDPOINT: http://otel-collector:4318/v1/traces
+
+  preprocess-worker:
+    environment:
+      WORKER_MANAGEMENT_PORT: 8081
+      OTEL_TRACES_SAMPLER_PROBABILITY: ${OTEL_TRACES_SAMPLER_PROBABILITY:-1.0}
+      OTEL_EXPORTER_OTLP_ENDPOINT: http://otel-collector:4318/v1/traces
+
+  rabbitmq:
+    ports:
+      - "${RABBITMQ_PROMETHEUS_PORT:-15692}:15692"
+
+  prometheus:
+    image: prom/prometheus:v2.54.1
+    container_name: image-preprocess-prometheus
+    depends_on:
+      backend-api:
+        condition: service_started
+      preprocess-worker:
+        condition: service_started
+      rabbitmq:
+        condition: service_healthy
+    command:
+      - --config.file=/etc/prometheus/prometheus.yml
+      - --storage.tsdb.path=/prometheus
+      - --web.enable-lifecycle
+    ports:
+      - "${PROMETHEUS_PORT:-9090}:9090"
+    volumes:
+      - ../monitoring/prometheus/prometheus.yml:/etc/prometheus/prometheus.yml:ro
+      - prometheus-data:/prometheus
+    networks:
+      - image-preprocess
+
+  grafana:
+    image: grafana/grafana:11.2.0
+    container_name: image-preprocess-grafana
+    depends_on:
+      prometheus:
+        condition: service_started
+    environment:
+      GF_SECURITY_ADMIN_USER: ${GRAFANA_ADMIN_USER:-admin}
+      GF_SECURITY_ADMIN_PASSWORD: ${GRAFANA_ADMIN_PASSWORD:-admin}
+      GF_SERVER_ROOT_URL: ${GRAFANA_ROOT_URL:-http://localhost/grafana/}
+      GF_SERVER_SERVE_FROM_SUB_PATH: "true"
+      GF_USERS_ALLOW_SIGN_UP: "false"
+    ports:
+      - "${GRAFANA_PORT:-3000}:3000"
+    volumes:
+      - ../monitoring/grafana/provisioning:/etc/grafana/provisioning:ro
+      - ../monitoring/grafana/dashboards:/var/lib/grafana/dashboards:ro
+      - grafana-data:/var/lib/grafana
+    networks:
+      - image-preprocess
+
+  jaeger:
+    image: jaegertracing/all-in-one:1.57
+    container_name: image-preprocess-jaeger
+    environment:
+      COLLECTOR_OTLP_ENABLED: "true"
+    command:
+      - --query.base-path=/jaeger
+    ports:
+      - "${JAEGER_UI_PORT:-16686}:16686"
+    networks:
+      - image-preprocess
+
+  otel-collector:
+    image: otel/opentelemetry-collector-contrib:0.104.0
+    container_name: image-preprocess-otel-collector
+    command:
+      - --config=/etc/otel-collector-config.yml
+    depends_on:
+      jaeger:
+        condition: service_started
+    ports:
+      - "${OTEL_GRPC_PORT:-4317}:4317"
+      - "${OTEL_HTTP_PORT:-4318}:4318"
+    volumes:
+      - ../monitoring/otel-collector/otel-collector-config.yml:/etc/otel-collector-config.yml:ro
+    networks:
+      - image-preprocess
+
+volumes:
+  prometheus-data:
+  grafana-data:
