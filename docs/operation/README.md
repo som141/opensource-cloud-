@@ -10,9 +10,10 @@
 3. [GitHub Actions 배포](github-actions-deployment.md)
 4. [HTTPS와 도메인 정책](https-domain-policy.md)
 5. [관측성 로컬 실행](observability.md)
-6. [배포 체크리스트](deployment-checklist.md)
-7. [최종 E2E 검증](final-e2e-verification.md)
-8. [백업/복구](backup-restore.md)
+6. [Kubernetes/KEDA 배포](kubernetes-deployment.md)
+7. [배포 체크리스트](deployment-checklist.md)
+8. [최종 E2E 검증](final-e2e-verification.md)
+9. [백업/복구](backup-restore.md)
 
 ## 로컬 실행 문서
 
@@ -33,6 +34,7 @@
 | [GitHub Actions 배포](github-actions-deployment.md) | `Deploy Production` workflow 사용 |
 | [HTTPS/도메인 정책](https-domain-policy.md) | TLS 종료, OAuth redirect, cookie 정책 |
 | [관측성 로컬 실행](observability.md) | 배포 전 metric과 trace 검증 |
+| [Kubernetes/KEDA 배포](kubernetes-deployment.md) | Kubernetes skeleton 적용과 Worker autoscaling |
 | [배포 체크리스트](deployment-checklist.md) | 공개 전 확인 목록 |
 | [최종 E2E 검증](final-e2e-verification.md) | 로그인부터 결과 다운로드까지 검증 |
 | [백업/복구](backup-restore.md) | PostgreSQL과 Object Storage 백업 |

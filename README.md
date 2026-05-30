@@ -119,11 +119,13 @@ localStorage.getItem('doc-pipeline.access-token')
 | --- | --- |
 | [문서 인덱스](docs/README.md) | 프로젝트 사용자 문서 진입점 |
 | [시스템 개요](docs/architecture/system-overview.md) | 컴포넌트와 데이터 흐름 |
+| [Kubernetes/KEDA 아키텍처](docs/architecture/kubernetes-architecture.md) | Kubernetes 전환 구조와 Worker autoscaling |
 | [레포지토리 구조](docs/architecture/repository-structure.md) | 모노레포 디렉터리와 책임 |
 | [API 문서](docs/api/api-index.md) | 도메인별 API 문서 진입점 |
 | [Worker 파이프라인](docs/worker/preprocess-pipeline.md) | OpenCV 전처리 단계 |
 | [로컬 실행](docs/operation/docker-compose-local.md) | Docker Compose 로컬 실행 |
 | [관측성 로컬 실행](docs/operation/observability.md) | Prometheus, Grafana, Jaeger 실행과 확인 |
+| [Kubernetes/KEDA 배포](docs/operation/kubernetes-deployment.md) | Kubernetes skeleton 적용 절차 |
 | [운영 배포](docs/operation/production-deployment-guide.md) | 운영 배포 전체 순서 |
 | [GitHub Actions 배포](docs/operation/github-actions-deployment.md) | CI/CD 배포 workflow |
 | [환경변수와 Secrets](docs/operation/production-env.md) | 운영 secret 주입 방식 |

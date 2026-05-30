@@ -1,0 +1,13 @@
+apiVersion: keda.sh/v1alpha1
+kind: TriggerAuthentication
+metadata:
+  name: preprocess-worker-rabbitmq-auth
+  namespace: docprep-cloud
+  labels:
+    app.kubernetes.io/name: preprocess-worker
+    app.kubernetes.io/part-of: docprep-cloud
+spec:
+  secretTargetRef:
+    - parameter: host
+      name: preprocess-worker-secret
+      key: RABBITMQ_AMQP_URI

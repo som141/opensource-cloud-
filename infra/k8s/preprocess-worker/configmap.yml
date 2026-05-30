@@ -1,0 +1,23 @@
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: preprocess-worker-config
+  namespace: docprep-cloud
+  labels:
+    app.kubernetes.io/name: preprocess-worker
+    app.kubernetes.io/part-of: docprep-cloud
+data:
+  WORKER_ID: k8s-worker
+  WORKER_LISTENER_ENABLED: "true"
+  WORKER_MANAGEMENT_PORT: "8081"
+  SPRING_RABBITMQ_HOST: rabbitmq
+  SPRING_RABBITMQ_PORT: "5672"
+  BACKEND_API_INTERNAL_URL: http://backend-api:8080
+  MINIO_ENDPOINT: http://minio:9000
+  MINIO_BUCKET: image-preprocess-prod
+  RABBIT_HEALTH_ENABLED: "true"
+  RABBITMQ_PREPROCESS_HIGH_QUEUE: image.preprocess.high
+  RABBITMQ_PREPROCESS_NORMAL_QUEUE: image.preprocess.normal
+  RABBITMQ_PREPROCESS_RETRY_QUEUE: image.preprocess.retry
+  OTEL_TRACES_SAMPLER_PROBABILITY: "1.0"
+  OTEL_EXPORTER_OTLP_ENDPOINT: http://otel-collector:4318/v1/traces
