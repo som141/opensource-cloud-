@@ -6,15 +6,14 @@ metadata:
   labels:
     app.kubernetes.io/name: otel-collector
     app.kubernetes.io/part-of: docprep-cloud
-  annotations:
-    docprep-cloud.io/placeholder: "Replace with OpenTelemetry Collector deployment or disable trace sampling."
 spec:
-  type: ExternalName
-  externalName: otel-collector.example.internal
+  type: ClusterIP
+  selector:
+    app.kubernetes.io/name: otel-collector
   ports:
     - name: otlp-http
       port: 4318
-      targetPort: 4318
+      targetPort: otlp-http
     - name: otlp-grpc
       port: 4317
-      targetPort: 4317
+      targetPort: otlp-grpc

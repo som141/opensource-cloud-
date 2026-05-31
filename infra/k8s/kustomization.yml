@@ -16,7 +16,14 @@ resources:
   - nginx/deployment.yml
   - nginx/service.yml
   - nginx/ingress.yml
-  - postgres/service-placeholder.yml
-  - rabbitmq/service-placeholder.yml
-  - minio/service-placeholder.yml
-  - monitoring/service-placeholder.yml
+  - postgres/deployment.yml
+  - postgres/service.yml
+  - rabbitmq/configmap.yml
+  - rabbitmq/deployment.yml
+  - rabbitmq/service.yml
+  - minio/deployment.yml
+  - minio/service.yml
+  - minio/bucket-job.yml
+  - monitoring/otel-collector-configmap.yml
+  - monitoring/otel-collector-deployment.yml
+  - monitoring/otel-collector-service.yml

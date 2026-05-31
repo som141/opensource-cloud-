@@ -1,0 +1,88 @@
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: rabbitmq-config
+  namespace: docprep-cloud
+  labels:
+    app.kubernetes.io/name: rabbitmq
+    app.kubernetes.io/part-of: docprep-cloud
+data:
+  enabled_plugins: |
+    [rabbitmq_management,rabbitmq_prometheus].
+  rabbitmq.conf: |
+    management.load_definitions = /etc/rabbitmq/definitions.json
+  definitions.json: |
+    {
+      "vhosts": [
+        {
+          "name": "/"
+        }
+      ],
+      "exchanges": [
+        {
+          "name": "image.preprocess.dlx",
+          "vhost": "/",
+          "type": "direct",
+          "durable": true,
+          "auto_delete": false,
+          "internal": false,
+          "arguments": {}
+        }
+      ],
+      "queues": [
+        {
+          "name": "image.preprocess.high",
+          "vhost": "/",
+          "durable": true,
+          "auto_delete": false,
+          "arguments": {
+            "x-dead-letter-exchange": "image.preprocess.dlx",
+            "x-dead-letter-routing-key": "image.preprocess.dlq"
+          }
+        },
+        {
+          "name": "image.preprocess.normal",
+          "vhost": "/",
+          "durable": true,
+          "auto_delete": false,
+          "arguments": {
+            "x-dead-letter-exchange": "image.preprocess.dlx",
+            "x-dead-letter-routing-key": "image.preprocess.dlq"
+          }
+        },
+        {
+          "name": "image.preprocess.retry",
+          "vhost": "/",
+          "durable": true,
+          "auto_delete": false,
+          "arguments": {
+            "x-dead-letter-exchange": "image.preprocess.dlx",
+            "x-dead-letter-routing-key": "image.preprocess.dlq"
+          }
+        },
+        {
+          "name": "image.preprocess.dlq",
+          "vhost": "/",
+          "durable": true,
+          "auto_delete": false,
+          "arguments": {}
+        },
+        {
+          "name": "image.benchmark.normal",
+          "vhost": "/",
+          "durable": true,
+          "auto_delete": false,
+          "arguments": {}
+        }
+      ],
+      "bindings": [
+        {
+          "source": "image.preprocess.dlx",
+          "vhost": "/",
+          "destination": "image.preprocess.dlq",
+          "destination_type": "queue",
+          "routing_key": "image.preprocess.dlq",
+          "arguments": {}
+        }
+      ]
+    }
