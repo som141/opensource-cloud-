@@ -6,12 +6,14 @@ metadata:
   labels:
     app.kubernetes.io/name: minio
     app.kubernetes.io/part-of: docprep-cloud
-  annotations:
-    docprep-cloud.io/placeholder: "Replace with managed S3, MinIO operator, or StatefulSet before production."
 spec:
-  type: ExternalName
-  externalName: minio.example.internal
+  type: ClusterIP
+  selector:
+    app.kubernetes.io/name: minio
   ports:
     - name: api
       port: 9000
-      targetPort: 9000
+      targetPort: api
+    - name: console
+      port: 9001
+      targetPort: console

@@ -6,12 +6,11 @@ metadata:
   labels:
     app.kubernetes.io/name: postgres
     app.kubernetes.io/part-of: docprep-cloud
-  annotations:
-    docprep-cloud.io/placeholder: "Replace with managed PostgreSQL, operator, or StatefulSet before production."
 spec:
-  type: ExternalName
-  externalName: postgres.example.internal
+  type: ClusterIP
+  selector:
+    app.kubernetes.io/name: postgres
   ports:
     - name: postgres
       port: 5432
-      targetPort: 5432
+      targetPort: postgres

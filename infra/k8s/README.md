@@ -7,7 +7,7 @@
 1. `backend-api`, `preprocess-worker`, `frontend`, `nginx` 기본 Deployment/Service
 2. RabbitMQ queue length 기반 KEDA `ScaledObject`
 3. Secret 예시 파일
-4. PostgreSQL, RabbitMQ, MinIO, OTel Collector 외부 서비스 placeholder
+4. PostgreSQL, RabbitMQ, MinIO, OTel Collector MVP용 in-cluster Deployment/Service
 5. NGINX 단일 진입점 Ingress skeleton
 
 ## 실제 적용 전에 필요한 값
@@ -58,7 +58,7 @@ Secret 파일은 환경변수 기반으로 생성할 수 있다.
 
 ## 주의사항
 
-- `postgres`, `rabbitmq`, `minio`, `otel-collector`는 현재 `ExternalName` placeholder다.
-- 실제 운영에서는 관리형 서비스, operator, StatefulSet 중 하나로 교체해야 한다.
+- `postgres`, `rabbitmq`, `minio`는 현재 `emptyDir` 기반이다.
+- Pod가 재생성되면 데이터가 사라질 수 있으므로 운영에서는 PVC, operator, 또는 관리형 서비스로 교체해야 한다.
 - Worker autoscaling은 CPU가 아니라 RabbitMQ queue length 기준이다.
 - `preprocess-worker` Deployment는 `replicas: 0`으로 시작하고 KEDA가 queue 상태에 따라 scale out한다.

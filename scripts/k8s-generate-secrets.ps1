@@ -142,6 +142,10 @@ if ($backendValues.WORKER_INTERNAL_TOKEN.Length -lt 16) {
     throw "WORKER_INTERNAL_TOKEN must be at least 16 characters."
 }
 
+if ($workerValues.RABBITMQ_AMQP_URI -match "@rabbitmq:5672") {
+    throw "RABBITMQ_AMQP_URI must use the namespace-qualified Kubernetes DNS name: rabbitmq.$Namespace.svc.cluster.local"
+}
+
 $backendManifest = New-SecretManifest `
     -Name "backend-api-secret" `
     -Namespace $Namespace `

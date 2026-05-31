@@ -8,7 +8,7 @@ metadata:
     app.kubernetes.io/part-of: docprep-cloud
 data:
   DB_URL: jdbc:postgresql://postgres:5432/image_preprocess
-  JPA_DDL_AUTO: validate
+  JPA_DDL_AUTO: update
   SERVER_FORWARD_HEADERS_STRATEGY: framework
   SPRING_RABBITMQ_HOST: rabbitmq
   SPRING_RABBITMQ_PORT: "5672"
