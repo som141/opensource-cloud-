@@ -53,6 +53,8 @@ OAUTH2_SUCCESS_REDIRECT_URI=https://YOUR_DOMAIN/oauth2/success
 - [ ] backend-api 이미지가 GHCR에 올라갔다.
 - [ ] preprocess-worker 이미지가 GHCR에 올라갔다.
 - [ ] frontend 이미지가 GHCR에 올라갔다.
+- [ ] `Render Kubernetes Manifests` workflow가 성공했다.
+- [ ] 렌더링 artifact에 `YOUR_REGISTRY` 또는 `CHANGE_ME`가 남아 있지 않다.
 - [ ] Kubernetes manifest 또는 overlay에 실제 image tag가 반영되어 있다.
 - [ ] GHCR package가 private이면 cluster에 `imagePullSecret`이 준비되어 있다.
 

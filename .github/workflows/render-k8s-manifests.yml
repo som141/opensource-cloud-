@@ -1,0 +1,146 @@
+name: Render Kubernetes Manifests
+
+on:
+  workflow_dispatch:
+    inputs:
+      image_tag:
+        description: "Image tag to inject. Defaults to the short commit SHA."
+        required: false
+        type: string
+      image_namespace:
+        description: "Container image namespace."
+        required: false
+        default: "ghcr.io/som141/docprep-cloud"
+        type: string
+      domain:
+        description: "Ingress domain. Leave as YOUR_DOMAIN for template rendering."
+        required: false
+        default: "YOUR_DOMAIN"
+        type: string
+      tls_secret:
+        description: "Ingress TLS secret name."
+        required: false
+        default: "docprep-cloud-tls"
+        type: string
+
+permissions:
+  contents: read
+
+concurrency:
+  group: render-k8s-manifests-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  render:
+    name: Render Kubernetes manifests
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Set up kubectl
+        uses: azure/setup-kubectl@v4
+        with:
+          version: v1.30.2
+
+      - name: Resolve render inputs
+        id: inputs
+        shell: bash
+        run: |
+          set -euo pipefail
+
+          if [ -n "${{ inputs.image_tag || '' }}" ]; then
+            IMAGE_TAG="${{ inputs.image_tag }}"
+          else
+            IMAGE_TAG="${GITHUB_SHA::12}"
+          fi
+
+          IMAGE_NAMESPACE="${{ inputs.image_namespace || 'ghcr.io/som141/docprep-cloud' }}"
+          DOMAIN="${{ inputs.domain || 'YOUR_DOMAIN' }}"
+          TLS_SECRET="${{ inputs.tls_secret || 'docprep-cloud-tls' }}"
+
+          echo "image_tag=$IMAGE_TAG" >> "$GITHUB_OUTPUT"
+          echo "image_namespace=$IMAGE_NAMESPACE" >> "$GITHUB_OUTPUT"
+          echo "domain=$DOMAIN" >> "$GITHUB_OUTPUT"
+          echo "tls_secret=$TLS_SECRET" >> "$GITHUB_OUTPUT"
+
+      - name: Copy Kubernetes manifests
+        shell: bash
+        run: |
+          set -euo pipefail
+          mkdir -p "$RUNNER_TEMP/render"
+          cp -R infra/k8s "$RUNNER_TEMP/render/k8s"
+
+      - name: Inject image tags and domain placeholders
+        shell: bash
+        env:
+          MANIFEST_ROOT: ${{ runner.temp }}/render/k8s
+          IMAGE_NAMESPACE: ${{ steps.inputs.outputs.image_namespace }}
+          IMAGE_TAG: ${{ steps.inputs.outputs.image_tag }}
+          DOMAIN: ${{ steps.inputs.outputs.domain }}
+          TLS_SECRET: ${{ steps.inputs.outputs.tls_secret }}
+        run: |
+          set -euo pipefail
+
+          python - <<'PY'
+          import os
+          import pathlib
+
+          root = pathlib.Path(os.environ["MANIFEST_ROOT"])
+          image_namespace = os.environ["IMAGE_NAMESPACE"].rstrip("/")
+          image_tag = os.environ["IMAGE_TAG"]
+          domain = os.environ["DOMAIN"]
+          tls_secret = os.environ["TLS_SECRET"]
+
+          replacements = {
+              "YOUR_REGISTRY/docprep-backend-api:CHANGE_ME": f"{image_namespace}/backend-api:{image_tag}",
+              "YOUR_REGISTRY/docprep-preprocess-worker:CHANGE_ME": f"{image_namespace}/preprocess-worker:{image_tag}",
+              "YOUR_REGISTRY/docprep-frontend:CHANGE_ME": f"{image_namespace}/frontend:{image_tag}",
+              "YOUR_DOMAIN": domain,
+              "docprep-cloud-tls": tls_secret,
+          }
+
+          for path in root.rglob("*.yml"):
+              text = path.read_text(encoding="utf-8")
+              for before, after in replacements.items():
+                  text = text.replace(before, after)
+              path.write_text(text, encoding="utf-8")
+          PY
+
+      - name: Render manifests
+        shell: bash
+        run: |
+          set -euo pipefail
+          mkdir -p rendered
+          kubectl kustomize "$RUNNER_TEMP/render/k8s" > rendered/docprep-cloud-k8s.yml
+
+      - name: Validate rendered manifest placeholders
+        shell: bash
+        run: |
+          set -euo pipefail
+          if grep -q "YOUR_REGISTRY\\|CHANGE_ME" rendered/docprep-cloud-k8s.yml; then
+            echo "Rendered manifest still contains image placeholders."
+            exit 1
+          fi
+
+      - name: Write render summary
+        shell: bash
+        run: |
+          {
+            echo "### Rendered Kubernetes manifests"
+            echo ""
+            echo "- backend-api: \`${{ steps.inputs.outputs.image_namespace }}/backend-api:${{ steps.inputs.outputs.image_tag }}\`"
+            echo "- preprocess-worker: \`${{ steps.inputs.outputs.image_namespace }}/preprocess-worker:${{ steps.inputs.outputs.image_tag }}\`"
+            echo "- frontend: \`${{ steps.inputs.outputs.image_namespace }}/frontend:${{ steps.inputs.outputs.image_tag }}\`"
+            echo "- domain: \`${{ steps.inputs.outputs.domain }}\`"
+            echo "- tls secret: \`${{ steps.inputs.outputs.tls_secret }}\`"
+          } >> "$GITHUB_STEP_SUMMARY"
+
+      - name: Upload rendered manifests
+        uses: actions/upload-artifact@v4
+        with:
+          name: docprep-cloud-k8s-${{ steps.inputs.outputs.image_tag }}
+          path: rendered/docprep-cloud-k8s.yml
+          if-no-files-found: error
