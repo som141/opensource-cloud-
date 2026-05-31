@@ -49,6 +49,9 @@
 25. backend-api CI workflow를 작성한다.
 26. preprocess-worker CI workflow를 작성한다.
 27. frontend CI workflow를 작성한다.
+28. GHCR 이미지 build/push workflow를 작성한다.
+29. Kubernetes manifest image tag 주입 방식을 문서화한다.
+30. Kubernetes manifest render artifact workflow를 작성한다.
 
 ## 산출물
 

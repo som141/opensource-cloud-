@@ -47,6 +47,8 @@ AI/Codex 작업 규칙 문서는 로컬 전용 파일로 관리하고 원격 저
 | [Kubernetes/KEDA 배포](operation/kubernetes-deployment.md) | Kubernetes skeleton 적용 절차 |
 | [운영 환경변수](operation/production-env.md) | `.env.prod`와 secret 주입 방식 |
 | [GitHub Actions 배포](operation/github-actions-deployment.md) | production workflow 사용법 |
+| [GHCR 이미지 빌드/푸시](operation/ghcr-image-workflow.md) | Kubernetes 배포용 이미지 생성 |
+| [Kubernetes manifest 렌더링](operation/kubernetes-manifest-render-workflow.md) | 이미지 태그를 주입한 K8s YAML artifact 생성 |
 | [HTTPS/도메인 정책](operation/https-domain-policy.md) | 도메인, TLS, OAuth redirect 기준 |
 | [백업/복구](operation/backup-restore.md) | PostgreSQL과 Object Storage 백업 |
 | [최종 E2E 검증](operation/final-e2e-verification.md) | 운영 배포 후 검증 흐름 |

@@ -39,12 +39,24 @@ OAUTH2_SUCCESS_REDIRECT_URI=https://YOUR_DOMAIN/oauth2/success
 ## 4. GitHub Actions
 
 - [ ] GitHub `production` Environment가 있다.
+- [ ] Actions workflow permission이 `Read and write permissions`로 설정되어 있다.
 - [ ] `DEPLOY_HOST`가 등록되어 있다.
 - [ ] `DEPLOY_USER`가 등록되어 있다.
 - [ ] `DEPLOY_SSH_PRIVATE_KEY`가 등록되어 있다.
 - [ ] `DEPLOY_PATH`가 등록되어 있다.
 - [ ] `PROD_BASE_URL`이 등록되어 있다.
 - [ ] 첫 배포는 수동 `workflow_dispatch`로 실행한다.
+
+## 4.1 GHCR 이미지
+
+- [ ] `Build GHCR Images` workflow가 성공했다.
+- [ ] backend-api 이미지가 GHCR에 올라갔다.
+- [ ] preprocess-worker 이미지가 GHCR에 올라갔다.
+- [ ] frontend 이미지가 GHCR에 올라갔다.
+- [ ] `Render Kubernetes Manifests` workflow가 성공했다.
+- [ ] 렌더링 artifact에 `YOUR_REGISTRY` 또는 `CHANGE_ME`가 남아 있지 않다.
+- [ ] Kubernetes manifest 또는 overlay에 실제 image tag가 반영되어 있다.
+- [ ] GHCR package가 private이면 cluster에 `imagePullSecret`이 준비되어 있다.
 
 ## 5. Compose 설정 검증
 

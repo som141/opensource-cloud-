@@ -63,6 +63,9 @@ infra/k8s/**/*.local.yml
 
 ## 4. 이미지와 도메인 교체
 
+GHCR 이미지는 [GHCR 이미지 빌드/푸시 workflow](ghcr-image-workflow.md)로 생성한다.
+이미지 태그를 넣은 최종 Kubernetes YAML은 [Kubernetes manifest 렌더링 workflow](kubernetes-manifest-render-workflow.md)로 먼저 검토한다.
+
 아래 파일의 placeholder를 실제 값으로 교체한다.
 
 | 파일 | 교체 값 |
