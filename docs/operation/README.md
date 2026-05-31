@@ -10,12 +10,13 @@
 3. [GitHub Actions 배포](github-actions-deployment.md)
 4. [GHCR 이미지 빌드/푸시](ghcr-image-workflow.md)
 5. [Kubernetes manifest 렌더링](kubernetes-manifest-render-workflow.md)
-6. [HTTPS와 도메인 정책](https-domain-policy.md)
-7. [관측성 로컬 실행](observability.md)
-8. [Kubernetes/KEDA 배포](kubernetes-deployment.md)
-9. [배포 체크리스트](deployment-checklist.md)
-10. [최종 E2E 검증](final-e2e-verification.md)
-11. [백업/복구](backup-restore.md)
+6. [Kubernetes GitHub Actions 배포](kubernetes-github-actions-deploy.md)
+7. [HTTPS와 도메인 정책](https-domain-policy.md)
+8. [관측성 로컬 실행](observability.md)
+9. [Kubernetes/KEDA 배포](kubernetes-deployment.md)
+10. [배포 체크리스트](deployment-checklist.md)
+11. [최종 E2E 검증](final-e2e-verification.md)
+12. [백업/복구](backup-restore.md)
 
 ## 로컬 실행 문서
 
@@ -36,6 +37,7 @@
 | [GitHub Actions 배포](github-actions-deployment.md) | `Deploy Production` workflow 사용 |
 | [GHCR 이미지 빌드/푸시](ghcr-image-workflow.md) | Kubernetes 배포용 이미지 생성 |
 | [Kubernetes manifest 렌더링](kubernetes-manifest-render-workflow.md) | 이미지 태그를 주입한 K8s YAML artifact 생성 |
+| [Kubernetes GitHub Actions 배포](kubernetes-github-actions-deploy.md) | kubeconfig 기반 수동 dry-run/apply workflow |
 | [HTTPS/도메인 정책](https-domain-policy.md) | TLS 종료, OAuth redirect, cookie 정책 |
 | [관측성 로컬 실행](observability.md) | 배포 전 metric과 trace 검증 |
 | [Kubernetes/KEDA 배포](kubernetes-deployment.md) | Kubernetes skeleton 적용과 Worker autoscaling |
