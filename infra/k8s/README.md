@@ -42,6 +42,20 @@ kubectl apply -f infra/k8s/preprocess-worker/secret.yml
 kubectl apply -k infra/k8s
 ```
 
+Secret 파일은 환경변수 기반으로 생성할 수 있다.
+
+```powershell
+.\scripts\k8s-generate-secrets.ps1 -Force
+```
+
+클러스터에 실제 배포하기 전에는 preflight를 먼저 실행한다.
+
+```powershell
+.\scripts\k8s-preflight.ps1
+```
+
+자세한 순서는 [Kubernetes Secret 준비와 Preflight](../../docs/operation/kubernetes-secret-preflight.md)를 따른다.
+
 ## 주의사항
 
 - `postgres`, `rabbitmq`, `minio`, `otel-collector`는 현재 `ExternalName` placeholder다.
