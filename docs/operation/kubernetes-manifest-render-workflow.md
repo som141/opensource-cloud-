@@ -79,5 +79,5 @@ docprep-cloud-k8s-{image_tag}
 
 1. GHCR 이미지 push workflow와 연결
 2. image tag를 자동으로 render workflow에 전달
-3. kubeconfig 기반 `kubectl apply` CD 추가
+3. [Kubernetes GitHub Actions 배포](kubernetes-github-actions-deploy.md)로 kubeconfig 기반 `dry-run` 또는 `apply` 수행
 4. 배포 후 health check와 smoke test 추가

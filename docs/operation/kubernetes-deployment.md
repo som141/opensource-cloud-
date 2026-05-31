@@ -65,6 +65,7 @@ infra/k8s/**/*.local.yml
 
 GHCR 이미지는 [GHCR 이미지 빌드/푸시 workflow](ghcr-image-workflow.md)로 생성한다.
 이미지 태그를 넣은 최종 Kubernetes YAML은 [Kubernetes manifest 렌더링 workflow](kubernetes-manifest-render-workflow.md)로 먼저 검토한다.
+실제 클러스터 적용은 [Kubernetes GitHub Actions 배포](kubernetes-github-actions-deploy.md)의 수동 `dry-run` 후 `apply` 순서로 진행한다.
 
 아래 파일의 placeholder를 실제 값으로 교체한다.
 

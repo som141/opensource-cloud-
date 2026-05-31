@@ -1,0 +1,382 @@
+name: Deploy Kubernetes
+
+on:
+  workflow_dispatch:
+    inputs:
+      image_tag:
+        description: "Image tag to deploy. Defaults to the short commit SHA."
+        required: false
+        type: string
+      image_namespace:
+        description: "Container image namespace."
+        required: false
+        default: "ghcr.io/som141/docprep-cloud"
+        type: string
+      domain:
+        description: "Production domain, for example docprep.example.com."
+        required: true
+        default: "YOUR_DOMAIN"
+        type: string
+      tls_secret:
+        description: "Existing Kubernetes TLS secret name."
+        required: true
+        default: "docprep-cloud-tls"
+        type: string
+      postgres_external_name:
+        description: "ExternalName target for PostgreSQL."
+        required: true
+        default: "postgres.example.internal"
+        type: string
+      rabbitmq_external_name:
+        description: "ExternalName target for RabbitMQ."
+        required: true
+        default: "rabbitmq.example.internal"
+        type: string
+      minio_external_name:
+        description: "ExternalName target for MinIO/S3."
+        required: true
+        default: "minio.example.internal"
+        type: string
+      otel_collector_external_name:
+        description: "ExternalName target for OpenTelemetry Collector."
+        required: true
+        default: "otel-collector.example.internal"
+        type: string
+      apply_mode:
+        description: "Use dry-run first. Select apply only for a real deployment."
+        required: true
+        default: "dry-run"
+        type: choice
+        options:
+          - dry-run
+          - apply
+      kube_context:
+        description: "Optional kubeconfig context name."
+        required: false
+        type: string
+      rollout_timeout:
+        description: "Rollout wait timeout for each deployment."
+        required: true
+        default: "180s"
+        type: string
+      configure_ghcr_pull_secret:
+        description: "Create/patch a GHCR imagePullSecret from production secrets."
+        required: true
+        default: false
+        type: boolean
+
+permissions:
+  contents: read
+
+concurrency:
+  group: deploy-k8s-${{ github.ref }}
+  cancel-in-progress: false
+
+jobs:
+  deploy:
+    name: Deploy Kubernetes manifests
+    runs-on: ubuntu-latest
+    environment: production
+    timeout-minutes: 30
+
+    env:
+      NAMESPACE: docprep-cloud
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Set up kubectl
+        uses: azure/setup-kubectl@v4
+        with:
+          version: v1.30.2
+
+      - name: Resolve deploy inputs
+        id: inputs
+        shell: bash
+        env:
+          RAW_IMAGE_TAG: ${{ inputs.image_tag }}
+          RAW_IMAGE_NAMESPACE: ${{ inputs.image_namespace }}
+          RAW_DOMAIN: ${{ inputs.domain }}
+          RAW_TLS_SECRET: ${{ inputs.tls_secret }}
+          RAW_POSTGRES_EXTERNAL_NAME: ${{ inputs.postgres_external_name }}
+          RAW_RABBITMQ_EXTERNAL_NAME: ${{ inputs.rabbitmq_external_name }}
+          RAW_MINIO_EXTERNAL_NAME: ${{ inputs.minio_external_name }}
+          RAW_OTEL_COLLECTOR_EXTERNAL_NAME: ${{ inputs.otel_collector_external_name }}
+          RAW_APPLY_MODE: ${{ inputs.apply_mode }}
+          RAW_KUBE_CONTEXT: ${{ inputs.kube_context }}
+          RAW_ROLLOUT_TIMEOUT: ${{ inputs.rollout_timeout }}
+          RAW_CONFIGURE_GHCR_PULL_SECRET: ${{ inputs.configure_ghcr_pull_secret }}
+        run: |
+          set -euo pipefail
+
+          if [ -n "$RAW_IMAGE_TAG" ]; then
+            IMAGE_TAG="$RAW_IMAGE_TAG"
+          else
+            IMAGE_TAG="${GITHUB_SHA::12}"
+          fi
+
+          IMAGE_NAMESPACE="${RAW_IMAGE_NAMESPACE:-ghcr.io/som141/docprep-cloud}"
+          DOMAIN="${RAW_DOMAIN:-YOUR_DOMAIN}"
+          TLS_SECRET="${RAW_TLS_SECRET:-docprep-cloud-tls}"
+          POSTGRES_EXTERNAL_NAME="${RAW_POSTGRES_EXTERNAL_NAME:-postgres.example.internal}"
+          RABBITMQ_EXTERNAL_NAME="${RAW_RABBITMQ_EXTERNAL_NAME:-rabbitmq.example.internal}"
+          MINIO_EXTERNAL_NAME="${RAW_MINIO_EXTERNAL_NAME:-minio.example.internal}"
+          OTEL_COLLECTOR_EXTERNAL_NAME="${RAW_OTEL_COLLECTOR_EXTERNAL_NAME:-otel-collector.example.internal}"
+          APPLY_MODE="${RAW_APPLY_MODE:-dry-run}"
+          KUBE_CONTEXT="${RAW_KUBE_CONTEXT:-}"
+          ROLLOUT_TIMEOUT="${RAW_ROLLOUT_TIMEOUT:-180s}"
+          CONFIGURE_GHCR_PULL_SECRET="${RAW_CONFIGURE_GHCR_PULL_SECRET:-false}"
+
+          if [ "$DOMAIN" = "YOUR_DOMAIN" ]; then
+            echo "::error::domain input must be a real domain, not YOUR_DOMAIN."
+            exit 1
+          fi
+
+          for pair in \
+            "postgres_external_name:$POSTGRES_EXTERNAL_NAME:postgres.example.internal" \
+            "rabbitmq_external_name:$RABBITMQ_EXTERNAL_NAME:rabbitmq.example.internal" \
+            "minio_external_name:$MINIO_EXTERNAL_NAME:minio.example.internal" \
+            "otel_collector_external_name:$OTEL_COLLECTOR_EXTERNAL_NAME:otel-collector.example.internal"; do
+            IFS=":" read -r name value placeholder <<< "$pair"
+            if [ "$value" = "$placeholder" ]; then
+              echo "::error::${name} input must be a real service DNS name, not ${placeholder}."
+              exit 1
+            fi
+          done
+
+          if [ "$APPLY_MODE" != "dry-run" ] && [ "$APPLY_MODE" != "apply" ]; then
+            echo "::error::apply_mode must be dry-run or apply."
+            exit 1
+          fi
+
+          {
+            echo "image_tag=$IMAGE_TAG"
+            echo "image_namespace=${IMAGE_NAMESPACE%/}"
+            echo "domain=$DOMAIN"
+            echo "tls_secret=$TLS_SECRET"
+            echo "postgres_external_name=$POSTGRES_EXTERNAL_NAME"
+            echo "rabbitmq_external_name=$RABBITMQ_EXTERNAL_NAME"
+            echo "minio_external_name=$MINIO_EXTERNAL_NAME"
+            echo "otel_collector_external_name=$OTEL_COLLECTOR_EXTERNAL_NAME"
+            echo "apply_mode=$APPLY_MODE"
+            echo "kube_context=$KUBE_CONTEXT"
+            echo "rollout_timeout=$ROLLOUT_TIMEOUT"
+            echo "configure_ghcr_pull_secret=$CONFIGURE_GHCR_PULL_SECRET"
+          } >> "$GITHUB_OUTPUT"
+
+      - name: Configure kubeconfig
+        shell: bash
+        env:
+          KUBE_CONFIG_B64: ${{ secrets.KUBE_CONFIG_B64 }}
+          KUBE_CONTEXT: ${{ steps.inputs.outputs.kube_context }}
+        run: |
+          set -euo pipefail
+
+          if [ -z "$KUBE_CONFIG_B64" ]; then
+            echo "::error::Missing GitHub production secret: KUBE_CONFIG_B64"
+            exit 1
+          fi
+
+          KUBECONFIG_PATH="$RUNNER_TEMP/kubeconfig"
+          printf '%s' "$KUBE_CONFIG_B64" | base64 --decode > "$KUBECONFIG_PATH"
+          chmod 600 "$KUBECONFIG_PATH"
+
+          export KUBECONFIG="$KUBECONFIG_PATH"
+          echo "KUBECONFIG=$KUBECONFIG_PATH" >> "$GITHUB_ENV"
+
+          if [ -n "$KUBE_CONTEXT" ]; then
+            kubectl config use-context "$KUBE_CONTEXT"
+          fi
+
+          kubectl config current-context
+
+      - name: Copy Kubernetes manifests
+        shell: bash
+        run: |
+          set -euo pipefail
+          mkdir -p "$RUNNER_TEMP/deploy"
+          cp -R infra/k8s "$RUNNER_TEMP/deploy/k8s"
+
+      - name: Inject image tags and domain placeholders
+        shell: bash
+        env:
+          MANIFEST_ROOT: ${{ runner.temp }}/deploy/k8s
+          IMAGE_NAMESPACE: ${{ steps.inputs.outputs.image_namespace }}
+          IMAGE_TAG: ${{ steps.inputs.outputs.image_tag }}
+          DOMAIN: ${{ steps.inputs.outputs.domain }}
+          TLS_SECRET: ${{ steps.inputs.outputs.tls_secret }}
+          POSTGRES_EXTERNAL_NAME: ${{ steps.inputs.outputs.postgres_external_name }}
+          RABBITMQ_EXTERNAL_NAME: ${{ steps.inputs.outputs.rabbitmq_external_name }}
+          MINIO_EXTERNAL_NAME: ${{ steps.inputs.outputs.minio_external_name }}
+          OTEL_COLLECTOR_EXTERNAL_NAME: ${{ steps.inputs.outputs.otel_collector_external_name }}
+        run: |
+          set -euo pipefail
+
+          python - <<'PY'
+          import os
+          import pathlib
+
+          root = pathlib.Path(os.environ["MANIFEST_ROOT"])
+          image_namespace = os.environ["IMAGE_NAMESPACE"].rstrip("/")
+          image_tag = os.environ["IMAGE_TAG"]
+          domain = os.environ["DOMAIN"]
+          tls_secret = os.environ["TLS_SECRET"]
+          postgres_external_name = os.environ["POSTGRES_EXTERNAL_NAME"]
+          rabbitmq_external_name = os.environ["RABBITMQ_EXTERNAL_NAME"]
+          minio_external_name = os.environ["MINIO_EXTERNAL_NAME"]
+          otel_collector_external_name = os.environ["OTEL_COLLECTOR_EXTERNAL_NAME"]
+
+          replacements = {
+              "YOUR_REGISTRY/docprep-backend-api:CHANGE_ME": f"{image_namespace}/backend-api:{image_tag}",
+              "YOUR_REGISTRY/docprep-preprocess-worker:CHANGE_ME": f"{image_namespace}/preprocess-worker:{image_tag}",
+              "YOUR_REGISTRY/docprep-frontend:CHANGE_ME": f"{image_namespace}/frontend:{image_tag}",
+              "YOUR_DOMAIN": domain,
+              "docprep-cloud-tls": tls_secret,
+              "postgres.example.internal": postgres_external_name,
+              "rabbitmq.example.internal": rabbitmq_external_name,
+              "minio.example.internal": minio_external_name,
+              "otel-collector.example.internal": otel_collector_external_name,
+          }
+
+          for path in root.rglob("*.yml"):
+              text = path.read_text(encoding="utf-8")
+              for before, after in replacements.items():
+                  text = text.replace(before, after)
+              path.write_text(text, encoding="utf-8")
+          PY
+
+      - name: Render manifests
+        shell: bash
+        run: |
+          set -euo pipefail
+          mkdir -p rendered
+          kubectl kustomize "$RUNNER_TEMP/deploy/k8s" > rendered/docprep-cloud-k8s.yml
+
+      - name: Validate rendered manifest placeholders
+        shell: bash
+        run: |
+          set -euo pipefail
+          if grep -q "YOUR_REGISTRY\\|CHANGE_ME\\|YOUR_DOMAIN\\|example.internal" rendered/docprep-cloud-k8s.yml; then
+            echo "::error::Rendered manifest still contains deployment placeholders."
+            exit 1
+          fi
+
+      - name: Validate cluster prerequisites
+        shell: bash
+        run: |
+          set -euo pipefail
+
+          kubectl cluster-info
+          kubectl get crd scaledobjects.keda.sh
+          kubectl get crd triggerauthentications.keda.sh
+          kubectl get ingressclass nginx
+
+      - name: Validate namespace and application secrets
+        shell: bash
+        env:
+          APPLY_MODE: ${{ steps.inputs.outputs.apply_mode }}
+          TLS_SECRET: ${{ steps.inputs.outputs.tls_secret }}
+          MANIFEST_ROOT: ${{ runner.temp }}/deploy/k8s
+        run: |
+          set -euo pipefail
+
+          if ! kubectl get namespace "$NAMESPACE" >/dev/null 2>&1; then
+            if [ "$APPLY_MODE" = "apply" ]; then
+              kubectl apply -f "$MANIFEST_ROOT/namespace.yml"
+            else
+              echo "::error::Namespace $NAMESPACE does not exist. Create namespace and app secrets first, or use the render workflow only."
+              exit 1
+            fi
+          fi
+
+          kubectl -n "$NAMESPACE" get secret backend-api-secret
+          kubectl -n "$NAMESPACE" get secret preprocess-worker-secret
+          kubectl -n "$NAMESPACE" get secret "$TLS_SECRET"
+
+      - name: Configure GHCR image pull secret
+        shell: bash
+        env:
+          APPLY_MODE: ${{ steps.inputs.outputs.apply_mode }}
+          CONFIGURE_GHCR_PULL_SECRET: ${{ steps.inputs.outputs.configure_ghcr_pull_secret }}
+          GHCR_USERNAME: ${{ secrets.GHCR_USERNAME }}
+          GHCR_TOKEN: ${{ secrets.GHCR_TOKEN }}
+        run: |
+          set -euo pipefail
+
+          if [ "$CONFIGURE_GHCR_PULL_SECRET" != "true" ]; then
+            echo "Skipping GHCR imagePullSecret configuration."
+            exit 0
+          fi
+
+          if [ -z "$GHCR_USERNAME" ] || [ -z "$GHCR_TOKEN" ]; then
+            echo "::error::GHCR_USERNAME and GHCR_TOKEN production secrets are required when configure_ghcr_pull_secret is true."
+            exit 1
+          fi
+
+          if [ "$APPLY_MODE" = "dry-run" ]; then
+            kubectl -n "$NAMESPACE" create secret docker-registry ghcr-pull-secret \
+              --docker-server=ghcr.io \
+              --docker-username="$GHCR_USERNAME" \
+              --docker-password="$GHCR_TOKEN" \
+              --dry-run=server \
+              -o yaml >/dev/null
+            echo "GHCR imagePullSecret server dry-run succeeded."
+            exit 0
+          fi
+
+          kubectl -n "$NAMESPACE" create secret docker-registry ghcr-pull-secret \
+            --docker-server=ghcr.io \
+            --docker-username="$GHCR_USERNAME" \
+            --docker-password="$GHCR_TOKEN" \
+            --dry-run=client \
+            -o yaml | kubectl apply -f -
+
+          kubectl -n "$NAMESPACE" patch serviceaccount default \
+            --type merge \
+            -p '{"imagePullSecrets":[{"name":"ghcr-pull-secret"}]}'
+
+      - name: Apply manifests
+        shell: bash
+        env:
+          APPLY_MODE: ${{ steps.inputs.outputs.apply_mode }}
+          ROLLOUT_TIMEOUT: ${{ steps.inputs.outputs.rollout_timeout }}
+        run: |
+          set -euo pipefail
+
+          if [ "$APPLY_MODE" = "dry-run" ]; then
+            kubectl apply --dry-run=server -f rendered/docprep-cloud-k8s.yml
+            exit 0
+          fi
+
+          kubectl apply -f rendered/docprep-cloud-k8s.yml
+          kubectl -n "$NAMESPACE" rollout status deployment/backend-api --timeout="$ROLLOUT_TIMEOUT"
+          kubectl -n "$NAMESPACE" rollout status deployment/frontend --timeout="$ROLLOUT_TIMEOUT"
+          kubectl -n "$NAMESPACE" rollout status deployment/nginx --timeout="$ROLLOUT_TIMEOUT"
+          kubectl -n "$NAMESPACE" get pods,svc,ingress,scaledobject
+
+      - name: Write deployment summary
+        shell: bash
+        run: |
+          {
+            echo "### Kubernetes deployment"
+            echo ""
+            echo "- mode: \`${{ steps.inputs.outputs.apply_mode }}\`"
+            echo "- backend-api: \`${{ steps.inputs.outputs.image_namespace }}/backend-api:${{ steps.inputs.outputs.image_tag }}\`"
+            echo "- preprocess-worker: \`${{ steps.inputs.outputs.image_namespace }}/preprocess-worker:${{ steps.inputs.outputs.image_tag }}\`"
+            echo "- frontend: \`${{ steps.inputs.outputs.image_namespace }}/frontend:${{ steps.inputs.outputs.image_tag }}\`"
+            echo "- domain: \`${{ steps.inputs.outputs.domain }}\`"
+            echo "- tls secret: \`${{ steps.inputs.outputs.tls_secret }}\`"
+            echo "- namespace: \`$NAMESPACE\`"
+            echo "- postgres external name: \`${{ steps.inputs.outputs.postgres_external_name }}\`"
+            echo "- rabbitmq external name: \`${{ steps.inputs.outputs.rabbitmq_external_name }}\`"
+            echo "- minio external name: \`${{ steps.inputs.outputs.minio_external_name }}\`"
+            echo "- otel collector external name: \`${{ steps.inputs.outputs.otel_collector_external_name }}\`"
+          } >> "$GITHUB_STEP_SUMMARY"
+
+      - name: Upload rendered manifests
+        uses: actions/upload-artifact@v4
+        with:
+          name: docprep-cloud-k8s-deploy-${{ steps.inputs.outputs.image_tag }}
+          path: rendered/docprep-cloud-k8s.yml
+          if-no-files-found: error
