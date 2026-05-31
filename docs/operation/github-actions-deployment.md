@@ -10,12 +10,19 @@ Workflow 파일:
 
 ## 실행 조건
 
-Workflow는 아래 경우 실행됩니다.
+Workflow는 아래 경우에만 실행됩니다.
 
 - `workflow_dispatch`: GitHub UI에서 수동 실행
-- `push` to `main`: main 반영 후 자동 실행
 
-첫 운영 배포는 반드시 수동 실행으로 검증하는 것을 권장합니다. 서버가 안정화된 뒤 main 자동 배포를 유지할지 결정합니다.
+현재 운영 배포 workflow는 `main` push 자동 실행을 하지 않습니다.
+서버 SSH 정보와 운영 `.env.prod`가 준비되지 않은 상태에서 자동 배포가 실패 체크를 만들지 않게 하기 위한 의도적인 설정입니다.
+
+자동 배포가 필요해지는 시점은 운영 서버, 도메인, HTTPS, Google OAuth 운영 redirect URI, 백업 정책까지 안정화된 뒤입니다.
+그 전까지는 아래 경로에서 명시적으로 수동 실행합니다.
+
+```text
+Actions -> Deploy Production -> Run workflow
+```
 
 ## GitHub Environment
 
@@ -35,6 +42,9 @@ production
 | `DEPLOY_SSH_PORT` | `22` | SSH 포트. 비워두면 22 |
 | `DEPLOY_PATH` | `/opt/image-preprocess` | 서버 배포 경로 |
 | `PROD_BASE_URL` | `https://YOUR_DOMAIN` | 배포 후 health check 기준 URL |
+
+Workflow는 수동 실행 직후 위 필수 secret이 비어 있는지 먼저 검사합니다.
+누락 값이 있으면 SSH 접속 전에 실패하며, Actions 로그에 `Missing GitHub production secret: ...` 형식으로 표시됩니다.
 
 주의:
 

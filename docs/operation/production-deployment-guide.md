@@ -106,6 +106,9 @@ GitHub Actions에서 아래 workflow를 수동 실행합니다.
 Actions -> Deploy Production -> Run workflow
 ```
 
+`Deploy Production` workflow는 `main` push 때 자동으로 실행되지 않습니다.
+운영 서버 SSH 정보와 서버 `.env.prod`가 준비된 이후에만 수동으로 실행하는 것을 기본 정책으로 둡니다.
+
 workflow는 repository를 압축해 서버에 업로드하고, 서버의 shared `.env.prod`를 사용해 production compose stack을 실행합니다.
 
 사용되는 compose 명령:
