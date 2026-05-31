@@ -129,6 +129,7 @@ localStorage.getItem('doc-pipeline.access-token')
 | [운영 배포](docs/operation/production-deployment-guide.md) | 운영 배포 전체 순서 |
 | [GitHub Actions 배포](docs/operation/github-actions-deployment.md) | CI/CD 배포 workflow |
 | [GHCR 이미지 빌드/푸시](docs/operation/ghcr-image-workflow.md) | Kubernetes 배포용 이미지 생성 |
+| [Kubernetes manifest 렌더링](docs/operation/kubernetes-manifest-render-workflow.md) | 이미지 태그를 주입한 K8s YAML artifact 생성 |
 | [환경변수와 Secrets](docs/operation/production-env.md) | 운영 secret 주입 방식 |
 | [배포 체크리스트](docs/operation/deployment-checklist.md) | 공개 전 점검 항목 |
 
