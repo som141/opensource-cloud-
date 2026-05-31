@@ -1,0 +1,111 @@
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: grafana-provisioning
+  namespace: docprep-cloud
+  labels:
+    app.kubernetes.io/name: grafana
+    app.kubernetes.io/part-of: docprep-cloud
+data:
+  datasource.yml: |
+    apiVersion: 1
+    datasources:
+      - name: Prometheus
+        type: prometheus
+        access: proxy
+        url: http://prometheus:9090
+        isDefault: true
+        editable: false
+  dashboard-provider.yml: |
+    apiVersion: 1
+    providers:
+      - name: docprep
+        orgId: 1
+        folder: DocPrep
+        type: file
+        disableDeletion: false
+        editable: true
+        options:
+          path: /var/lib/grafana/dashboards
+  keda-batch-comparison.json: |
+    {
+      "uid": "docprep-keda-batch",
+      "title": "DocPrep KEDA 500장 배치 비교",
+      "schemaVersion": 39,
+      "version": 1,
+      "refresh": "10s",
+      "time": {
+        "from": "now-1h",
+        "to": "now"
+      },
+      "panels": [
+        {
+          "type": "timeseries",
+          "title": "Worker replica 수",
+          "gridPos": { "x": 0, "y": 0, "w": 12, "h": 8 },
+          "targets": [
+            {
+              "expr": "kube_deployment_status_replicas{namespace=\"docprep-cloud\",deployment=\"preprocess-worker\"}",
+              "legendFormat": "current"
+            },
+            {
+              "expr": "kube_deployment_status_replicas_ready{namespace=\"docprep-cloud\",deployment=\"preprocess-worker\"}",
+              "legendFormat": "ready"
+            },
+            {
+              "expr": "kube_horizontalpodautoscaler_status_desired_replicas{namespace=\"docprep-cloud\",horizontalpodautoscaler=\"keda-hpa-preprocess-worker\"}",
+              "legendFormat": "hpa desired"
+            }
+          ]
+        },
+        {
+          "type": "timeseries",
+          "title": "RabbitMQ 대기 메시지",
+          "gridPos": { "x": 12, "y": 0, "w": 12, "h": 8 },
+          "targets": [
+            {
+              "expr": "rabbitmq_queue_messages_ready{queue=\"image.preprocess.normal\"}",
+              "legendFormat": "normal ready"
+            },
+            {
+              "expr": "rabbitmq_queue_messages_ready{queue=\"image.preprocess.high\"}",
+              "legendFormat": "high ready"
+            },
+            {
+              "expr": "rabbitmq_queue_messages_unacked{queue=\"image.preprocess.normal\"}",
+              "legendFormat": "normal unacked"
+            }
+          ]
+        },
+        {
+          "type": "timeseries",
+          "title": "Worker 처리량",
+          "gridPos": { "x": 0, "y": 8, "w": 12, "h": 8 },
+          "targets": [
+            {
+              "expr": "sum(rate(worker_job_processed_total[1m]))",
+              "legendFormat": "processed/sec"
+            },
+            {
+              "expr": "sum(rate(worker_job_failed_total[1m]))",
+              "legendFormat": "failed/sec"
+            }
+          ]
+        },
+        {
+          "type": "timeseries",
+          "title": "RabbitMQ consumer 수",
+          "gridPos": { "x": 12, "y": 8, "w": 12, "h": 8 },
+          "targets": [
+            {
+              "expr": "rabbitmq_queue_consumers{queue=\"image.preprocess.normal\"}",
+              "legendFormat": "normal consumers"
+            },
+            {
+              "expr": "rabbitmq_queue_consumers{queue=\"image.preprocess.high\"}",
+              "legendFormat": "high consumers"
+            }
+          ]
+        }
+      ]
+    }

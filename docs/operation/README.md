@@ -52,3 +52,9 @@
 - GitHub Actions secrets에는 SSH 배포에 필요한 값만 둡니다.
 - Google OAuth 운영 redirect URI는 HTTPS 도메인 기준으로 등록합니다.
 - Swagger는 MVP 검증에는 유용하지만 공개 서비스 전에는 접근 제한 여부를 결정해야 합니다.
+
+## KEDA 성능 비교 실험
+
+KEDA 자동 확장과 고정 Worker 방식의 500장 이미지 전처리 성능을 비교하려면 [KEDA 500장 배치 비교 실험 가이드](keda-batch-benchmark.md)를 확인합니다.
+
+이 문서는 Prometheus/Grafana/kube-state-metrics 배포, KEDA ON/OFF 전환, 배치 업로드 벤치마크 실행, 결과 해석 기준을 포함합니다.

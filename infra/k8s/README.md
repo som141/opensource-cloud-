@@ -62,3 +62,15 @@ Secret 파일은 환경변수 기반으로 생성할 수 있다.
 - Pod가 재생성되면 데이터가 사라질 수 있으므로 운영에서는 PVC, operator, 또는 관리형 서비스로 교체해야 한다.
 - Worker autoscaling은 CPU가 아니라 RabbitMQ queue length 기준이다.
 - `preprocess-worker` Deployment는 `replicas: 0`으로 시작하고 KEDA가 queue 상태에 따라 scale out한다.
+
+## KEDA 비교 실험용 관측성 리소스
+
+`infra/k8s/monitoring/`에는 KEDA 500장 배치 비교 실험을 위한 Prometheus, Grafana, kube-state-metrics manifest가 포함됩니다.
+
+배포 후 Grafana는 NGINX의 `/grafana/` 경로로 접근합니다.
+
+```text
+https://YOUR_DOMAIN/grafana/
+```
+
+자세한 실험 절차는 [KEDA 500장 배치 비교 실험 가이드](../../docs/operation/keda-batch-benchmark.md)를 확인합니다.

@@ -24,6 +24,16 @@ resources:
   - minio/deployment.yml
   - minio/service.yml
   - minio/bucket-job.yml
+  - monitoring/prometheus-rbac.yml
+  - monitoring/prometheus-configmap.yml
+  - monitoring/prometheus-deployment.yml
+  - monitoring/prometheus-service.yml
+  - monitoring/kube-state-metrics-rbac.yml
+  - monitoring/kube-state-metrics-deployment.yml
+  - monitoring/kube-state-metrics-service.yml
+  - monitoring/grafana-configmap.yml
+  - monitoring/grafana-deployment.yml
+  - monitoring/grafana-service.yml
   - monitoring/otel-collector-configmap.yml
   - monitoring/otel-collector-deployment.yml
   - monitoring/otel-collector-service.yml
