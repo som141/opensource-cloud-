@@ -75,7 +75,7 @@ concurrency:
 jobs:
   deploy:
     name: Deploy Kubernetes manifests
-    runs-on: ubuntu-latest
+    runs-on: [self-hosted, Linux, X64, docprep-k8s]
     environment: production
     timeout-minutes: 30
 
