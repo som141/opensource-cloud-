@@ -138,7 +138,8 @@ KEDA 비활성화 후 Worker 20개 고정:
   -AccessToken "<ACCESS_TOKEN>" `
   -InputPath "C:\dataset\doc-images-500" `
   -MaxFiles 500 `
-  -KubeConfig "C:\path\to\kube.conf"
+  -KubeConfig "C:\path\to\kube.conf" `
+  -NgrokSkipBrowserWarning
 ```
 
 ZIP 파일을 넣어도 된다.
@@ -150,8 +151,14 @@ ZIP 파일을 넣어도 된다.
   -AccessToken "<ACCESS_TOKEN>" `
   -InputPath "C:\dataset\doc-images-500.zip" `
   -MaxFiles 500 `
-  -KubeConfig "C:\path\to\kube.conf"
+  -KubeConfig "C:\path\to\kube.conf" `
+  -NgrokSkipBrowserWarning
 ```
+
+ngrok 무료 도메인을 API 앞단에 둘 때는 응답이 경고 페이지로 바뀌지 않도록 `-NgrokSkipBrowserWarning`을 함께 사용한다.
+
+스크립트는 presigned URL 원본 업로드 중 일시적인 네트워크 끊김이 발생하면 파일별 최대 5회까지 재시도한다.
+Kubernetes 샘플링은 Worker가 0개인 상태에서도 실패하지 않도록 누락된 replica 필드를 `null`로 기록한다.
 
 스크립트는 아래 순서로 동작한다.
 

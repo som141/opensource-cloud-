@@ -50,3 +50,39 @@ PR 단계에서는 수동 `workflow_dispatch` 실행으로 같은 배포 job이 
 - 500장 테스트 결과 JSON이 생성된다.
 - 테스트 과정과 요약 결과 PDF가 생성된다.
 - 실패 또는 제약이 있으면 리포트에 명시한다.
+
+## 검증 결과
+
+### 자동 배포 workflow
+
+- 수동 검증 run: `https://github.com/som141/opensource-cloud-/actions/runs/26742366531`
+- 결과: 성공
+- 검증 방식: `ci/som/151` 브랜치에서 `workflow_dispatch`로 `Deploy Kubernetes`를 실행해 self-hosted runner의 `kubectl apply`와 rollout을 확인했다.
+- 자동 `workflow_run` 검증: PR merge 후 `main`의 `Build GHCR Images` 성공 이벤트에서 최종 확인한다.
+
+### 500장 배치 테스트
+
+- 입력 원본: `Downloads` 하위 이미지 후보 147개
+- 디코딩 가능 원본: 144개
+- 테스트 입력셋: 500개 JPEG, 총 29.60MB
+- Job ID: `7`
+- 결과: 500개 성공, 0개 실패
+- Job 처리 시간: 52.572초
+- Job 생성부터 완료까지: 81.755초
+- 결과 ZIP: `benchmark-results/job-7-processed-results.zip`
+- ZIP 엔트리: 500개
+- 결과 리포트 JSON: `benchmark-results/20260601-keda-on-500-result.json`
+- 결과 리포트 PDF: `benchmark-results/20260601-keda-on-500-result.pdf`
+
+### KEDA 관측 결과
+
+- `minReplicaCount`: 0
+- `maxReplicaCount`: 20
+- normal queue target: 25
+- high queue target: 10
+- 관측 최대 desired/deployment replica: 20
+- 관측 최대 ready Worker: 4
+- 피크 시 Pending Worker: 16
+- Pending 사유: 현재 4개 노드 기준 CPU/메모리 부족과 control-plane taint 때문에 추가 Worker가 스케줄링되지 못했다.
+
+이번 결과는 KEDA trigger와 최대 스케일 요청은 정상이고, 실제 병렬 처리량은 현재 클러스터 리소스에 의해 제한된다는 의미다.
