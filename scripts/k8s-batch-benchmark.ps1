@@ -296,7 +296,8 @@ function Save-Result {
     if ([string]::IsNullOrWhiteSpace($safeScenario)) {
         $safeScenario = "manual"
     }
-    $fileName = "$(Get-Date -Format 'yyyyMMdd-HHmmss')-$safeScenario-$($Result.fileCount)-images.json"
+    $fileCount = $Result["fileCount"]
+    $fileName = "$(Get-Date -Format 'yyyyMMdd-HHmmss')-$safeScenario-$fileCount-images.json"
     $path = Join-Path $OutputDirectory $fileName
     $Result | ConvertTo-Json -Depth 30 | Set-Content -LiteralPath $path -Encoding UTF8
     return $path
@@ -453,7 +454,7 @@ try {
         succeeded = $summary.succeeded
         failed = $summary.failed
         progressPercent = $summary.progressPercent
-        kubernetesSamples = @($samples)
+        kubernetesSamples = @($samples.ToArray())
     }
 
     $resultPath = Save-Result $result

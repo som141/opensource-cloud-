@@ -160,6 +160,24 @@ ngrok 무료 도메인을 API 앞단에 둘 때는 응답이 경고 페이지로
 스크립트는 presigned URL 원본 업로드 중 일시적인 네트워크 끊김이 발생하면 파일별 최대 5회까지 재시도한다.
 Kubernetes 샘플링은 Worker가 0개인 상태에서도 실패하지 않도록 누락된 replica 필드를 `null`로 기록한다.
 
+## 비교 리포트 생성
+
+KEDA ON/OFF 실험을 모두 완료한 뒤 아래 명령으로 비교 리포트를 생성한다.
+
+```powershell
+python .\scripts\generate-keda-comparison-report.py
+```
+
+생성 산출물은 다음과 같다.
+
+| 파일 | 설명 |
+| --- | --- |
+| `benchmark-results/20260601-keda-comparison-report.json` | 비교 분석 원본 데이터 |
+| `benchmark-results/20260601-keda-comparison-report.md` | Markdown 요약 보고서 |
+| `benchmark-results/20260601-keda-comparison-report.pdf` | 한글 PDF 보고서 |
+
+PDF는 ReportLab과 Windows `Malgun Gothic` 폰트를 사용해 생성한다. PowerShell 파이프를 통해 Python 코드를 직접 전달하면 한글 문자열이 깨질 수 있으므로, 반드시 UTF-8 파일인 `scripts/generate-keda-comparison-report.py`를 실행한다.
+
 스크립트는 아래 순서로 동작한다.
 
 1. 프로젝트 생성 또는 기존 프로젝트 조회

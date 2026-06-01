@@ -65,14 +65,20 @@ PR 단계에서는 수동 `workflow_dispatch` 실행으로 같은 배포 job이 
 - 입력 원본: `Downloads` 하위 이미지 후보 147개
 - 디코딩 가능 원본: 144개
 - 테스트 입력셋: 500개 JPEG, 총 29.60MB
-- Job ID: `7`
-- 결과: 500개 성공, 0개 실패
-- Job 처리 시간: 52.572초
-- Job 생성부터 완료까지: 81.755초
-- 결과 ZIP: `benchmark-results/job-7-processed-results.zip`
+- KEDA ON Job ID: `7`
+- KEDA OFF Job ID: `8`
+- KEDA ON 결과: 500개 성공, 0개 실패
+- KEDA OFF 결과: 500개 성공, 0개 실패
+- KEDA ON Job 처리 시간: 52.572초
+- KEDA OFF Job 처리 시간: 98.1초
+- KEDA ON Job 생성부터 완료까지: 81.755초
+- KEDA OFF Job 생성부터 완료까지: 100.815초
+- KEDA ON 결과 ZIP: `benchmark-results/job-7-processed-results.zip`
+- KEDA OFF 결과 ZIP: `benchmark-results/job-8-processed-results.zip`
 - ZIP 엔트리: 500개
 - 결과 리포트 JSON: `benchmark-results/20260601-keda-on-500-result.json`
-- 결과 리포트 PDF: `benchmark-results/20260601-keda-on-500-result.pdf`
+- 비교 리포트 JSON: `benchmark-results/20260601-keda-comparison-report.json`
+- 비교 리포트 PDF: `benchmark-results/20260601-keda-comparison-report.pdf`
 
 ### KEDA 관측 결과
 
@@ -86,3 +92,16 @@ PR 단계에서는 수동 `workflow_dispatch` 실행으로 같은 배포 job이 
 - Pending 사유: 현재 4개 노드 기준 CPU/메모리 부족과 control-plane taint 때문에 추가 Worker가 스케줄링되지 못했다.
 
 이번 결과는 KEDA trigger와 최대 스케일 요청은 정상이고, 실제 병렬 처리량은 현재 클러스터 리소스에 의해 제한된다는 의미다.
+
+### KEDA ON/OFF 비교 분석
+
+- KEDA ON은 scale-to-zero에서 시작했기 때문에 큐 대기 시간이 29.183초였다.
+- KEDA OFF는 Worker 1개가 이미 실행 중이어서 큐 대기 시간이 2.716초였다.
+- 순수 Worker 처리 구간은 KEDA ON 52.572초, KEDA OFF 98.1초로 KEDA ON이 1.87배 빨랐다.
+- Job 생성부터 완료까지는 KEDA ON 81.755초, KEDA OFF 100.815초로 KEDA ON이 19.06초 빨랐다.
+- 현재 클러스터에서 KEDA ON의 실제 ready Worker는 최대 4개였기 때문에, 노드 리소스를 늘리면 KEDA ON과 OFF의 차이는 더 커질 가능성이 높다.
+
+### 리포트 생성 방식 수정
+
+처음 생성한 PDF는 PowerShell 파이프로 Python 코드를 전달하는 과정에서 한글 문자열이 `???`로 변환되는 문제가 있었다.
+이를 피하기 위해 `scripts/generate-keda-comparison-report.py`를 추가하고, UTF-8 Python 파일에서 ReportLab과 Windows `Malgun Gothic` 폰트를 사용해 PDF를 생성하도록 변경했다.
