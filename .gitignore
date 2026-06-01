@@ -50,6 +50,8 @@ frontend/vite.config.d.ts
 infra/docker-compose/.env.prod
 LOCAL_CONFIG.md
 *.local.md
+*.local.log
+benchmark-results/
 AGENTS.md
 CODEX_DIRECTORY_SPEC.md
 .codex/
