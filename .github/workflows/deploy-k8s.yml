@@ -75,7 +75,7 @@ concurrency:
 jobs:
   deploy:
     name: Deploy Kubernetes manifests
-    runs-on: ubuntu-latest
+    runs-on: [self-hosted, Linux, X64, docprep-k8s]
     environment: production
     timeout-minutes: 30
 
@@ -213,7 +213,7 @@ jobs:
         run: |
           set -euo pipefail
 
-          python - <<'PY'
+          python3 - <<'PY'
           import os
           import pathlib
 
