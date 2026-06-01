@@ -1,0 +1,52 @@
+# 이슈 151: 자동 Kubernetes 배포와 500장 배치 검증
+
+## 목적
+
+`main`에 코드가 머지된 뒤 GHCR 이미지 빌드가 성공하면 Kubernetes 배포가 자동 실행되도록 GitHub Actions 흐름을 보강한다.
+또한 다운로드 폴더의 이미지 파일을 기준으로 500장 배치 전처리 테스트를 수행하고, 과정과 결과를 PDF로 남긴다.
+
+## 작업 범위
+
+1. `Deploy Kubernetes` workflow에 `workflow_run` trigger를 추가한다.
+2. 자동 배포 입력값은 `production` environment variables에서 읽도록 정리한다.
+3. `Build GHCR Images`가 만든 commit SHA 기반 이미지 태그를 `Deploy Kubernetes`가 그대로 사용한다.
+4. 다운로드 폴더 이미지로 500장 테스트 입력셋을 만든다.
+5. 실제 배포 환경에서 업로드, Job 생성, Worker 처리, KEDA scale 상태를 검증한다.
+6. 검증 결과를 `benchmark-results/` 하위 JSON/HTML/PDF 산출물로 저장한다.
+
+## 자동 배포 흐름
+
+```text
+main push 또는 PR merge
+-> Build GHCR Images 성공
+-> Deploy Kubernetes 자동 실행
+-> self-hosted runner에서 kubectl apply
+-> rollout 상태 확인
+```
+
+자동 배포는 `workflow_run` 이벤트에서 실행되므로 PR 브랜치에서는 최종 자동 실행까지 검증할 수 없다.
+PR 단계에서는 수동 `workflow_dispatch` 실행으로 같은 배포 job이 정상 동작하는지 확인한다.
+
+## 500장 검증 방식
+
+다운로드 폴더에 있는 이미지 파일을 재귀 탐색한다.
+실제 이미지 수가 500장보다 적으면 같은 이미지를 순환 복사해서 임시 입력셋을 만들고, 중복 checksum으로 거절되지 않도록 복사본마다 식별 바이트를 추가한다.
+
+검증 대상은 다음이다.
+
+- 프로젝트 생성 또는 기존 프로젝트 재사용
+- presigned URL 발급
+- MinIO 원본 업로드
+- 업로드 완료 처리와 이미지 메타데이터 생성
+- Job 생성
+- RabbitMQ 기반 Worker 처리
+- KEDA/HPA/Worker replica 변화
+- 처리 결과 다운로드 가능 여부
+
+## 완료 조건
+
+- `Deploy Kubernetes` workflow가 수동 실행으로 성공한다.
+- 자동 배포 trigger와 environment variable 사용 방식이 문서화된다.
+- 500장 테스트 결과 JSON이 생성된다.
+- 테스트 과정과 요약 결과 PDF가 생성된다.
+- 실패 또는 제약이 있으면 리포트에 명시한다.
