@@ -178,6 +178,95 @@ python .\scripts\generate-keda-comparison-report.py
 
 PDF는 ReportLab과 Windows `Malgun Gothic` 폰트를 사용해 생성한다. PowerShell 파이프를 통해 Python 코드를 직접 전달하면 한글 문자열이 깨질 수 있으므로, 반드시 UTF-8 파일인 `scripts/generate-keda-comparison-report.py`를 실행한다.
 
+## HPA CPU 비교 실험
+
+KEDA의 필요성을 Kubernetes 기본 오토스케일링과 비교하려면 `HPA CPU` 실험을 추가한다.
+HPA CPU는 Pod CPU 사용률을 기준으로 replica를 조절하고, KEDA는 RabbitMQ queue length를 기준으로 replica를 조절한다.
+
+### 전제 조건
+
+HPA CPU 실험은 `metrics-server`가 필요하다.
+
+```powershell
+kubectl top nodes
+```
+
+위 명령이 `Metrics API not available`로 실패하면 metrics-server를 먼저 설치한다.
+
+```powershell
+kubectl apply -f https://github.com/kubernetes-sigs/metrics-server/releases/download/v0.7.2/components.yaml
+kubectl -n kube-system patch deployment metrics-server --type=json --patch-file metrics-server-insecure-tls-patch.json
+kubectl -n kube-system rollout status deployment/metrics-server --timeout=180s
+```
+
+`metrics-server-insecure-tls-patch.json` 내용은 다음과 같다.
+
+```json
+[
+  {
+    "op": "add",
+    "path": "/spec/template/spec/containers/0/args/-",
+    "value": "--kubelet-insecure-tls"
+  }
+]
+```
+
+자체 인증서 환경에서는 kubelet 인증서 검증 때문에 readiness가 실패할 수 있어 `--kubelet-insecure-tls` 옵션이 필요할 수 있다.
+
+### 실험 순서
+
+고정 Worker 기준선:
+
+```powershell
+.\scripts\k8s-scale-mode.ps1 `
+  -Mode keda-off-fixed `
+  -FixedReplicas 1 `
+  -KubeConfig "C:\path\to\kube.conf"
+```
+
+HPA CPU:
+
+```powershell
+.\scripts\k8s-scale-mode.ps1 `
+  -Mode hpa-cpu `
+  -HpaMinReplicas 1 `
+  -HpaMaxReplicas 20 `
+  -TargetCpuUtilization 60 `
+  -KubeConfig "C:\path\to\kube.conf"
+```
+
+KEDA min 1:
+
+```powershell
+.\scripts\k8s-scale-mode.ps1 `
+  -Mode keda-on-min1 `
+  -KubeConfig "C:\path\to\kube.conf"
+```
+
+KEDA min 0으로 복구:
+
+```powershell
+.\scripts\k8s-scale-mode.ps1 `
+  -Mode keda-on `
+  -KubeConfig "C:\path\to\kube.conf"
+```
+
+### 4-way 리포트 생성
+
+Fixed 1, HPA CPU, KEDA min 1, KEDA min 0 실험을 모두 완료한 뒤 아래 명령으로 리포트를 만든다.
+
+```powershell
+python .\scripts\generate-autoscaling-comparison-report.py
+```
+
+산출물:
+
+| 파일 | 설명 |
+| --- | --- |
+| `benchmark-results/20260601-autoscaling-comparison-report.json` | Fixed/HPA/KEDA 비교 원본 데이터 |
+| `benchmark-results/20260601-autoscaling-comparison-report.md` | Markdown 요약 보고서 |
+| `benchmark-results/20260601-autoscaling-comparison-report.pdf` | 한글 PDF 보고서 |
+
 스크립트는 아래 순서로 동작한다.
 
 1. 프로젝트 생성 또는 기존 프로젝트 조회

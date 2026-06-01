@@ -268,11 +268,17 @@ function Get-KubernetesSample {
 
     $deployment = Invoke-KubectlJson @("-n", $Namespace, "get", "deployment", "preprocess-worker", "-o", "json")
     $hpa = Invoke-KubectlJson @("-n", $Namespace, "get", "hpa", "keda-hpa-preprocess-worker", "-o", "json")
+    $hpaName = "keda-hpa-preprocess-worker"
+    if ($null -eq $hpa) {
+        $hpa = Invoke-KubectlJson @("-n", $Namespace, "get", "hpa", "preprocess-worker-cpu", "-o", "json")
+        $hpaName = "preprocess-worker-cpu"
+    }
     $deploymentStatus = Get-OptionalPropertyValue $deployment "status"
     $hpaStatus = Get-OptionalPropertyValue $hpa "status"
 
     return [ordered]@{
         sampledAt = (Get-Date).ToUniversalTime().ToString("o")
+        hpaName = $hpaName
         progressPercent = $Summary.progressPercent
         succeeded = $Summary.succeeded
         failed = $Summary.failed

@@ -101,7 +101,26 @@ PR 단계에서는 수동 `workflow_dispatch` 실행으로 같은 배포 job이 
 - Job 생성부터 완료까지는 KEDA ON 81.755초, KEDA OFF 100.815초로 KEDA ON이 19.06초 빨랐다.
 - 현재 클러스터에서 KEDA ON의 실제 ready Worker는 최대 4개였기 때문에, 노드 리소스를 늘리면 KEDA ON과 OFF의 차이는 더 커질 가능성이 높다.
 
+### Kubernetes HPA CPU 비교 분석
+
+KEDA의 필요성을 입증하기 위해 Kubernetes 기본 HPA CPU 방식도 추가로 실험했다.
+
+| 방식 | 큐 대기 | 처리 시간 | 전체 시간 | 성공/전체 | 관측 replica |
+| --- | ---: | ---: | ---: | ---: | ---: |
+| Fixed 1 | 2.716초 | 98.1초 | 100.815초 | 500/500 | 1 |
+| HPA CPU | 2.145초 | 91.736초 | 93.881초 | 500/500 | 3 |
+| KEDA min 1 | 2.209초 | 59.728초 | 61.937초 | 500/500 | 10 |
+| KEDA min 0 | 29.183초 | 52.572초 | 81.755초 | 500/500 | 20 |
+
+- HPA CPU는 Worker 1개에서 3개까지 늘었지만 CPU 사용률 기반이라 큐 적체를 직접 보지 못했다.
+- KEDA min 1은 HPA와 같은 `min=1` 출발선에서 가장 빠른 완료 시간을 보였다.
+- KEDA min 1은 HPA CPU보다 처리 구간 기준 1.54배 빨랐다.
+- KEDA min 0은 scale-to-zero 비용 절감 모드라 시작 지연이 포함된다.
+- HPA 비교를 위해 `metrics-server`를 클러스터에 설치했고, `kubectl top nodes`가 정상 동작하는 것을 확인했다.
+- 운영 상태는 실험 후 다시 KEDA ON `minReplicaCount=0`으로 복구했다.
+
 ### 리포트 생성 방식 수정
 
 처음 생성한 PDF는 PowerShell 파이프로 Python 코드를 전달하는 과정에서 한글 문자열이 `???`로 변환되는 문제가 있었다.
 이를 피하기 위해 `scripts/generate-keda-comparison-report.py`를 추가하고, UTF-8 Python 파일에서 ReportLab과 Windows `Malgun Gothic` 폰트를 사용해 PDF를 생성하도록 변경했다.
+추가 비교 실험은 `scripts/generate-autoscaling-comparison-report.py`로 생성하며, 결과는 `benchmark-results/20260601-autoscaling-comparison-report.pdf`에 저장된다.
