@@ -213,7 +213,7 @@ jobs:
         run: |
           set -euo pipefail
 
-          python - <<'PY'
+          python3 - <<'PY'
           import os
           import pathlib
 
