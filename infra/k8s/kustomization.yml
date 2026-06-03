@@ -31,6 +31,8 @@ resources:
   - monitoring/kube-state-metrics-rbac.yml
   - monitoring/kube-state-metrics-deployment.yml
   - monitoring/kube-state-metrics-service.yml
+  - monitoring/node-exporter-daemonset.yml
+  - monitoring/node-exporter-service.yml
   - monitoring/grafana-configmap.yml
   - monitoring/grafana-deployment.yml
   - monitoring/grafana-service.yml

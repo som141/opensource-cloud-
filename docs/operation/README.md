@@ -13,10 +13,11 @@
 6. [운영 환경변수와 Secret 주입](production-env.md)
 7. [HTTPS와 도메인 정책](https-domain-policy.md)
 8. [KEDA 500장 배치 비교 실험](keda-batch-benchmark.md)
-9. [관측성 로컬 실행](observability.md)
-10. [배포 체크리스트](deployment-checklist.md)
-11. [최종 E2E 검증](final-e2e-verification.md)
-12. [백업/복구](backup-restore.md)
+9. [노드 리소스 관측](node-resource-observability.md)
+10. [관측성 로컬 실행](observability.md)
+11. [배포 체크리스트](deployment-checklist.md)
+12. [최종 E2E 검증](final-e2e-verification.md)
+13. [백업/복구](backup-restore.md)
 
 ## 로컬 실행 문서
 
@@ -43,6 +44,7 @@
 | [관측성 로컬 실행](observability.md) | 배포 전 metric과 trace 검증 |
 | [Kubernetes/KEDA 배포](kubernetes-deployment.md) | Kubernetes 배포와 Worker autoscaling 확인 |
 | [KEDA 500장 배치 비교 실험](keda-batch-benchmark.md) | KEDA, HPA CPU, 고정 Worker 성능 비교 |
+| [노드 리소스 관측](node-resource-observability.md) | node-exporter 기반 노드별 CPU/메모리 그래프와 500장 보고서 생성 |
 | [배포 체크리스트](deployment-checklist.md) | 공개 전 확인 목록 |
 | [최종 E2E 검증](final-e2e-verification.md) | 로그인부터 결과 다운로드까지 검증 |
 | [백업/복구](backup-restore.md) | PostgreSQL과 Object Storage 백업 |
