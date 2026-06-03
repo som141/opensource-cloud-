@@ -8,10 +8,16 @@ The script intentionally changes only the ScaledObject/HPA and preprocess-worker
 #>
 [CmdletBinding()]
 param(
-    [ValidateSet("keda-on", "keda-off-fixed")]
+    [ValidateSet("keda-on", "keda-on-min1", "hpa-cpu", "keda-off-fixed")]
     [string]$Mode,
 
     [int]$FixedReplicas = 1,
+
+    [int]$HpaMinReplicas = 1,
+
+    [int]$HpaMaxReplicas = 20,
+
+    [int]$TargetCpuUtilization = 60,
 
     [string]$Namespace = "docprep-cloud",
 
@@ -25,6 +31,15 @@ $ErrorActionPreference = "Stop"
 
 if ($Mode -eq "keda-off-fixed" -and $FixedReplicas -lt 1) {
     throw "FixedReplicas must be 1 or greater when Mode is keda-off-fixed."
+}
+if ($Mode -eq "hpa-cpu" -and $HpaMinReplicas -lt 1) {
+    throw "HpaMinReplicas must be 1 or greater when Mode is hpa-cpu."
+}
+if ($Mode -eq "hpa-cpu" -and $HpaMaxReplicas -lt $HpaMinReplicas) {
+    throw "HpaMaxReplicas must be greater than or equal to HpaMinReplicas."
+}
+if ($Mode -eq "hpa-cpu" -and ($TargetCpuUtilization -lt 1 -or $TargetCpuUtilization -gt 100)) {
+    throw "TargetCpuUtilization must be between 1 and 100."
 }
 
 $repoRoot = Split-Path -Parent $PSScriptRoot
@@ -54,24 +69,109 @@ function Invoke-Kubectl {
     return $output
 }
 
+function Assert-MetricsApiAvailable {
+    try {
+        Invoke-Kubectl @("get", "--raw", "/apis/metrics.k8s.io/v1beta1/nodes") | Out-Null
+    } catch {
+        throw "metrics.k8s.io API is not available. Install metrics-server before using hpa-cpu mode."
+    }
+}
+
+function Wait-WorkerRollout {
+    param([int]$ExpectedReplicas)
+
+    if ($ExpectedReplicas -lt 1) {
+        return
+    }
+    Invoke-Kubectl @("-n", $Namespace, "rollout", "status", "deployment/preprocess-worker", "--timeout=180s") | Out-Host
+}
+
 function Show-WorkerStatus {
     Write-Host ""
     Write-Host "Current worker autoscaling status"
     Invoke-Kubectl @("-n", $Namespace, "get", "deploy", "preprocess-worker") | Out-Host
     Invoke-Kubectl @("-n", $Namespace, "get", "hpa", "keda-hpa-preprocess-worker", "--ignore-not-found") | Out-Host
+    Invoke-Kubectl @("-n", $Namespace, "get", "hpa", "preprocess-worker-cpu", "--ignore-not-found") | Out-Host
     Invoke-Kubectl @("-n", $Namespace, "get", "scaledobject", "preprocess-worker", "--ignore-not-found") | Out-Host
     Invoke-Kubectl @("-n", $Namespace, "get", "pods", "-l", "app.kubernetes.io/name=preprocess-worker") | Out-Host
 }
 
-if ($Mode -eq "keda-on") {
+if ($Mode -eq "keda-on" -or $Mode -eq "keda-on-min1") {
+    $minReplicas = 0
+    if ($Mode -eq "keda-on-min1") {
+        $minReplicas = 1
+    }
     Write-Host "Switching to KEDA ON mode."
     Write-Host "- ScaledObject enabled"
     Write-Host "- Deployment desired replicas controlled by KEDA"
-    Write-Host "- minReplicaCount=0, maxReplicaCount=20"
+    Write-Host "- minReplicaCount=$minReplicas, maxReplicaCount=20"
 
+    Invoke-Kubectl @("-n", $Namespace, "delete", "hpa", "preprocess-worker-cpu", "--ignore-not-found=true") | Out-Host
     Invoke-Kubectl @("apply", "-f", $triggerAuthPath) | Out-Host
     Invoke-Kubectl @("apply", "-f", $scaledObjectPath) | Out-Host
-    Invoke-Kubectl @("-n", $Namespace, "scale", "deployment/preprocess-worker", "--replicas=0") | Out-Host
+    if ($minReplicas -ne 0) {
+        $patchFile = New-TemporaryFile
+        try {
+            Set-Content `
+                -LiteralPath $patchFile `
+                -Value "{""spec"":{""minReplicaCount"":$minReplicas,""maxReplicaCount"":20}}" `
+                -Encoding ASCII
+            Invoke-Kubectl @(
+                "-n", $Namespace,
+                "patch", "scaledobject", "preprocess-worker",
+                "--type", "merge",
+                "--patch-file", $patchFile
+            ) | Out-Host
+        } finally {
+            Remove-Item -LiteralPath $patchFile -Force -ErrorAction SilentlyContinue
+        }
+    }
+    Invoke-Kubectl @("-n", $Namespace, "scale", "deployment/preprocess-worker", "--replicas=$minReplicas") | Out-Host
+    Wait-WorkerRollout $minReplicas
+    Show-WorkerStatus
+    exit 0
+}
+
+if ($Mode -eq "hpa-cpu") {
+    Write-Host "Switching to Kubernetes HPA CPU mode."
+    Write-Host "- ScaledObject disabled"
+    Write-Host "- HPA uses CPU average utilization"
+    Write-Host "- minReplicas=$HpaMinReplicas, maxReplicas=$HpaMaxReplicas, targetCpu=$TargetCpuUtilization%"
+
+    Assert-MetricsApiAvailable
+    Invoke-Kubectl @("-n", $Namespace, "delete", "scaledobject", "preprocess-worker", "--ignore-not-found=true") | Out-Host
+    Invoke-Kubectl @("-n", $Namespace, "delete", "hpa", "keda-hpa-preprocess-worker", "--ignore-not-found=true") | Out-Host
+    Invoke-Kubectl @("-n", $Namespace, "scale", "deployment/preprocess-worker", "--replicas=$HpaMinReplicas") | Out-Host
+    Wait-WorkerRollout $HpaMinReplicas
+
+    $hpaManifest = @"
+apiVersion: autoscaling/v2
+kind: HorizontalPodAutoscaler
+metadata:
+  name: preprocess-worker-cpu
+  namespace: $Namespace
+spec:
+  scaleTargetRef:
+    apiVersion: apps/v1
+    kind: Deployment
+    name: preprocess-worker
+  minReplicas: $HpaMinReplicas
+  maxReplicas: $HpaMaxReplicas
+  metrics:
+    - type: Resource
+      resource:
+        name: cpu
+        target:
+          type: Utilization
+          averageUtilization: $TargetCpuUtilization
+"@
+    $tempFile = New-TemporaryFile
+    try {
+        Set-Content -LiteralPath $tempFile -Value $hpaManifest -Encoding UTF8
+        Invoke-Kubectl @("apply", "-f", $tempFile) | Out-Host
+    } finally {
+        Remove-Item -LiteralPath $tempFile -Force -ErrorAction SilentlyContinue
+    }
     Show-WorkerStatus
     exit 0
 }

@@ -1,154 +1,159 @@
 # Kubernetes/KEDA 아키텍처
 
-이 문서는 Docker Compose 기반 MVP를 Kubernetes로 확장할 때의 목표 구조를 설명한다.
+이 문서는 DocPrep Cloud의 현재 Kubernetes 배포 구조를 설명한다. Docker Compose MVP에서 출발했지만, 현재 운영 실험 기준은 `docprep-cloud` namespace에 애플리케이션, 런타임 의존성, 관측성 리소스를 함께 배포하는 구조다.
 
-## 목표 구조
+## 배포 단위
+
+| 영역 | Kubernetes 리소스 | 설명 |
+| --- | --- | --- |
+| 진입점 | `Ingress`, `nginx` Deployment/Service/ConfigMap | 외부 트래픽을 프론트, API, OAuth, object route, Grafana로 분기 |
+| Frontend | `frontend` Deployment/Service | React/Vite 정적 파일 제공 |
+| API | `backend-api` Deployment/Service/ConfigMap/Secret | 인증, 프로젝트, 업로드, 이미지, Job API |
+| Worker | `preprocess-worker` Deployment/Service/ConfigMap/Secret | RabbitMQ 메시지 소비와 OpenCV 전처리 |
+| Queue | `rabbitmq` Deployment/Service/ConfigMap | 전처리 JobItem 메시지 전달 |
+| DB | `postgres` Deployment/Service | MVP용 PostgreSQL |
+| Object Storage | `minio` Deployment/Service, bucket init Job | 원본/결과 이미지 저장 |
+| Autoscaling | KEDA `ScaledObject`, `TriggerAuthentication`, HPA | RabbitMQ queue length 기반 Worker 확장 |
+| Observability | `prometheus`, `grafana`, `kube-state-metrics`, `otel-collector` | metric, dashboard, trace 수집 |
+| CI/CD Runner | `github-actions/docprep-k8s-runner` | 사설망 Kubernetes API에 접근하는 self-hosted runner |
+
+## 네트워크 구조
 
 ```text
-User Browser
+Internet
+  |
+  v
+ngrok 또는 운영 도메인
   |
   v
 Ingress Controller
   |
   v
 nginx Service
-  |--------------------------> frontend Service
-  |
-  | /api, /oauth2, /login/oauth2, /v3/api-docs
-  v
-backend-api Service
-  |--------------------------> PostgreSQL Service 또는 관리형 DB
-  |--------------------------> MinIO/S3 Service 또는 관리형 Object Storage
-  |--------------------------> RabbitMQ Service 또는 관리형 Queue
-                                      |
-                                      v
-                              preprocess-worker Deployment
-                              KEDA ScaledObject
+  |-- /                         -> frontend Service
+  |-- /api/*                    -> backend-api Service
+  |-- /oauth2/*                 -> backend-api Service
+  |-- /login/oauth2/*           -> backend-api Service
+  |-- /swagger-ui/*             -> backend-api Service
+  |-- /v3/api-docs/*            -> backend-api Service
+  |-- /image-preprocess-prod/*  -> minio Service
+  |-- /grafana/*                -> grafana Service
 ```
 
-## 컴포넌트 책임
+NGINX는 단일 진입점 역할만 수행한다. 사용자 인증, Job 상태 판단, object 권한 검증은 backend-api의 책임이다.
 
-| 컴포넌트 | Kubernetes 리소스 | 책임 |
-| --- | --- | --- |
-| Ingress | `Ingress` | 운영 도메인과 TLS 진입점 |
-| NGINX | `Deployment`, `Service`, `ConfigMap` | 프론트와 API 경로를 단일 진입점으로 분기 |
-| Frontend | `Deployment`, `Service` | React/Vite build 결과 제공 |
-| Backend API | `Deployment`, `Service`, `ConfigMap`, `Secret` | 인증, 프로젝트, 업로드, 이미지, Job API |
-| Worker | `Deployment`, `Service`, `ConfigMap`, `Secret` | RabbitMQ 메시지 소비와 OpenCV 전처리 |
-| KEDA | `ScaledObject`, `TriggerAuthentication` | RabbitMQ queue length 기반 Worker autoscaling |
-| PostgreSQL | `Service` placeholder | 실제 운영 DB 또는 operator로 교체 |
-| RabbitMQ | `Service` placeholder | 실제 운영 queue 또는 operator로 교체 |
-| MinIO/S3 | `Service` placeholder | 실제 Object Storage로 교체 |
-| OTel Collector | `Service` placeholder | trace 수집 endpoint |
+## Namespace 기준
 
-## Namespace
+| Namespace | 용도 |
+| --- | --- |
+| `docprep-cloud` | 애플리케이션, DB, Queue, Object Storage, 관측성 |
+| `keda` | KEDA operator와 metrics API |
+| `ingress-nginx` | NGINX Ingress Controller |
+| `github-actions` | self-hosted runner |
+| `kubernetes-dashboard` | Kubernetes Dashboard GUI |
+| `ngrok` | ngrok tunnel workload |
 
-모든 리소스는 기본적으로 `docprep-cloud` namespace에 둔다.
+기본 운영 확인은 `docprep-cloud` namespace를 기준으로 한다.
 
-```text
-infra/k8s/namespace.yml
+```powershell
+kubectl -n docprep-cloud get pods,deploy,svc,ingress,scaledobject,hpa
 ```
 
-## API 서버 배포
+## Worker 확장 구조
 
-`backend-api`는 최소 2개 replica로 시작한다.
+Worker는 일반 Deployment지만 replica를 사람이 직접 늘리는 것이 아니라 KEDA가 조절한다.
 
-주요 설정:
-
-| 항목 | 값 |
+| 항목 | 현재 값 |
 | --- | --- |
-| container port | `8080` |
-| readiness/liveness | `/actuator/health` |
-| secret | `backend-api-secret` |
-| configmap | `backend-api-config` |
-| service | `backend-api:8080` |
-
-API 서버는 OpenCV 작업을 수행하지 않는다. 이미지 전처리는 RabbitMQ 메시지 발행 후 Worker가 처리한다.
-
-## Worker 배포와 KEDA
-
-`preprocess-worker`는 기본 `replicas: 0`으로 시작한다. KEDA가 RabbitMQ queue length를 기준으로 replica 수를 조절한다.
-
-주요 설정:
-
-| 항목 | 값 |
-| --- | --- |
-| target Deployment | `preprocess-worker` |
-| min replica | `0` |
-| max replica | `20` |
+| scale target | `deployment/preprocess-worker` |
+| polling interval | 10초 |
+| cooldown period | 300초 |
+| min replica | 0 |
+| max replica | 20 |
 | normal queue | `image.preprocess.normal` |
+| normal queue threshold | Worker 1개당 대기 메시지 25개 |
 | high queue | `image.preprocess.high` |
-| normal threshold | Worker 1개당 대기 메시지 `25`개 |
-| high threshold | Worker 1개당 대기 메시지 `10`개 |
-| cooldown | `300`초 |
+| high queue threshold | Worker 1개당 대기 메시지 10개 |
 
-RabbitMQ 접속 URI는 `preprocess-worker-secret`의 `RABBITMQ_AMQP_URI`에 둔다. KEDA `TriggerAuthentication`은 이 값을 `host` parameter로 참조한다.
+queue가 비어 있으면 `preprocess-worker`가 `0/0`으로 보이는 것이 정상이다.
 
-## Queue 기준
-
-Docker Compose와 Kubernetes의 queue 이름은 동일하게 유지한다.
-
-```text
-image.preprocess.high
-image.preprocess.normal
-image.preprocess.retry
-image.preprocess.dlq
+```powershell
+kubectl -n docprep-cloud get deploy preprocess-worker
+kubectl -n docprep-cloud get scaledobject preprocess-worker
+kubectl -n docprep-cloud get hpa keda-hpa-preprocess-worker
 ```
 
-## Storage 기준
+## KEDA와 HPA CPU의 차이
 
-Kubernetes manifest는 `minio`라는 내부 Service 이름을 기준으로 한다.
+| 방식 | 확장 기준 | 장점 | 한계 |
+| --- | --- | --- | --- |
+| KEDA min 0 | RabbitMQ queue length, 0개에서 시작 | 유휴 비용 최소화 | cold start 대기 발생 |
+| KEDA min 1 | RabbitMQ queue length, 1개 유지 | 빠른 시작과 큐 기반 확장 | 최소 Worker 비용 발생 |
+| HPA CPU | Pod CPU 사용률 | Kubernetes 기본 기능 | 큐 적체를 직접 보지 못함 |
+| Fixed Worker | replica 고정 | 예측 쉬움 | 트래픽 변동에 비용 또는 지연 발생 |
 
-실제 운영에서는 아래 중 하나로 교체한다.
+500장 실험에서는 같은 입력 기준으로 KEDA min 1이 HPA CPU보다 처리 구간 기준 더 빠르게 동작했다. 이유는 HPA CPU가 CPU 사용률이 올라간 뒤 반응하는 반면, KEDA는 queue backlog를 보고 Worker를 직접 늘리기 때문이다.
 
-1. 관리형 S3 호환 Object Storage
-2. MinIO Operator
-3. 직접 구성한 MinIO StatefulSet
+## 현재 실험 결과 요약
 
-Object Storage bucket은 private을 기본값으로 한다.
+| 방식 | 큐 대기 | 처리 시간 | 전체 시간 | 성공/전체 | 관측 replica |
+| --- | ---: | ---: | ---: | ---: | ---: |
+| Fixed 1 | 2.716초 | 98.1초 | 100.815초 | 500/500 | 1 |
+| HPA CPU | 2.145초 | 91.736초 | 93.881초 | 500/500 | 3 |
+| KEDA min 1 | 2.209초 | 59.728초 | 61.937초 | 500/500 | 10 |
+| KEDA min 0 | 29.183초 | 52.572초 | 81.755초 | 500/500 | 20 |
 
-## Ingress와 NGINX
+운영 기본값은 비용 절감을 우선해 `minReplicaCount=0`으로 복구했다. 사용자 체감 지연을 줄이는 것이 더 중요하면 `minReplicaCount=1`로 바꾸는 것이 합리적이다.
 
-Ingress는 운영 도메인을 `nginx` Service로 연결한다. 실제 path routing은 NGINX ConfigMap에서 수행한다.
+## 런타임 의존성 운영 상태
 
-```text
-/                    -> frontend
-/api/*               -> backend-api
-/oauth2/*            -> backend-api
-/login/oauth2/*      -> backend-api
-/swagger-ui/*        -> backend-api
-/v3/api-docs/*       -> backend-api
-```
+현재 manifest는 PostgreSQL, RabbitMQ, MinIO를 클러스터 내부 Deployment로 실행한다. 단, 현재 설정은 MVP/테스트 기준이다.
 
-SSE 성격의 Job event 경로는 `proxy_buffering off`와 긴 read timeout을 사용한다.
+| 컴포넌트 | 현재 저장소 | 운영 권장 |
+| --- | --- | --- |
+| PostgreSQL | `emptyDir` | PVC, managed DB, 또는 PostgreSQL operator |
+| RabbitMQ | `emptyDir` | PVC, managed RabbitMQ, 또는 RabbitMQ cluster operator |
+| MinIO | `emptyDir` | PVC, MinIO operator, 또는 관리형 S3 |
+| Prometheus | `emptyDir` | PVC 또는 외부 장기 저장소 |
 
-## Secret 원칙
+`emptyDir`는 Pod가 재생성되면 데이터가 사라진다. 운영 장기 사용 전에는 반드시 영속 저장소로 교체해야 한다.
 
-Git에는 실제 secret을 커밋하지 않는다.
-
-커밋 가능한 파일:
-
-```text
-secret.example.yml
-```
-
-커밋하면 안 되는 파일:
+## CI/CD 구조
 
 ```text
-secret.yml
-*.local.yml
+main merge
+  -> Build GHCR Images
+  -> ghcr.io/som141/docprep-cloud/backend-api:<short-sha>
+  -> ghcr.io/som141/docprep-cloud/preprocess-worker:<short-sha>
+  -> ghcr.io/som141/docprep-cloud/frontend:<short-sha>
+  -> Deploy Kubernetes
+  -> Kubernetes 내부 self-hosted runner
+  -> kubectl apply -k rendered manifests
+  -> backend-api/frontend/nginx rollout 확인
 ```
 
-## 현재 skeleton의 한계
+Worker는 KEDA scale-to-zero 대상이므로 배포 후 rollout 확인 대상에서 제외하거나, queue가 있을 때만 Pod가 뜨는 것으로 판단한다.
 
-1. PostgreSQL, RabbitMQ, MinIO는 실제 Stateful workload가 아니라 `ExternalName` placeholder다.
-2. 이미지 registry 주소는 `YOUR_REGISTRY/...:CHANGE_ME` placeholder다.
-3. TLS secret과 운영 도메인은 실제 값으로 교체해야 한다.
-4. KEDA CRD가 클러스터에 설치되어 있어야 `ScaledObject`를 적용할 수 있다.
-5. 운영 backup, migration, persistent volume 정책은 별도 작업이 필요하다.
+## 정상 상태 기준
 
-## 참고
+| 항목 | 정상 기준 |
+| --- | --- |
+| `backend-api` | `2/2 Running`, `/actuator/health` ready |
+| `frontend` | `2/2 Running` |
+| `nginx` | `2/2 Running`, Ingress host 연결 |
+| `postgres` | `1/1 Running` |
+| `rabbitmq` | `1/1 Running`, management/AMQP/Prometheus port open |
+| `minio` | `1/1 Running`, bucket init Job Completed |
+| `preprocess-worker` | queue 없음: `0/0`, queue 있음: KEDA가 replica 증가 |
+| `grafana` | `1/1 Running`, `/grafana/` 접근 가능 |
+| `prometheus` | `1/1 Running`, targets UP |
+| `kube-state-metrics` | `1/1 Running` |
+| `metrics-server` | `kubectl top nodes` 동작 |
 
-KEDA RabbitMQ scaler는 공식 문서 기준으로 `queueName`, `mode: QueueLength`, `value`, `TriggerAuthentication`을 사용한다.
+## 관련 문서
 
-- KEDA RabbitMQ Queue scaler: https://keda.sh/docs/2.19/scalers/rabbitmq-queue/
+- [시스템 개요](system-overview.md)
+- [런타임 자원 정책](runtime-resource-policy.md)
+- [Kubernetes 배포 가이드](../operation/kubernetes-deployment.md)
+- [Kubernetes GitHub Actions 배포](../operation/kubernetes-github-actions-deploy.md)
+- [KEDA 배치 비교 실험](../operation/keda-batch-benchmark.md)

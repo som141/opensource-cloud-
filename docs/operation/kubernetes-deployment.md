@@ -1,182 +1,182 @@
 # Kubernetes/KEDA 배포 가이드
 
-이 문서는 DocPrep Cloud를 Kubernetes에 배포하기 위한 skeleton 적용 절차를 정리한다.
-
-현재 문서는 실제 운영 클러스터에 바로 적용하는 완성본이 아니라, 배포 전 필요한 값과 교체 지점을 명확히 하기 위한 기준 문서다.
+이 문서는 DocPrep Cloud를 Kubernetes에 배포하고 상태를 확인하는 절차를 정리한다. 현재 배포 기준은 `docprep-cloud` namespace에 애플리케이션, 런타임 의존성, 관측성 리소스를 함께 배포하는 MVP 운영 구조다.
 
 ## 1. 사전 준비
 
-실제 적용 전에 아래 항목을 준비해야 한다.
-
 | 항목 | 설명 |
 | --- | --- |
-| Kubernetes cluster | 운영 또는 테스트 클러스터 |
-| `kubectl` context | 배포 대상 cluster를 가리키는 context |
-| Ingress Controller | `ingressClassName: nginx`를 처리할 controller |
+| Kubernetes cluster | 테스트 또는 운영 클러스터 |
+| kubeconfig | 배포 대상 cluster 접근 정보 |
+| Ingress Controller | `ingressClassName: nginx` 처리 |
 | KEDA | `ScaledObject`, `TriggerAuthentication` CRD |
-| 이미지 registry | backend-api, preprocess-worker, frontend 이미지 저장소 |
-| 운영 도메인 | Ingress host에 사용할 도메인 |
-| TLS secret | `docprep-cloud-tls` 또는 운영 환경에 맞는 secret |
-| PostgreSQL | 관리형 DB, operator, 또는 StatefulSet |
-| RabbitMQ | 관리형 RabbitMQ, operator, 또는 StatefulSet |
-| Object Storage | S3 호환 저장소 또는 MinIO |
-| Google OAuth | 운영 Client ID와 Client Secret |
+| metrics-server | HPA CPU 비교와 `kubectl top` 확인 |
+| GHCR 이미지 | backend-api, preprocess-worker, frontend 이미지 |
+| 공개 도메인 | ngrok 도메인 또는 운영 도메인 |
+| Google OAuth | 현재 도메인 기준 redirect URI 등록 |
+| Kubernetes Secrets | backend-api, preprocess-worker, TLS, 필요 시 GHCR pull secret |
 
-## 2. 사용자에게 미리 받아야 할 값
+## 2. 배포 방식
 
-Kubernetes 실제 적용 작업을 시작하기 전에 아래 값을 사용자에게 받아야 한다.
-
-| 값 | 예시 |
-| --- | --- |
-| 운영 도메인 | `https://YOUR_DOMAIN` |
-| backend-api 이미지 | `ghcr.io/ORG/docprep-backend-api:TAG` |
-| preprocess-worker 이미지 | `ghcr.io/ORG/docprep-preprocess-worker:TAG` |
-| frontend 이미지 | `ghcr.io/ORG/docprep-frontend:TAG` |
-| DB URL | `jdbc:postgresql://postgres:5432/image_preprocess` |
-| DB username/password | 실제 secret |
-| RabbitMQ username/password | 실제 secret |
-| RabbitMQ AMQP URI | `amqp://USER:PASSWORD@rabbitmq:5672/%2F` |
-| MinIO/S3 endpoint/access key/secret key | 실제 secret |
-| Google OAuth Client ID/Secret | 운영용 값 |
-| JWT secret | 32 bytes 이상 |
-| Worker internal token | backend-api와 worker가 공유하는 내부 토큰 |
-
-이 값들은 Git에 커밋하지 않는다.
-
-## 3. Secret 파일 작성
-
-예시 파일을 실제 secret 파일로 복사한다.
-
-```powershell
-Copy-Item infra/k8s/backend-api/secret.example.yml infra/k8s/backend-api/secret.yml
-Copy-Item infra/k8s/preprocess-worker/secret.example.yml infra/k8s/preprocess-worker/secret.yml
-```
-
-`secret.yml` 안의 `CHANGE_ME` 값을 실제 값으로 바꾼다.
-
-`.gitignore`는 아래 파일을 제외한다.
+권장 배포 방식은 GitHub Actions다.
 
 ```text
-infra/k8s/**/secret.yml
-infra/k8s/**/*.local.yml
+main merge
+  -> Build GHCR Images
+  -> Deploy Kubernetes
+  -> self-hosted runner
+  -> kubectl apply
 ```
 
-## 4. 이미지와 도메인 교체
+수동으로 manifest만 확인하려면 [Kubernetes manifest 렌더링](kubernetes-manifest-render-workflow.md)을 먼저 실행한다. 실제 배포는 [Kubernetes GitHub Actions 배포](kubernetes-github-actions-deploy.md)를 기준으로 한다.
 
-GHCR 이미지는 [GHCR 이미지 빌드/푸시 workflow](ghcr-image-workflow.md)로 생성한다.
-이미지 태그를 넣은 최종 Kubernetes YAML은 [Kubernetes manifest 렌더링 workflow](kubernetes-manifest-render-workflow.md)로 먼저 검토한다.
-실제 클러스터 적용은 [Kubernetes GitHub Actions 배포](kubernetes-github-actions-deploy.md)의 수동 `dry-run` 후 `apply` 순서로 진행한다.
+## 3. 수동 적용 순서
 
-아래 파일의 placeholder를 실제 값으로 교체한다.
+GitHub Actions가 아니라 로컬에서 직접 적용할 때의 기본 순서는 아래와 같다.
 
-| 파일 | 교체 값 |
+```powershell
+$KC="$env:USERPROFILE\Downloads\kube (1).conf"
+kubectl --kubeconfig $KC apply -f infra/k8s/namespace.yml
+kubectl --kubeconfig $KC apply -k infra/k8s
+```
+
+실제 secret 값은 Git에 없는 `secret.yml` 또는 GitHub Actions secret에서 주입한다. `secret.example.yml`은 양식 확인용이다.
+
+## 4. 현재 namespace 구조
+
+| Namespace | 역할 |
 | --- | --- |
-| `infra/k8s/backend-api/deployment.yml` | `YOUR_REGISTRY/docprep-backend-api:CHANGE_ME` |
-| `infra/k8s/preprocess-worker/deployment.yml` | `YOUR_REGISTRY/docprep-preprocess-worker:CHANGE_ME` |
-| `infra/k8s/frontend/deployment.yml` | `YOUR_REGISTRY/docprep-frontend:CHANGE_ME` |
-| `infra/k8s/nginx/ingress.yml` | `YOUR_DOMAIN`, `docprep-cloud-tls` |
-| `infra/k8s/backend-api/configmap.yml` | `https://YOUR_DOMAIN`, storage endpoint |
+| `docprep-cloud` | 애플리케이션, 런타임 의존성, 관측성 |
+| `keda` | KEDA operator |
+| `ingress-nginx` | Ingress Controller |
+| `github-actions` | self-hosted runner |
+| `ngrok` | ngrok tunnel |
+| `kubernetes-dashboard` | Dashboard GUI |
 
-실제 운영에서는 `kustomize overlay` 또는 GitHub Actions에서 image tag를 주입하는 방식을 권장한다.
+상태 확인:
 
-## 5. 외부 서비스 placeholder 교체
+```powershell
+kubectl --kubeconfig $KC get ns
+kubectl --kubeconfig $KC -n docprep-cloud get pods,deploy,svc,ingress,scaledobject,hpa
+```
 
-현재 skeleton은 PostgreSQL, RabbitMQ, MinIO, OTel Collector를 `ExternalName` Service로 둔다.
+## 5. 배포된 컴포넌트
 
-| 파일 | 교체 대상 |
+| 컴포넌트 | 기대 상태 |
 | --- | --- |
-| `infra/k8s/postgres/service-placeholder.yml` | 실제 PostgreSQL Service 또는 관리형 DB endpoint |
-| `infra/k8s/rabbitmq/service-placeholder.yml` | 실제 RabbitMQ Service 또는 관리형 RabbitMQ endpoint |
-| `infra/k8s/minio/service-placeholder.yml` | 실제 MinIO/S3 endpoint |
-| `infra/k8s/monitoring/service-placeholder.yml` | 실제 OTel Collector Service |
+| `backend-api` | `2/2 Running` |
+| `frontend` | `2/2 Running` |
+| `nginx` | `2/2 Running` |
+| `postgres` | `1/1 Running` |
+| `rabbitmq` | `1/1 Running` |
+| `minio` | `1/1 Running` |
+| `minio-bucket-init` | `Completed` |
+| `prometheus` | `1/1 Running` |
+| `grafana` | `1/1 Running` |
+| `kube-state-metrics` | `1/1 Running` |
+| `otel-collector` | `1/1 Running` |
+| `preprocess-worker` | queue 없음: `0/0`, queue 있음: KEDA 확장 |
 
-Kubernetes 내부에 직접 Stateful workload를 둘 경우 operator 또는 별도 StatefulSet manifest를 추가한다.
+Worker가 `0/0`이어도 queue가 비어 있으면 정상이다.
 
-## 6. KEDA 설치 확인
+## 6. KEDA 확인
 
-KEDA CRD가 설치되어 있는지 확인한다.
-
-```bash
-kubectl get crd scaledobjects.keda.sh
-kubectl get crd triggerauthentications.keda.sh
+```powershell
+kubectl --kubeconfig $KC -n docprep-cloud get scaledobject preprocess-worker
+kubectl --kubeconfig $KC -n docprep-cloud describe scaledobject preprocess-worker
+kubectl --kubeconfig $KC -n docprep-cloud get hpa
 ```
 
-없으면 KEDA를 먼저 설치한다. 설치 방법은 클러스터 운영 방식에 따라 Helm 또는 manifest 적용 중 하나를 선택한다.
+현재 KEDA 기준:
 
-## 7. 적용 순서
-
-namespace를 먼저 만든다.
-
-```bash
-kubectl apply -f infra/k8s/namespace.yml
-```
-
-secret을 적용한다.
-
-```bash
-kubectl apply -f infra/k8s/backend-api/secret.yml
-kubectl apply -f infra/k8s/preprocess-worker/secret.yml
-```
-
-나머지 manifest를 적용한다.
-
-```bash
-kubectl apply -k infra/k8s
-```
-
-## 8. 상태 확인
-
-```bash
-kubectl -n docprep-cloud get pods
-kubectl -n docprep-cloud get svc
-kubectl -n docprep-cloud get ingress
-kubectl -n docprep-cloud get scaledobject
-```
-
-Worker는 queue가 비어 있으면 `0` replica가 정상이다.
-
-```bash
-kubectl -n docprep-cloud get deployment preprocess-worker
-```
-
-## 9. KEDA 동작 확인
-
-RabbitMQ의 `image.preprocess.normal` 또는 `image.preprocess.high` queue에 메시지가 쌓이면 KEDA가 Worker replica를 늘려야 한다.
-
-```bash
-kubectl -n docprep-cloud describe scaledobject preprocess-worker
-kubectl -n docprep-cloud get hpa
-```
-
-기본 기준:
-
-| Queue | threshold |
+| 항목 | 값 |
 | --- | --- |
-| `image.preprocess.normal` | Worker 1개당 25개 |
-| `image.preprocess.high` | Worker 1개당 10개 |
+| min replica | 0 |
+| max replica | 20 |
+| normal queue | `image.preprocess.normal`, threshold 25 |
+| high queue | `image.preprocess.high`, threshold 10 |
+| cooldown | 300초 |
 
-## 10. E2E 확인
+데모 또는 사용자 체감 테스트에서는 `min=1`이 더 적합할 수 있다.
 
-1. 운영 도메인 접속
+```powershell
+.\scripts\k8s-scale-mode.ps1 -Mode keda-on-min1 -KubeConfig $KC
+```
+
+실험 후 기본값으로 복구:
+
+```powershell
+.\scripts\k8s-scale-mode.ps1 -Mode keda-on -KubeConfig $KC
+```
+
+## 7. Grafana 확인
+
+외부 경로:
+
+```text
+https://<운영-도메인>/grafana/
+```
+
+로컬 port-forward:
+
+```powershell
+kubectl --kubeconfig $KC -n docprep-cloud port-forward svc/grafana 3000:3000
+```
+
+접속:
+
+```text
+http://localhost:3000/grafana/
+```
+
+현재 기본 계정은 `admin/admin`이다. 운영 공개 전에는 Secret 기반 비밀번호로 교체한다.
+
+## 8. Dashboard GUI 확인
+
+```powershell
+kubectl --kubeconfig $KC -n kubernetes-dashboard port-forward svc/kubernetes-dashboard 8443:443
+```
+
+접속:
+
+```text
+https://localhost:8443
+```
+
+토큰 발급:
+
+```powershell
+kubectl --kubeconfig $KC -n kubernetes-dashboard create token docprep-dashboard-viewer
+```
+
+## 9. E2E 확인
+
+1. 공개 도메인 접속
 2. Google 로그인
 3. 프로젝트 생성
 4. 이미지 또는 ZIP 업로드
 5. 전처리 Job 생성
 6. RabbitMQ queue 증가 확인
-7. Worker replica 증가 확인
+7. KEDA Worker replica 증가 확인
 8. 처리 완료 후 Worker replica 감소 확인
-9. 처리된 이미지 또는 결과 ZIP 다운로드
+9. 처리된 이미지 또는 Job 결과 ZIP 다운로드
 
-## 11. 현재 skeleton의 한계
+## 10. 운영 전 반드시 바꿀 항목
 
-1. Stateful 서비스 운영 정책은 아직 포함하지 않는다.
-2. TLS 발급 자동화는 포함하지 않는다.
-3. GitHub Actions에서 image tag를 자동 주입하는 CD workflow는 별도 작업이다.
-4. 운영 alert rule, ServiceMonitor, Prometheus Operator 설정은 별도 작업이다.
+| 항목 | 현재 | 운영 전 조치 |
+| --- | --- | --- |
+| PostgreSQL 저장소 | `emptyDir` | PVC 또는 managed DB |
+| RabbitMQ 저장소 | `emptyDir` | PVC 또는 managed queue |
+| MinIO 저장소 | `emptyDir` | PVC 또는 managed S3 |
+| Grafana 계정 | `admin/admin` | Secret 기반 강한 비밀번호 |
+| TLS | 수동 secret 또는 ngrok | 운영 도메인과 인증서 자동화 |
+| OAuth redirect | 현재 도메인 | 운영 도메인 callback 등록 |
+| Alert | dashboard 중심 | Prometheus alert rule 추가 |
 
-## 12. 관련 문서
+## 11. 관련 문서
 
 - [Kubernetes/KEDA 아키텍처](../architecture/kubernetes-architecture.md)
-- [관측성 로컬 실행](observability.md)
-- [운영 배포 가이드](production-deployment-guide.md)
-- [배포 체크리스트](deployment-checklist.md)
+- [런타임 자원 정책](../architecture/runtime-resource-policy.md)
+- [운영 원칙](operating-principles.md)
+- [Kubernetes GitHub Actions 배포](kubernetes-github-actions-deploy.md)
+- [KEDA 500장 배치 비교 실험](keda-batch-benchmark.md)

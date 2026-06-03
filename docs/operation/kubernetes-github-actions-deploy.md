@@ -26,13 +26,37 @@ GitHub hosted runner는 이 주소에 접근할 수 없다. 따라서 `github-ac
 
 ## 실행 방법
 
-GitHub에서 아래 순서로 실행한다.
+수동 실행은 GitHub에서 아래 순서로 실행한다.
 
 ```text
 Actions -> Deploy Kubernetes -> Run workflow
 ```
 
-현재 수동 배포 입력값 예시는 다음과 같다.
+자동 실행은 아래 흐름으로 동작한다.
+
+```text
+main push 또는 PR merge
+-> Build GHCR Images workflow 성공
+-> Deploy Kubernetes workflow 자동 실행
+-> self-hosted runner에서 kubectl apply
+```
+
+자동 실행 시에는 수동 입력값을 받을 수 없으므로 `production` environment variables를 사용한다.
+
+| Variable | 현재 값 예시 |
+| --- | --- |
+| `K8S_IMAGE_NAMESPACE` | `ghcr.io/som141/docprep-cloud` |
+| `PROD_DOMAIN` | 현재 ngrok 도메인 |
+| `K8S_TLS_SECRET` | `docprep-cloud-tls` |
+| `POSTGRES_EXTERNAL_NAME` | `postgres` |
+| `RABBITMQ_EXTERNAL_NAME` | `rabbitmq` |
+| `MINIO_EXTERNAL_NAME` | `minio` |
+| `OTEL_COLLECTOR_EXTERNAL_NAME` | `otel-collector` |
+| `K8S_APPLY_MODE` | `apply` |
+| `K8S_ROLLOUT_TIMEOUT` | `180s` |
+| `CONFIGURE_GHCR_PULL_SECRET` | `false` |
+
+수동 배포 입력값 예시는 다음과 같다.
 
 | 입력값 | 값 |
 | --- | --- |
@@ -122,11 +146,9 @@ kubectl -n docprep-cloud get ingress
 kubectl -n docprep-cloud get scaledobject
 ```
 
-## 자동 CI/CD로 확장할 때
+## 자동 CI/CD 흐름
 
-완전 자동 배포를 하려면 `Deploy Kubernetes` workflow에 `workflow_run` 또는 `push` trigger를 추가한다.
-
-권장 흐름은 다음과 같다.
+현재 자동 배포는 `workflow_run` trigger를 사용한다.
 
 ```text
 main merge
@@ -135,7 +157,7 @@ main merge
 -> rollout 확인
 ```
 
-운영 안정성을 위해 처음에는 `production` environment approval을 유지하는 것이 좋다.
+`Deploy Kubernetes`는 `Build GHCR Images`의 `head_sha` 앞 12자리를 image tag로 사용한다. 따라서 이미지 빌드와 Kubernetes 배포가 같은 commit SHA 기준으로 맞춰진다.
 
 ## 현재 제약
 

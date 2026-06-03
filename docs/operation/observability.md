@@ -1,6 +1,6 @@
 # 관측성 로컬 실행 가이드
 
-이 문서는 Docker Compose 로컬 환경에 Prometheus, Grafana, OpenTelemetry Collector, Jaeger를 붙여 API, Worker, RabbitMQ 상태를 확인하는 방법을 정리한다.
+이 문서는 Docker Compose 로컬 환경과 Kubernetes 환경에서 Prometheus, Grafana, OpenTelemetry Collector를 사용해 API, Worker, RabbitMQ, KEDA 상태를 확인하는 방법을 정리한다.
 
 ## 목적
 
@@ -11,6 +11,7 @@
 3. Worker 처리량, 실패 코드, 처리 시간 수집
 4. OpenTelemetry trace를 Jaeger에서 확인
 5. NGINX 단일 진입점에서 `/grafana/`, `/jaeger/` 경로 접근
+6. Kubernetes에서 KEDA/HPA desired replica와 Worker ready replica 확인
 
 ## 구성
 
@@ -21,6 +22,57 @@
 | OpenTelemetry Collector | API/Worker trace 수신 후 Jaeger로 전달 | `http://localhost:4318` |
 | Jaeger | trace 검색과 확인 | `http://localhost/jaeger/`, `http://localhost:16686/jaeger/` |
 | RabbitMQ Prometheus plugin | queue metric 노출 | `http://localhost:15692/metrics` |
+
+## Kubernetes 관측성 구성
+
+Kubernetes에서는 `docprep-cloud` namespace에 아래 리소스를 배포한다.
+
+| 컴포넌트 | 역할 |
+| --- | --- |
+| `prometheus` | backend-api, preprocess-worker, RabbitMQ, kube-state-metrics metric 수집 |
+| `grafana` | KEDA 배치 비교와 운영 dashboard 제공 |
+| `kube-state-metrics` | Deployment, HPA, Pod, Node 상태 metric 제공 |
+| `otel-collector` | API/Worker trace 수집 endpoint |
+| `metrics-server` | `kubectl top`, HPA CPU 비교 실험에 필요 |
+
+상태 확인:
+
+```powershell
+$KC="$env:USERPROFILE\Downloads\kube (1).conf"
+kubectl --kubeconfig $KC -n docprep-cloud get pods,svc | Select-String "prometheus|grafana|kube-state|otel"
+kubectl --kubeconfig $KC top nodes
+kubectl --kubeconfig $KC -n docprep-cloud top pods
+```
+
+Grafana 외부 접근:
+
+```text
+https://<운영-도메인>/grafana/
+```
+
+Grafana local port-forward:
+
+```powershell
+kubectl --kubeconfig $KC -n docprep-cloud port-forward svc/grafana 3000:3000
+```
+
+접속:
+
+```text
+http://localhost:3000/grafana/
+```
+
+현재 manifest 기본 계정은 `admin/admin`이다. 공개 운영 전에는 반드시 Secret 기반 비밀번호로 교체한다.
+
+Grafana에서 우선 볼 dashboard 항목:
+
+| 항목 | 이유 |
+| --- | --- |
+| Worker desired replica | KEDA가 queue backlog에 반응하는지 확인 |
+| Worker ready replica | 실제 스케줄링된 Worker 수 확인 |
+| RabbitMQ queue length | 작업 적체 확인 |
+| Job 처리량과 실패율 | 전처리 품질과 장애 확인 |
+| Pod CPU/Memory | Worker request/limit 조정 근거 확보 |
 
 ## 실행 방법
 

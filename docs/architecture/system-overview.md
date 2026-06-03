@@ -1,76 +1,161 @@
 # 시스템 개요
 
-DocPrep Cloud는 대량 스캔 문서 이미지를 OCR 전에 정규화하는 비동기 전처리 플랫폼입니다.  
-핵심은 API 서버와 이미지 처리 Worker를 분리해 웹 요청 부하와 CPU 중심 이미지 처리 부하가 서로 영향을 주지 않도록 만드는 것입니다.
+DocPrep Cloud는 대량의 스캔 문서 이미지를 OCR 전에 안정적으로 전처리하기 위한 비동기 이미지 전처리 플랫폼이다. 핵심은 이미지 리사이징 서비스가 아니라, 문서 이미지의 방향, 기울기, 여백, 노이즈, 대비, 이진화 품질을 Worker가 OpenCV 기반 파이프라인으로 보정하는 구조다.
 
-## 컴포넌트
+## 목표
+
+| 목표 | 설명 |
+| --- | --- |
+| 대량 처리 | 여러 이미지 또는 ZIP 파일을 업로드하면 이미지 단위 `JobItem`으로 분리해 큐에 넣는다. |
+| 책임 분리 | API 서버는 인증, 업로드, Job 등록/조회만 담당하고, Worker가 실제 전처리를 수행한다. |
+| 단일 진입점 | 외부 사용자는 NGINX/Ingress 하나만 바라보고 프론트, API, OAuth, object download 경로를 사용한다. |
+| 운영 가능성 | PostgreSQL, RabbitMQ, MinIO/S3, Prometheus, Grafana, KEDA, GitHub Actions 배포 흐름을 포함한다. |
+| 보안 기본값 | Google OAuth, HttpOnly refresh token cookie, private object storage, Worker internal token을 사용한다. |
+
+## 전체 구조
+
+```text
+User Browser
+  |
+  v
+Ingress / NGINX
+  |-- /                         -> frontend
+  |-- /api/*                    -> backend-api
+  |-- /oauth2/*                 -> backend-api OAuth entry
+  |-- /login/oauth2/*           -> backend-api OAuth callback
+  |-- /image-preprocess-prod/*  -> MinIO/S3 object route
+  |-- /grafana/*                -> Grafana
+  |
+  v
+backend-api
+  |-- PostgreSQL                -> users, projects, images, jobs, job_items
+  |-- RabbitMQ                  -> image.preprocess.normal/high queue
+  |-- MinIO/S3                  -> originals, processed outputs, archives
+  |
+  v
+preprocess-worker
+  |-- RabbitMQ consume
+  |-- MinIO/S3 download original
+  |-- OpenCV document preprocessing pipeline
+  |-- MinIO/S3 upload processed image
+  |-- backend-api internal callback
+```
+
+## 컴포넌트 책임
 
 | 컴포넌트 | 책임 |
 | --- | --- |
-| Frontend | 프로젝트, 업로드, Job, 결과 다운로드 화면 제공 |
-| NGINX | 프론트 정적 파일과 API/OAuth 경로를 단일 진입점으로 라우팅 |
-| backend-api | 인증, 프로젝트, 업로드 세션, 이미지 메타데이터, Job 등록/조회 담당 |
-| PostgreSQL | 사용자, 프로젝트, 이미지, Job, JobItem 메타데이터 저장 |
-| MinIO/S3 | 원본 이미지와 처리된 이미지 파일 저장 |
-| RabbitMQ | 이미지 전처리 작업 메시지 전달 |
-| preprocess-worker | RabbitMQ 메시지를 소비하고 OpenCV 문서 전처리 파이프라인 실행 |
-| GitHub Actions | 운영 서버에 Docker Compose 기반 production stack 배포 |
+| Frontend | 로그인 진입, 프로젝트/업로드/Job/이미지 화면, API 호출, 결과 다운로드 링크 표시 |
+| NGINX | 정적 프론트와 API/OAuth/Object Storage/Grafana 경로를 단일 진입점으로 라우팅 |
+| backend-api | Google OAuth, JWT/refresh token, 프로젝트, 업로드 세션, 이미지 메타데이터, Job 생성/조회, Worker callback |
+| PostgreSQL | 사용자, 프로젝트, 업로드 세션, 이미지, Job, JobItem, artifact 메타데이터 저장 |
+| RabbitMQ | 이미지 전처리 요청을 queue로 보관하고 Worker에 전달 |
+| MinIO/S3 | 원본 이미지, 처리된 이미지, Job 결과 ZIP 저장 |
+| preprocess-worker | RabbitMQ 메시지 소비, 문서 이미지 전처리, 처리 결과 저장, 성공/실패 callback |
+| Prometheus | API, Worker, RabbitMQ, Kubernetes 상태 metric 수집 |
+| Grafana | Worker replica, queue, Job 처리 상태, 리소스 사용량 시각화 |
+| KEDA | RabbitMQ queue length 기준으로 Worker replica 자동 조절 |
+| GitHub Actions | GHCR 이미지 빌드, Kubernetes manifest 렌더링, self-hosted runner 기반 배포 |
 
-## 요청 흐름
+## 사용자 요청 흐름
+
+### 1. 로그인
 
 ```text
-사용자 브라우저
-  -> NGINX
-  -> backend-api
-  -> PostgreSQL / MinIO / RabbitMQ
-  -> preprocess-worker
-  -> MinIO 결과 저장
-  -> backend-api internal callback
-  -> Frontend 결과 조회/다운로드
+Browser
+  -> /oauth2/authorization/google
+  -> Google OAuth
+  -> /login/oauth2/code/google
+  -> backend-api OAuth success handler
+  -> refresh token HttpOnly cookie 저장
+  -> frontend /oauth2/success?login=success
+  -> frontend가 /api/v1/auth/refresh 또는 /api/v1/auth/me 호출
 ```
 
-## 인증 흐름
+Access Token은 URL에 노출하지 않는 것이 원칙이다. Refresh Token은 `HttpOnly`, `Secure`, `SameSite` 정책이 적용된 cookie로 관리한다.
 
-1. 사용자가 Google 로그인 버튼을 누릅니다.
-2. 브라우저가 `/oauth2/authorization/google`로 이동합니다.
-3. Spring Security OAuth2가 Google callback을 처리합니다.
-4. backend-api가 사용자 정보를 저장하거나 기존 사용자를 찾습니다.
-5. Access Token은 프론트에서 API 호출에 사용합니다.
-6. Refresh Token은 HttpOnly cookie로 저장합니다.
-7. Access Token이 만료되면 `/api/v1/auth/refresh`로 재발급합니다.
+### 2. 이미지 업로드
 
-## 업로드와 전처리 흐름
+```text
+Frontend
+  -> upload session 생성
+  -> 파일별 SHA-256 계산
+  -> presigned upload URL 요청
+  -> MinIO/S3에 원본 직접 PUT
+  -> upload complete 요청
+  -> backend-api가 이미지 메타데이터 생성
+```
 
-1. 프론트가 업로드 세션을 생성합니다.
-2. backend-api가 파일별 presigned URL을 발급합니다.
-3. 브라우저가 MinIO/S3에 원본 파일을 업로드합니다.
-4. 업로드 완료 API가 이미지 메타데이터를 DB에 저장합니다.
-5. 사용자가 전처리 Job을 생성합니다.
-6. backend-api가 이미지 단위 JobItem을 만들고 RabbitMQ 메시지를 발행합니다.
-7. Worker가 원본 파일을 다운로드해 전처리합니다.
-8. Worker가 처리된 이미지를 Object Storage에 저장하고 backend-api에 성공/실패를 보고합니다.
-9. 사용자는 처리된 이미지 또는 Job 결과 ZIP을 다운로드합니다.
+대용량 파일을 API 서버 메모리로 직접 받지 않기 위해 presigned URL 방식을 사용한다. ZIP 업로드는 프론트에서 이미지 파일로 펼친 뒤 각 이미지를 별도 객체로 업로드한다.
 
-## 전처리 범위
+### 3. 전처리 Job
 
-Worker는 단순 resize가 아니라 문서 OCR 품질을 높이기 위한 전처리를 수행합니다.
+```text
+Frontend
+  -> Job 생성 요청
 
-- Decode
-- Color Normalize
-- Orientation Normalize
-- Deskew
-- Crop
-- Denoise
-- Contrast Normalize
-- Binarization
-- Morphology Cleanup
-- DPI Normalize
-- Optional Sharpen
+backend-api
+  -> Job 생성
+  -> 이미지별 JobItem 생성
+  -> RabbitMQ message publish
 
-## 운영 관점의 경계
+preprocess-worker
+  -> message consume
+  -> 원본 download
+  -> 전처리 pipeline 실행
+  -> processed image upload
+  -> backend-api internal callback
+```
 
-- API 서버는 OpenCV 처리를 수행하지 않습니다.
-- Worker는 OAuth 로그인과 화면용 API를 갖지 않습니다.
-- Object Storage bucket은 private을 기본값으로 합니다.
-- 운영 secret은 GitHub 저장소가 아니라 서버 `.env.prod` 또는 배포 플랫폼 secret store에 둡니다.
-- 공개 진입점은 NGINX 하나로 유지합니다.
+이미지 한 장이 하나의 `JobItem`이다. 이 구조 때문에 Worker가 여러 개로 늘어나도 같은 Job 안의 이미지를 병렬 처리할 수 있다.
+
+## Worker 전처리 범위
+
+Worker는 단순 resize만 수행하지 않는다. 현재 전처리 단계는 아래 순서가 기준이다.
+
+1. Decode
+2. Color Normalize
+3. Orientation Normalize
+4. Deskew
+5. Crop
+6. Denoise
+7. Contrast Normalize
+8. Binarization
+9. Morphology Cleanup
+10. DPI Normalize
+11. Optional Sharpen
+
+결과물은 사용자에게 처리된 이미지와 Job 결과 ZIP 중심으로 제공한다. 디버그 artifact와 리포트는 내부 검증과 개발 용도이며, 운영 UI에서는 필요할 때만 노출한다.
+
+## 운영 경계
+
+| 경계 | 원칙 |
+| --- | --- |
+| API와 Worker | API는 OpenCV 작업을 직접 하지 않는다. Worker는 사용자 인증과 화면 API를 갖지 않는다. |
+| Queue와 DB | RabbitMQ는 처리 요청 전달용이다. 최종 상태와 조회 기준은 PostgreSQL이다. |
+| Object Storage | 원본과 결과 파일은 private bucket에 저장하고, 다운로드는 API가 권한을 확인한 뒤 URL을 발급한다. |
+| OAuth | Google OAuth만 지원한다. Kakao OAuth는 현재 범위에서 제외한다. |
+| OCR | 이 프로젝트는 OCR 엔진 자체가 아니라 OCR 전 이미지 전처리에 집중한다. |
+| 관측성 | 운영 판단은 로그만 보지 않고 metric, replica, queue length, Job 성공률을 함께 본다. |
+
+## 현재 배포 기준
+
+현재 Kubernetes 배포 기준은 다음과 같다.
+
+| 항목 | 기준 |
+| --- | --- |
+| Namespace | `docprep-cloud` |
+| 공개 도메인 | 현재 ngrok 도메인 또는 운영 도메인 |
+| 이미지 registry | `ghcr.io/som141/docprep-cloud/*` |
+| 배포 방식 | `Build GHCR Images` 성공 후 `Deploy Kubernetes` 자동 실행 |
+| 배포 runner | Kubernetes 내부 self-hosted runner |
+| Worker 확장 | KEDA RabbitMQ queue length 기반 `min=0`, `max=20` |
+| 관측성 | Prometheus, Grafana, kube-state-metrics, metrics-server |
+
+## 관련 문서
+
+- [Kubernetes/KEDA 아키텍처](kubernetes-architecture.md)
+- [런타임 자원 정책](runtime-resource-policy.md)
+- [NGINX 라우팅](nginx-routing.md)
+- [Worker 전처리 파이프라인](../worker/preprocess-pipeline.md)
+- [운영 원칙](../operation/operating-principles.md)

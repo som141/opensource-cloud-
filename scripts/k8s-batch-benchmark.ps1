@@ -45,6 +45,8 @@ param(
 
     [string]$KubeContext = "",
 
+    [switch]$NgrokSkipBrowserWarning,
+
     [switch]$SkipKubernetesSampling
 )
 
@@ -104,6 +106,9 @@ function Invoke-Api {
         Authorization = "Bearer $AccessToken"
         Accept = "application/json"
     }
+    if ($NgrokSkipBrowserWarning) {
+        $headers["ngrok-skip-browser-warning"] = "true"
+    }
     $uri = Get-ApiUrl $Path
 
     try {
@@ -126,6 +131,37 @@ function Invoke-Api {
         return $response.result
     }
     return $response
+}
+
+function Invoke-UploadWithRetry {
+    param(
+        [string]$Uri,
+        [hashtable]$Headers,
+        [string]$Path,
+        [string]$ContentType,
+        [string]$FileName
+    )
+
+    $maxAttempts = 5
+    for ($attempt = 1; $attempt -le $maxAttempts; $attempt++) {
+        try {
+            Invoke-WebRequest `
+                -Method PUT `
+                -Uri $Uri `
+                -Headers $Headers `
+                -InFile $Path `
+                -ContentType $ContentType `
+                -TimeoutSec 180 | Out-Null
+            return
+        } catch {
+            if ($attempt -ge $maxAttempts) {
+                throw "Upload failed after $maxAttempts attempts. file=$FileName error=$($_.Exception.Message)"
+            }
+            $sleepSeconds = [Math]::Min(30, 3 * $attempt)
+            Write-Host "Upload retry $attempt/$maxAttempts for $FileName after error: $($_.Exception.Message)"
+            Start-Sleep -Seconds $sleepSeconds
+        }
+    }
 }
 
 function Get-InputFiles {
@@ -204,6 +240,22 @@ function Invoke-KubectlJson {
     }
 }
 
+function Get-OptionalPropertyValue {
+    param(
+        $Object,
+        [string]$Name
+    )
+
+    if ($null -eq $Object) {
+        return $null
+    }
+    $property = $Object.PSObject.Properties[$Name]
+    if ($null -eq $property) {
+        return $null
+    }
+    return $property.Value
+}
+
 function Get-KubernetesSample {
     param($Summary)
 
@@ -216,18 +268,26 @@ function Get-KubernetesSample {
 
     $deployment = Invoke-KubectlJson @("-n", $Namespace, "get", "deployment", "preprocess-worker", "-o", "json")
     $hpa = Invoke-KubectlJson @("-n", $Namespace, "get", "hpa", "keda-hpa-preprocess-worker", "-o", "json")
+    $hpaName = "keda-hpa-preprocess-worker"
+    if ($null -eq $hpa) {
+        $hpa = Invoke-KubectlJson @("-n", $Namespace, "get", "hpa", "preprocess-worker-cpu", "-o", "json")
+        $hpaName = "preprocess-worker-cpu"
+    }
+    $deploymentStatus = Get-OptionalPropertyValue $deployment "status"
+    $hpaStatus = Get-OptionalPropertyValue $hpa "status"
 
     return [ordered]@{
         sampledAt = (Get-Date).ToUniversalTime().ToString("o")
+        hpaName = $hpaName
         progressPercent = $Summary.progressPercent
         succeeded = $Summary.succeeded
         failed = $Summary.failed
         queued = $Summary.queued
         processing = $Summary.processing
-        workerReplicas = $deployment.status.replicas
-        workerReadyReplicas = $deployment.status.readyReplicas
-        hpaCurrentReplicas = $hpa.status.currentReplicas
-        hpaDesiredReplicas = $hpa.status.desiredReplicas
+        workerReplicas = Get-OptionalPropertyValue $deploymentStatus "replicas"
+        workerReadyReplicas = Get-OptionalPropertyValue $deploymentStatus "readyReplicas"
+        hpaCurrentReplicas = Get-OptionalPropertyValue $hpaStatus "currentReplicas"
+        hpaDesiredReplicas = Get-OptionalPropertyValue $hpaStatus "desiredReplicas"
     }
 }
 
@@ -242,7 +302,8 @@ function Save-Result {
     if ([string]::IsNullOrWhiteSpace($safeScenario)) {
         $safeScenario = "manual"
     }
-    $fileName = "$(Get-Date -Format 'yyyyMMdd-HHmmss')-$safeScenario-$($Result.fileCount)-images.json"
+    $fileCount = $Result["fileCount"]
+    $fileName = "$(Get-Date -Format 'yyyyMMdd-HHmmss')-$safeScenario-$fileCount-images.json"
     $path = Join-Path $OutputDirectory $fileName
     $Result | ConvertTo-Json -Depth 30 | Set-Content -LiteralPath $path -Encoding UTF8
     return $path
@@ -315,8 +376,16 @@ try {
                 $headers.Remove($headerName)
             }
         }
+        if ($NgrokSkipBrowserWarning) {
+            $headers["ngrok-skip-browser-warning"] = "true"
+        }
         Write-Progress -Activity "Uploading originals" -Status $payload.fileName -PercentComplete (($index / $files.Count) * 100)
-        Invoke-WebRequest -Method PUT -Uri $target.uploadUrl -Headers $headers -InFile $payload.path -ContentType $payload.contentType | Out-Null
+        Invoke-UploadWithRetry `
+            -Uri $target.uploadUrl `
+            -Headers $headers `
+            -Path $payload.path `
+            -ContentType $payload.contentType `
+            -FileName $payload.fileName
         $uploadFileIds += $target.uploadFileId
     }
     Write-Progress -Activity "Uploading originals" -Completed
@@ -391,7 +460,7 @@ try {
         succeeded = $summary.succeeded
         failed = $summary.failed
         progressPercent = $summary.progressPercent
-        kubernetesSamples = @($samples)
+        kubernetesSamples = @($samples.ToArray())
     }
 
     $resultPath = Save-Result $result

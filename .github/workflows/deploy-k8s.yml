@@ -1,6 +1,13 @@
 name: Deploy Kubernetes
 
 on:
+  workflow_run:
+    workflows:
+      - Build GHCR Images
+    branches:
+      - main
+    types:
+      - completed
   workflow_dispatch:
     inputs:
       image_tag:
@@ -75,6 +82,7 @@ concurrency:
 jobs:
   deploy:
     name: Deploy Kubernetes manifests
+    if: github.event_name == 'workflow_dispatch' || github.event.workflow_run.conclusion == 'success'
     runs-on: [self-hosted, Linux, X64, docprep-k8s]
     environment: production
     timeout-minutes: 30
@@ -95,23 +103,26 @@ jobs:
         id: inputs
         shell: bash
         env:
-          RAW_IMAGE_TAG: ${{ inputs.image_tag }}
-          RAW_IMAGE_NAMESPACE: ${{ inputs.image_namespace }}
-          RAW_DOMAIN: ${{ inputs.domain }}
-          RAW_TLS_SECRET: ${{ inputs.tls_secret }}
-          RAW_POSTGRES_EXTERNAL_NAME: ${{ inputs.postgres_external_name }}
-          RAW_RABBITMQ_EXTERNAL_NAME: ${{ inputs.rabbitmq_external_name }}
-          RAW_MINIO_EXTERNAL_NAME: ${{ inputs.minio_external_name }}
-          RAW_OTEL_COLLECTOR_EXTERNAL_NAME: ${{ inputs.otel_collector_external_name }}
-          RAW_APPLY_MODE: ${{ inputs.apply_mode }}
-          RAW_KUBE_CONTEXT: ${{ inputs.kube_context }}
-          RAW_ROLLOUT_TIMEOUT: ${{ inputs.rollout_timeout }}
-          RAW_CONFIGURE_GHCR_PULL_SECRET: ${{ inputs.configure_ghcr_pull_secret }}
+          RAW_IMAGE_TAG: ${{ github.event.inputs.image_tag || '' }}
+          BUILD_HEAD_SHA: ${{ github.event.workflow_run.head_sha || github.sha }}
+          RAW_IMAGE_NAMESPACE: ${{ github.event.inputs.image_namespace || vars.K8S_IMAGE_NAMESPACE || 'ghcr.io/som141/docprep-cloud' }}
+          RAW_DOMAIN: ${{ github.event.inputs.domain || vars.PROD_DOMAIN }}
+          RAW_TLS_SECRET: ${{ github.event.inputs.tls_secret || vars.K8S_TLS_SECRET || 'docprep-cloud-tls' }}
+          RAW_POSTGRES_EXTERNAL_NAME: ${{ github.event.inputs.postgres_external_name || vars.POSTGRES_EXTERNAL_NAME }}
+          RAW_RABBITMQ_EXTERNAL_NAME: ${{ github.event.inputs.rabbitmq_external_name || vars.RABBITMQ_EXTERNAL_NAME }}
+          RAW_MINIO_EXTERNAL_NAME: ${{ github.event.inputs.minio_external_name || vars.MINIO_EXTERNAL_NAME }}
+          RAW_OTEL_COLLECTOR_EXTERNAL_NAME: ${{ github.event.inputs.otel_collector_external_name || vars.OTEL_COLLECTOR_EXTERNAL_NAME }}
+          RAW_APPLY_MODE: ${{ github.event.inputs.apply_mode || vars.K8S_APPLY_MODE || 'apply' }}
+          RAW_KUBE_CONTEXT: ${{ github.event.inputs.kube_context || '' }}
+          RAW_ROLLOUT_TIMEOUT: ${{ github.event.inputs.rollout_timeout || vars.K8S_ROLLOUT_TIMEOUT || '180s' }}
+          RAW_CONFIGURE_GHCR_PULL_SECRET: ${{ github.event.inputs.configure_ghcr_pull_secret || vars.CONFIGURE_GHCR_PULL_SECRET || 'false' }}
         run: |
           set -euo pipefail
 
           if [ -n "$RAW_IMAGE_TAG" ]; then
             IMAGE_TAG="$RAW_IMAGE_TAG"
+          elif [ -n "$BUILD_HEAD_SHA" ]; then
+            IMAGE_TAG="${BUILD_HEAD_SHA::12}"
           else
             IMAGE_TAG="${GITHUB_SHA::12}"
           fi
