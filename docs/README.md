@@ -10,6 +10,7 @@ AI/Codex 작업 규칙 문서는 로컬 전용 파일로 관리하고 원격 저
 | [README](../README.md) | 프로젝트 소개, 빠른 시작, 주요 링크 |
 | [시스템 개요](architecture/system-overview.md) | 전체 아키텍처와 데이터 흐름 |
 | [Kubernetes/KEDA 아키텍처](architecture/kubernetes-architecture.md) | Kubernetes 전환 구조와 KEDA autoscaling 기준 |
+| [런타임 자원 정책](architecture/runtime-resource-policy.md) | 컨테이너 requests/limits, replica, KEDA/HPA 기준 |
 | [레포지토리 구조](architecture/repository-structure.md) | 모노레포 구성과 컴포넌트 책임 |
 | [작업 계획](implementation-plan.md) | 구현 계획과 단계별 흐름 |
 | [작업 단위 목록](tasks/README.md) | 기능별 작업 단위와 진행 흐름 |
@@ -41,10 +42,12 @@ AI/Codex 작업 규칙 문서는 로컬 전용 파일로 관리하고 원격 저
 | 문서 | 설명 |
 | --- | --- |
 | [운영 문서 인덱스](operation/README.md) | 운영/배포 문서 진입점 |
+| [운영 원칙](operation/operating-principles.md) | 배포, secret, 장애 대응, 관측성, KEDA 운영 기준 |
 | [로컬 실행](operation/docker-compose-local.md) | Docker Compose local 실행 |
 | [관측성 로컬 실행](operation/observability.md) | Prometheus, Grafana, Jaeger 실행과 확인 |
 | [운영 배포 가이드](operation/production-deployment-guide.md) | 서버 준비부터 검증까지 전체 순서 |
-| [Kubernetes/KEDA 배포](operation/kubernetes-deployment.md) | Kubernetes skeleton 적용 절차 |
+| [Kubernetes/KEDA 배포](operation/kubernetes-deployment.md) | Kubernetes 배포와 Worker autoscaling 확인 |
+| [KEDA 배치 비교 실험](operation/keda-batch-benchmark.md) | KEDA, HPA CPU, 고정 Worker 비교 실험 |
 | [운영 환경변수](operation/production-env.md) | `.env.prod`와 secret 주입 방식 |
 | [GitHub Actions 배포](operation/github-actions-deployment.md) | production workflow 사용법 |
 | [GHCR 이미지 빌드/푸시](operation/ghcr-image-workflow.md) | Kubernetes 배포용 이미지 생성 |

@@ -21,7 +21,7 @@
 | 작업 | 전처리 Job 생성, JobItem 상태 관리, Worker callback, 실패 상태 저장 |
 | 결과 | 처리된 이미지 다운로드, Job 결과 ZIP 다운로드 |
 | 프론트엔드 | 프로젝트, 업로드, Job 상세, 이미지 상세, 대시보드 MVP 화면 |
-| 운영 | Docker Compose local/prod, NGINX routing, Prometheus/Grafana/Jaeger 관측성, GitHub Actions production deploy workflow |
+| 운영 | Docker Compose local, Kubernetes/KEDA, NGINX Ingress, Prometheus/Grafana, GHCR 이미지, GitHub Actions 자동 배포 |
 
 ## 아키텍처
 
@@ -99,17 +99,29 @@ localStorage.getItem('doc-pipeline.access-token')
 .\scripts\local-e2e-smoke.ps1 -BaseUrl "http://localhost/api" -AccessToken "<access-token>"
 ```
 
-## 운영 배포 요약
+## Kubernetes 운영 배포 요약
 
-운영 배포는 GitHub Actions와 Docker Compose production override를 기준으로 합니다.
+현재 운영 배포는 Kubernetes와 GitHub Actions를 기준으로 합니다. `main`에 머지되면 GHCR 이미지가 빌드되고, 이미지 빌드 성공 후 Kubernetes 내부 self-hosted runner가 배포 workflow를 실행합니다.
 
-1. 운영 서버에 Docker Engine과 Docker Compose plugin을 설치합니다.
-2. 서버에 `/opt/image-preprocess/shared/.env.prod`를 생성합니다.
-3. GitHub `production` Environment에 SSH 배포 secrets를 등록합니다.
-4. 도메인과 HTTPS를 연결합니다.
-5. Google OAuth Console에 운영 redirect URI를 추가합니다.
-6. GitHub Actions의 `Deploy Production` workflow를 실행합니다.
-7. 로그인, 업로드, Worker 처리, 결과 다운로드까지 E2E로 확인합니다.
+```text
+PR merge to main
+  -> Build GHCR Images
+  -> ghcr.io/som141/docprep-cloud/*:<short-sha>
+  -> Deploy Kubernetes
+  -> self-hosted runner inside cluster
+  -> kubectl apply
+  -> rollout 확인
+```
+
+운영 전 필수 준비는 다음입니다.
+
+1. Kubernetes cluster와 `docprep-cloud` namespace를 준비합니다.
+2. KEDA, metrics-server, ingress-nginx, ngrok 또는 운영 도메인을 준비합니다.
+3. Google OAuth Console에 현재 공개 도메인의 redirect URI를 등록합니다.
+4. GitHub `production` Environment에 `KUBE_CONFIG_B64`와 필요한 secrets/variables를 등록합니다.
+5. backend-api, preprocess-worker, frontend 이미지를 GHCR로 빌드합니다.
+6. `Deploy Kubernetes` workflow를 `dry-run`으로 확인한 뒤 `apply`합니다.
+7. 로그인, 업로드, Worker 처리, 결과 다운로드, Grafana dashboard까지 E2E로 확인합니다.
 
 자세한 절차는 [운영 문서](docs/operation/README.md)를 기준으로 진행합니다.
 
@@ -120,12 +132,16 @@ localStorage.getItem('doc-pipeline.access-token')
 | [문서 인덱스](docs/README.md) | 프로젝트 사용자 문서 진입점 |
 | [시스템 개요](docs/architecture/system-overview.md) | 컴포넌트와 데이터 흐름 |
 | [Kubernetes/KEDA 아키텍처](docs/architecture/kubernetes-architecture.md) | Kubernetes 전환 구조와 Worker autoscaling |
+| [런타임 자원 정책](docs/architecture/runtime-resource-policy.md) | 컨테이너 requests/limits, replica, KEDA 기준 |
 | [레포지토리 구조](docs/architecture/repository-structure.md) | 모노레포 디렉터리와 책임 |
 | [API 문서](docs/api/api-index.md) | 도메인별 API 문서 진입점 |
 | [Worker 파이프라인](docs/worker/preprocess-pipeline.md) | OpenCV 전처리 단계 |
 | [로컬 실행](docs/operation/docker-compose-local.md) | Docker Compose 로컬 실행 |
 | [관측성 로컬 실행](docs/operation/observability.md) | Prometheus, Grafana, Jaeger 실행과 확인 |
-| [Kubernetes/KEDA 배포](docs/operation/kubernetes-deployment.md) | Kubernetes skeleton 적용 절차 |
+| [Kubernetes/KEDA 배포](docs/operation/kubernetes-deployment.md) | Kubernetes 배포와 KEDA 운영 확인 절차 |
+| [운영 원칙](docs/operation/operating-principles.md) | 배포, secret, 장애 대응, 관측성 운영 기준 |
+| [Kubernetes GitHub Actions 배포](docs/operation/kubernetes-github-actions-deploy.md) | GHCR 이미지 기반 자동 Kubernetes 배포 |
+| [KEDA 배치 비교 실험](docs/operation/keda-batch-benchmark.md) | KEDA/HPA/고정 Worker 성능 비교 절차 |
 | [운영 배포](docs/operation/production-deployment-guide.md) | 운영 배포 전체 순서 |
 | [GitHub Actions 배포](docs/operation/github-actions-deployment.md) | CI/CD 배포 workflow |
 | [GHCR 이미지 빌드/푸시](docs/operation/ghcr-image-workflow.md) | Kubernetes 배포용 이미지 생성 |

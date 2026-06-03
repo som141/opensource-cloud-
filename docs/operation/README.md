@@ -5,15 +5,15 @@
 
 ## 권장 읽기 순서
 
-1. [운영 배포 가이드](production-deployment-guide.md)
-2. [운영 환경변수와 Secret 주입](production-env.md)
-3. [GitHub Actions 배포](github-actions-deployment.md)
+1. [운영 원칙](operating-principles.md)
+2. [Kubernetes/KEDA 배포](kubernetes-deployment.md)
+3. [Kubernetes GitHub Actions 배포](kubernetes-github-actions-deploy.md)
 4. [GHCR 이미지 빌드/푸시](ghcr-image-workflow.md)
 5. [Kubernetes manifest 렌더링](kubernetes-manifest-render-workflow.md)
-6. [Kubernetes GitHub Actions 배포](kubernetes-github-actions-deploy.md)
+6. [운영 환경변수와 Secret 주입](production-env.md)
 7. [HTTPS와 도메인 정책](https-domain-policy.md)
-8. [관측성 로컬 실행](observability.md)
-9. [Kubernetes/KEDA 배포](kubernetes-deployment.md)
+8. [KEDA 500장 배치 비교 실험](keda-batch-benchmark.md)
+9. [관측성 로컬 실행](observability.md)
 10. [배포 체크리스트](deployment-checklist.md)
 11. [최종 E2E 검증](final-e2e-verification.md)
 12. [백업/복구](backup-restore.md)
@@ -32,6 +32,7 @@
 
 | 문서 | 설명 |
 | --- | --- |
+| [운영 원칙](operating-principles.md) | 배포, Secret, 장애 대응, 관측성, KEDA 운영 기준 |
 | [운영 배포 가이드](production-deployment-guide.md) | 서버 준비부터 post-deploy까지 전체 흐름 |
 | [운영 환경변수](production-env.md) | `.env.prod` 작성과 secret 관리 |
 | [GitHub Actions 배포](github-actions-deployment.md) | `Deploy Production` workflow 사용 |
@@ -40,7 +41,8 @@
 | [Kubernetes GitHub Actions 배포](kubernetes-github-actions-deploy.md) | kubeconfig 기반 수동 dry-run/apply workflow |
 | [HTTPS/도메인 정책](https-domain-policy.md) | TLS 종료, OAuth redirect, cookie 정책 |
 | [관측성 로컬 실행](observability.md) | 배포 전 metric과 trace 검증 |
-| [Kubernetes/KEDA 배포](kubernetes-deployment.md) | Kubernetes skeleton 적용과 Worker autoscaling |
+| [Kubernetes/KEDA 배포](kubernetes-deployment.md) | Kubernetes 배포와 Worker autoscaling 확인 |
+| [KEDA 500장 배치 비교 실험](keda-batch-benchmark.md) | KEDA, HPA CPU, 고정 Worker 성능 비교 |
 | [배포 체크리스트](deployment-checklist.md) | 공개 전 확인 목록 |
 | [최종 E2E 검증](final-e2e-verification.md) | 로그인부터 결과 다운로드까지 검증 |
 | [백업/복구](backup-restore.md) | PostgreSQL과 Object Storage 백업 |
@@ -48,9 +50,10 @@
 ## 운영 원칙
 
 - 운영 secret은 Git에 커밋하지 않습니다.
-- 서버의 실제 값은 `/opt/image-preprocess/shared/.env.prod`에 둡니다.
-- GitHub Actions secrets에는 SSH 배포에 필요한 값만 둡니다.
-- Google OAuth 운영 redirect URI는 HTTPS 도메인 기준으로 등록합니다.
+- Kubernetes 배포 secret은 GitHub `production` Environment 또는 Kubernetes Secret으로 주입합니다.
+- kubeconfig는 `KUBE_CONFIG_B64`로 저장하고 문서에는 실제 값을 기록하지 않습니다.
+- Google OAuth 운영 redirect URI는 현재 공개 도메인 기준으로 등록합니다.
+- Worker가 `0/0`이어도 queue가 비어 있으면 KEDA scale-to-zero 정상 상태입니다.
 - Swagger는 MVP 검증에는 유용하지만 공개 서비스 전에는 접근 제한 여부를 결정해야 합니다.
 
 ## KEDA 성능 비교 실험
