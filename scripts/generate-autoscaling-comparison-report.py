@@ -45,6 +45,23 @@ def setup_korean_font() -> None:
     plt.rcParams["axes.unicode_minus"] = False
 
 
+GRAPH_TITLES = {
+    "duration_throughput": "전체 처리 시간과 평균 처리량",
+    "latency": "완료 지연 시간",
+    "replicas": "Pod 증가량과 확장 목표",
+    "node_cpu": "시간별 노드 CPU 사용률",
+    "node_memory": "시간별 노드 메모리 사용률",
+    "ready_replicas": "시간별 Ready Worker replica",
+    "desired_replicas": "시간별 HPA desired replica",
+    "throughput": "시간별 처리량",
+    "progress": "시간별 완료 이미지 수",
+}
+
+
+def graph_title(key: str) -> str:
+    return GRAPH_TITLES.get(key, key)
+
+
 def sample_elapsed_series(samples: list[dict[str, Any]]) -> list[float]:
     if not samples:
         return []
@@ -388,7 +405,7 @@ def analysis_text(scenarios: list[Scenario]) -> list[str]:
 
 def write_markdown(path: Path, scenarios: list[Scenario], generated_at: str, graphs: dict[str, Path]) -> None:
     analysis = "\n".join(f"- {line}" for line in analysis_text(scenarios))
-    graph_lines = "\n\n".join(f"![{key}]({graph.name})" for key, graph in graphs.items())
+    graph_lines = "\n\n".join(f"### {graph_title(key)}\n\n![{graph_title(key)}]({graph.name})" for key, graph in graphs.items())
     markdown = f"""# 4가지 스케일링 워크로드 500장 배치 비교 보고서
 
 생성 시각: {generated_at}
@@ -447,7 +464,7 @@ def write_html(path: Path, scenarios: list[Scenario], generated_at: str, graphs:
         for scenario in scenarios
     )
     graph_html = "\n".join(
-        f"<section><h2>{key}</h2><img src='{graph.name}' alt='{key}'></section>"
+        f"<section><h2>{graph_title(key)}</h2><img src='{graph.name}' alt='{graph_title(key)}'></section>"
         for key, graph in graphs.items()
     )
     analysis = "\n".join(f"<li>{line}</li>" for line in analysis_text(scenarios))
@@ -566,10 +583,12 @@ def write_pdf(path: Path, scenarios: list[Scenario], generated_at: str, graphs: 
     ))
     story.append(PageBreak())
 
-    for key, graph in graphs.items():
-        story.append(Paragraph(key, heading))
-        story.append(Image(str(graph), width=250 * mm, height=136 * mm))
-        story.append(Spacer(1, 5))
+    for index, (key, graph) in enumerate(graphs.items()):
+        story.append(Paragraph(graph_title(key), heading))
+        story.append(Spacer(1, 4))
+        story.append(Image(str(graph), width=260 * mm, height=130 * mm))
+        if index < len(graphs) - 1:
+            story.append(PageBreak())
     doc.build(story)
     return True
 
