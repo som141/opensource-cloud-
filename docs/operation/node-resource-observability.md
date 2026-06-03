@@ -116,6 +116,62 @@ benchmark-results/20260603-keda-node-resource-500-worker-pods-by-node.svg
 
 `benchmark-results/`는 로컬 실험 산출물 보관 위치이며 원격 저장소에는 올리지 않는다.
 
+## 4가지 스케일링 케이스 비교 보고서 생성
+
+KEDA의 효과를 입증하려면 단일 KEDA ON 결과만 보면 부족하다. 같은 입력 500장을 다음 4가지 케이스로 실행해 비교한다.
+
+| 케이스 | 의미 |
+| --- | --- |
+| Fixed 1 Worker | KEDA/HPA 없이 Worker 1개 고정 |
+| HPA CPU 60% | Kubernetes HPA가 CPU 평균 사용률 60%를 기준으로 확장 |
+| KEDA min 1 | RabbitMQ queue length 기반 확장, 최소 Worker 1개 유지 |
+| KEDA min 0 | RabbitMQ queue length 기반 확장, scale-to-zero에서 시작 |
+
+4개 결과 JSON을 만든 뒤 아래 명령으로 통합 보고서를 생성한다.
+
+```powershell
+python scripts/generate-autoscaling-comparison-report.py `
+  --output-dir benchmark-results `
+  --prefix 20260604-autoscaling-4case `
+  --label "Fixed 1 Worker" `
+  --result benchmark-results\20260603-235028-fixed-1-500-20260603-500-images.json `
+  --label "HPA CPU 60%" `
+  --result benchmark-results\20260604-000053-hpa-cpu-60-min1-500-20260603-500-images.json `
+  --label "KEDA min 1" `
+  --result benchmark-results\20260604-000615-keda-min1-500-20260604-500-images.json `
+  --label "KEDA min 0" `
+  --result benchmark-results\20260604-001125-keda-min0-500-20260604-500-images.json
+```
+
+생성되는 산출물은 다음과 같다.
+
+| 파일 | 설명 |
+| --- | --- |
+| `20260604-autoscaling-4case-report.md` | 한글 Markdown 보고서 |
+| `20260604-autoscaling-4case-report.html` | 그래프가 바로 보이는 HTML 보고서 |
+| `20260604-autoscaling-4case-report.pdf` | 그래프 PNG가 삽입된 PDF 보고서 |
+| `20260604-autoscaling-4case-report.json` | 통계 원본 JSON |
+| `20260604-autoscaling-4case-duration-throughput.png` | 전체 처리 시간과 평균 처리량 |
+| `20260604-autoscaling-4case-latency.png` | 첫 완료, p50, p95 완료 지연 |
+| `20260604-autoscaling-4case-replicas.png` | Worker/current/ready/desired 증가량 |
+| `20260604-autoscaling-4case-time-node-cpu.png` | 시간별 노드 CPU 사용률 |
+| `20260604-autoscaling-4case-time-node-memory.png` | 시간별 노드 메모리 사용률 |
+| `20260604-autoscaling-4case-time-ready-replicas.png` | 시간별 Ready Worker replica |
+| `20260604-autoscaling-4case-time-desired-replicas.png` | 시간별 HPA desired replica |
+| `20260604-autoscaling-4case-time-throughput.png` | 시간별 처리량 |
+| `20260604-autoscaling-4case-time-progress.png` | 시간별 완료 이미지 수 |
+
+2026-06-04 재실험 결과는 다음과 같다.
+
+| 케이스 | 전체 시간(초) | 평균 처리량(장/초) | p95 완료(초) | 최대 Ready | 최대 Desired | 최대 노드 CPU% | 최대 노드 Memory% |
+| --- | ---: | ---: | ---: | ---: | ---: | ---: | ---: |
+| Fixed 1 Worker | 308.674 | 1.62 | 85.014 | 1 | 0 | 55.0 | 59.0 |
+| HPA CPU 60% | 303.517 | 1.647 | 78.371 | 3 | 3 | 49.0 | 62.0 |
+| KEDA min 1 | 283.749 | 1.762 | 58.162 | 4 | 8 | 67.0 | 67.0 |
+| KEDA min 0 | 276.798 | 1.806 | 54.597 | 4 | 20 | 57.0 | 64.0 |
+
+이 결과는 KEDA가 CPU 사용률이 아니라 RabbitMQ backlog를 기준으로 빠르게 확장 목표를 세우며, HPA CPU보다 배치 완료 시점이 빠르다는 것을 보여준다. 다만 최대 desired replica가 20이어도 실제 ready replica는 4개까지였으므로, 다음 성능 개선은 KEDA 설정만이 아니라 Worker resource request, 노드 여유 자원, 스케줄링 정책을 함께 봐야 한다.
+
 ## 해석 기준
 
 | 상황 | 해석 |
