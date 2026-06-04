@@ -12,17 +12,18 @@ export type AppRoute = {
   label: string;
   element: JSX.Element;
   showInNav?: boolean;
+  eyebrow?: string;
 };
 
 export const routes: AppRoute[] = [
-  { path: '/', label: 'Dashboard', element: <DashboardPage /> },
+  { path: '/', label: 'Dashboard', element: <DashboardPage />, eyebrow: 'Operations overview' },
   { path: '/login', label: 'Login', element: <LoginPage />, showInNav: false },
   { path: '/oauth2/success', label: 'OAuth Success', element: <OAuthSuccessPage />, showInNav: false },
-  { path: '/projects', label: 'Projects', element: <ProjectListPage /> },
-  { path: '/projects/:projectId', label: 'Project Detail', element: <ProjectDetailPage /> },
-  { path: '/upload', label: 'Upload', element: <UploadPage /> },
-  { path: '/jobs/:jobId', label: 'Job Detail', element: <JobDetailPage /> },
-  { path: '/images/:imageId', label: 'Image Detail', element: <ImageDetailPage /> }
+  { path: '/projects', label: 'Projects', element: <ProjectListPage />, eyebrow: 'Workspace scope' },
+  { path: '/projects/:projectId', label: 'Project Detail', element: <ProjectDetailPage />, eyebrow: 'Project workspace' },
+  { path: '/upload', label: 'Upload', element: <UploadPage />, eyebrow: 'Batch processing' },
+  { path: '/jobs/:jobId', label: 'Job Detail', element: <JobDetailPage />, eyebrow: 'Job monitoring' },
+  { path: '/images/:imageId', label: 'Image Detail', element: <ImageDetailPage />, eyebrow: 'Image artifact' }
 ];
 
 export function resolveRoute(pathname: string): AppRoute {

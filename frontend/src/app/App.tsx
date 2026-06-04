@@ -40,6 +40,7 @@ export function App() {
         </aside>
         <main className="content">
           <header className="page-header">
+            {route.eyebrow && <p className="eyebrow">{route.eyebrow}</p>}
             <h1>{route.label}</h1>
           </header>
           {route.element}
