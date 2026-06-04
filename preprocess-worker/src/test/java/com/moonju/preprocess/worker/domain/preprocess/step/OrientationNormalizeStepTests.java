@@ -38,7 +38,26 @@ class OrientationNormalizeStepTests {
         assertThat(rotatedHolder.height()).isEqualTo(5);
         assertThat(rotatedHolder.colorSpace()).isEqualTo("BGR");
         assertThat(context.consumeStepNote(PreprocessStepName.ORIENTATION_NORMALIZE))
-            .contains("landscape -> portrait");
+            .contains("landscape -> portrait")
+            .contains("grossRotationDegrees=-90.0");
+        context.releaseDecodedImage();
+    }
+
+    @Test
+    void keepsSlightLandscapeImageAsNoOp() {
+        PreprocessContext context = context();
+        ImageMatHolder slightLandscapeHolder = ImageMatHolder.decoded(
+            "originals/slight-landscape.png",
+            new Mat(10, 11, CvType.CV_8UC3, new Scalar(255, 255, 255))
+        );
+        context.storeDecodedImage(slightLandscapeHolder);
+
+        step.execute(context);
+
+        assertThat(context.decodedImage().orElseThrow()).isSameAs(slightLandscapeHolder);
+        assertThat(slightLandscapeHolder.released()).isFalse();
+        assertThat(context.consumeStepNote(PreprocessStepName.ORIENTATION_NORMALIZE))
+            .contains("already normalized");
         context.releaseDecodedImage();
     }
 

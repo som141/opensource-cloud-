@@ -14,7 +14,7 @@ import org.springframework.stereotype.Component;
 @Component
 public class ContrastNormalizeStep implements PreprocessStep {
 
-    private static final double DEFAULT_CLIP_LIMIT = 2.0;
+    private static final double DEFAULT_CLIP_LIMIT = 2.5;
     private static final int DEFAULT_TILE_GRID_SIZE = 8;
 
     @Override
@@ -32,6 +32,11 @@ public class ContrastNormalizeStep implements PreprocessStep {
         ImageMatHolder holder = context.decodedImage().orElseThrow();
         if (!holder.loaded()) {
             context.recordStep(name(), "Decoded image is not loaded; contrast normalization is deferred.");
+            return;
+        }
+
+        if (!enabled(context)) {
+            context.recordStep(name(), "Contrast normalization skipped: disabled by preset parameters.");
             return;
         }
 
@@ -88,6 +93,16 @@ public class ContrastNormalizeStep implements PreprocessStep {
             return defaultValue;
         }
         return Math.max(0.1, Double.parseDouble(value));
+    }
+
+    private boolean enabled(PreprocessContext context) {
+        String configured = context.parameters().get("contrastNormalize");
+        if (configured == null || configured.isBlank()) {
+            return true;
+        }
+        return "true".equalsIgnoreCase(configured)
+            || "on".equalsIgnoreCase(configured)
+            || "yes".equalsIgnoreCase(configured);
     }
 
     private int positiveInt(String value, int defaultValue) {

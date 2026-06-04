@@ -69,7 +69,7 @@ class DenoiseStepTests {
     }
 
     @Test
-    void appliesBilateralDenoiseWithTunedDefaultSigmas() {
+    void appliesBilateralDenoiseWithDefaultImageTestSigmas() {
         PreprocessContext context = context(Map.of("denoiseMode", "bilateral"));
         ImageMatHolder sourceHolder = ImageMatHolder.decoded("originals/noisy.png", noisyImage());
         context.storeDecodedImage(sourceHolder);
@@ -78,8 +78,9 @@ class DenoiseStepTests {
 
         assertThat(context.consumeStepNote(PreprocessStepName.DENOISE))
             .contains("mode=bilateral")
-            .contains("sigmaColor=25.0")
-            .contains("sigmaRange=75.0");
+            .contains("diameter=7")
+            .contains("sigmaColor=50.0")
+            .contains("sigmaRange=50.0");
         context.releaseDecodedImage();
     }
 

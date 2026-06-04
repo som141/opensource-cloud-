@@ -39,7 +39,8 @@ class ColorNormalizeStepTests {
         assertThat(normalizedHolder.width()).isEqualTo(3);
         assertThat(normalizedHolder.height()).isEqualTo(2);
         assertThat(normalizedHolder.colorSpace()).isEqualTo("BGR");
-        assertThat(context.consumeStepNote(PreprocessStepName.COLOR_NORMALIZE)).isEqualTo("Color normalized: GRAY -> BGR");
+        assertThat(context.consumeStepNote(PreprocessStepName.COLOR_NORMALIZE))
+            .isEqualTo("Color normalized: GRAY -> BGR");
         context.releaseDecodedImage();
     }
 
@@ -57,7 +58,45 @@ class ColorNormalizeStepTests {
         ImageMatHolder normalizedHolder = context.decodedImage().orElseThrow();
         assertThat(bgraHolder.released()).isTrue();
         assertThat(normalizedHolder.colorSpace()).isEqualTo("BGR");
-        assertThat(context.consumeStepNote(PreprocessStepName.COLOR_NORMALIZE)).isEqualTo("Color normalized: BGRA -> BGR");
+        assertThat(context.consumeStepNote(PreprocessStepName.COLOR_NORMALIZE))
+            .isEqualTo("Color normalized: BGRA -> BGR");
+        context.releaseDecodedImage();
+    }
+
+    @Test
+    void convertsBgrImageToGrayWhenGrayscaleIsEnabled() {
+        PreprocessContext context = context(Map.of("grayscale", "true"));
+        ImageMatHolder bgrHolder = ImageMatHolder.decoded(
+            "originals/bgr.png",
+            new Mat(2, 3, CvType.CV_8UC3, new Scalar(10, 20, 30))
+        );
+        context.storeDecodedImage(bgrHolder);
+
+        step.execute(context);
+
+        ImageMatHolder normalizedHolder = context.decodedImage().orElseThrow();
+        assertThat(bgrHolder.released()).isTrue();
+        assertThat(normalizedHolder.colorSpace()).isEqualTo("GRAY");
+        assertThat(context.consumeStepNote(PreprocessStepName.COLOR_NORMALIZE))
+            .isEqualTo("Color normalized: BGR -> GRAY");
+        context.releaseDecodedImage();
+    }
+
+    @Test
+    void keepsGrayImageAsNoOpWhenGrayscaleIsEnabled() {
+        PreprocessContext context = context(Map.of("grayscale", "true"));
+        ImageMatHolder grayHolder = ImageMatHolder.decoded(
+            "originals/gray.png",
+            new Mat(2, 3, CvType.CV_8UC1, new Scalar(128))
+        );
+        context.storeDecodedImage(grayHolder);
+
+        step.execute(context);
+
+        assertThat(context.decodedImage().orElseThrow()).isSameAs(grayHolder);
+        assertThat(grayHolder.released()).isFalse();
+        assertThat(context.consumeStepNote(PreprocessStepName.COLOR_NORMALIZE))
+            .isEqualTo("Color already normalized: GRAY.");
         context.releaseDecodedImage();
     }
 
@@ -74,7 +113,8 @@ class ColorNormalizeStepTests {
 
         assertThat(context.decodedImage().orElseThrow()).isSameAs(bgrHolder);
         assertThat(bgrHolder.released()).isFalse();
-        assertThat(context.consumeStepNote(PreprocessStepName.COLOR_NORMALIZE)).isEqualTo("Color already normalized: BGR.");
+        assertThat(context.consumeStepNote(PreprocessStepName.COLOR_NORMALIZE))
+            .isEqualTo("Color already normalized: BGR.");
         context.releaseDecodedImage();
     }
 
@@ -104,13 +144,17 @@ class ColorNormalizeStepTests {
     }
 
     private PreprocessContext context() {
+        return context(Map.of());
+    }
+
+    private PreprocessContext context(Map<String, String> parameters) {
         return new PreprocessContext(
             3L,
             1L,
             2L,
             "originals/project/scan.png",
             "LOW_CONTRAST_SCAN",
-            Map.of(),
+            parameters,
             false
         );
     }

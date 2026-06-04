@@ -4,6 +4,7 @@ import com.moonju.preprocess.worker.domain.preprocess.model.DpiInfo;
 import com.moonju.preprocess.worker.domain.preprocess.model.ImageMatHolder;
 import com.moonju.preprocess.worker.domain.preprocess.pipeline.PreprocessContext;
 import java.util.Map;
+import java.util.OptionalDouble;
 import java.util.OptionalInt;
 import org.opencv.core.Mat;
 import org.opencv.core.Size;
@@ -14,8 +15,8 @@ import org.springframework.stereotype.Component;
 public class DpiNormalizeStep implements PreprocessStep {
 
     private static final int DEFAULT_TARGET_DPI = 300;
-    private static final double MIN_SCALE = 0.25;
-    private static final double MAX_SCALE = 4.0;
+    private static final double MIN_SCALE = 0.75;
+    private static final double MAX_SCALE = 2.5;
     private static final double NO_OP_SCALE_DELTA = 0.01;
 
     @Override
@@ -36,7 +37,7 @@ public class DpiNormalizeStep implements PreprocessStep {
             return;
         }
 
-        DpiInfo dpiInfo = dpiInfo(context.parameters());
+        DpiInfo dpiInfo = dpiInfo(context.parameters(), holder);
         if (!dpiInfo.sourceKnown()) {
             context.recordFallback(name(), "Source DPI metadata is missing.", "skip");
             context.recordStep(name(), "DPI normalization skipped: source DPI is unknown.");
@@ -87,13 +88,33 @@ public class DpiNormalizeStep implements PreprocessStep {
         );
     }
 
-    private DpiInfo dpiInfo(Map<String, String> parameters) {
+    private DpiInfo dpiInfo(Map<String, String> parameters, ImageMatHolder holder) {
         int targetDpi = parsePositiveInt(parameters.get("targetDpi")).orElse(DEFAULT_TARGET_DPI);
         OptionalInt sameAxisDpi = firstPositiveInt(parameters, "sourceDpi", "dpi", "xDpi");
         int sourceDpiX = firstPositiveInt(parameters, "sourceDpiX", "dpiX").orElseGet(() -> sameAxisDpi.orElse(0));
         int sourceDpiY = firstPositiveInt(parameters, "sourceDpiY", "dpiY", "yDpi")
             .orElseGet(() -> sameAxisDpi.orElse(0));
+        if (sourceDpiX <= 0 || sourceDpiY <= 0) {
+            OptionalInt estimatedX = estimateDpi(holder.width(), parameters.get("referenceWidthInches"));
+            OptionalInt estimatedY = estimateDpi(holder.height(), parameters.get("referenceHeightInches"));
+            sourceDpiX = sourceDpiX > 0 ? sourceDpiX : estimatedX.orElse(0);
+            sourceDpiY = sourceDpiY > 0 ? sourceDpiY : estimatedY.orElse(0);
+        }
+        if (sourceDpiX <= 0 || sourceDpiY <= 0) {
+            OptionalInt fallbackSourceDpi = parsePositiveInt(parameters.get("fallbackSourceDpi"));
+            sourceDpiX = sourceDpiX > 0 ? sourceDpiX : fallbackSourceDpi.orElse(0);
+            sourceDpiY = sourceDpiY > 0 ? sourceDpiY : fallbackSourceDpi.orElse(0);
+        }
         return new DpiInfo(sourceDpiX, sourceDpiY, targetDpi);
+    }
+
+    private OptionalInt estimateDpi(int pixels, String referenceInches) {
+        OptionalDouble parsedReferenceInches = parsePositiveDouble(referenceInches);
+        if (parsedReferenceInches.isEmpty()) {
+            return OptionalInt.empty();
+        }
+        int estimated = (int) Math.round(pixels / parsedReferenceInches.getAsDouble());
+        return estimated > 0 ? OptionalInt.of(estimated) : OptionalInt.empty();
     }
 
     private OptionalInt firstPositiveInt(Map<String, String> parameters, String... keys) {
@@ -115,6 +136,17 @@ public class DpiNormalizeStep implements PreprocessStep {
             return OptionalInt.empty();
         }
         return OptionalInt.of(parsed);
+    }
+
+    private OptionalDouble parsePositiveDouble(String value) {
+        if (value == null || value.isBlank()) {
+            return OptionalDouble.empty();
+        }
+        double parsed = Double.parseDouble(value);
+        if (parsed <= 0) {
+            return OptionalDouble.empty();
+        }
+        return OptionalDouble.of(parsed);
     }
 
     private double clampScale(double scale) {

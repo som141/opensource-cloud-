@@ -24,7 +24,7 @@ class MorphologyCleanupStepTests {
     }
 
     @Test
-    void appliesOpenCloseCleanupAndReleasesPreviousHolder() {
+    void appliesOpenCleanupByDefaultAndReleasesPreviousHolder() {
         PreprocessContext context = context(Map.of("morphologyKernelSize", "2"));
         ImageMatHolder sourceHolder = ImageMatHolder.decoded("originals/binary.png", binaryDocument());
         context.storeDecodedImage(sourceHolder);
@@ -37,7 +37,7 @@ class MorphologyCleanupStepTests {
         assertThat(cleanedHolder.width()).isEqualTo(16);
         assertThat(cleanedHolder.height()).isEqualTo(16);
         assertThat(cleanedHolder.colorSpace()).isEqualTo("GRAY");
-        assertThat(context.consumeStepNote(PreprocessStepName.MORPHOLOGY_CLEANUP)).contains("mode=open_close");
+        assertThat(context.consumeStepNote(PreprocessStepName.MORPHOLOGY_CLEANUP)).contains("mode=open");
         context.releaseDecodedImage();
     }
 
@@ -56,7 +56,7 @@ class MorphologyCleanupStepTests {
     }
 
     @Test
-    void fallsBackToOpenCloseWhenModeIsUnsupported() {
+    void fallsBackToOpenWhenModeIsUnsupported() {
         PreprocessContext context = context(Map.of("morphologyMode", "unknown"));
         ImageMatHolder sourceHolder = ImageMatHolder.decoded("originals/binary.png", binaryDocument());
         context.storeDecodedImage(sourceHolder);
@@ -65,8 +65,8 @@ class MorphologyCleanupStepTests {
 
         assertThat(context.fallbackNotes()).hasSize(1);
         assertThat(context.fallbackNotes().getFirst().stepName()).isEqualTo("MORPHOLOGY_CLEANUP");
-        assertThat(context.fallbackNotes().getFirst().selectedStrategy()).isEqualTo("open_close");
-        assertThat(context.consumeStepNote(PreprocessStepName.MORPHOLOGY_CLEANUP)).contains("mode=open_close");
+        assertThat(context.fallbackNotes().getFirst().selectedStrategy()).isEqualTo("open");
+        assertThat(context.consumeStepNote(PreprocessStepName.MORPHOLOGY_CLEANUP)).contains("mode=open");
         context.releaseDecodedImage();
     }
 

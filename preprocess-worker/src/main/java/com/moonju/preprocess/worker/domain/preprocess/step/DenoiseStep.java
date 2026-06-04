@@ -11,9 +11,9 @@ import org.springframework.stereotype.Component;
 public class DenoiseStep implements PreprocessStep {
 
     private static final int DEFAULT_MEDIAN_KERNEL_SIZE = 3;
-    private static final int DEFAULT_BILATERAL_DIAMETER = 5;
-    private static final double DEFAULT_BILATERAL_SIGMA_COLOR = 25.0;
-    private static final double DEFAULT_BILATERAL_SIGMA_RANGE = 75.0;
+    private static final int DEFAULT_BILATERAL_DIAMETER = 7;
+    private static final double DEFAULT_BILATERAL_SIGMA_COLOR = 50.0;
+    private static final double DEFAULT_BILATERAL_SIGMA_RANGE = 50.0;
 
     @Override
     public PreprocessStepName name() {

@@ -2,23 +2,24 @@
 
 ## 목적
 
-Preprocess Preset API는 backend-api, Job 생성 흐름, Worker가 공유하는 전처리 파라미터 계약을 제공합니다.
-API 서버는 프리셋 이름과 파라미터 범위를 검증하지만 OpenCV 이미지 전처리를 직접 수행하지 않습니다.
+Preprocess Preset API는 Job 생성 전에 사용할 수 있는 전처리 프리셋과 파라미터 범위를 제공한다.
+API 서버는 파라미터 이름과 범위를 검증하지만 OpenCV 이미지 전처리는 직접 수행하지 않는다.
+실제 처리는 RabbitMQ 메시지를 받은 Worker가 수행한다.
 
 ## 규칙
 
-- built-in preset 이름은 Worker preset 이름과 정확히 일치해야 합니다.
-- API 서버는 Job 생성 전에 파라미터 형태와 범위를 검증합니다.
-- API 서버는 문서 이미지 전처리를 직접 수행하지 않습니다.
-- 프리셋은 단순 썸네일 resize가 아니라 OCR용 문서 전처리 파이프라인을 설명합니다.
-- custom preset은 built-in preset에서 파생되는 사용자 소유 skeleton record입니다.
+- built-in preset 이름은 Worker preset 이름과 일치해야 한다.
+- Job 생성 시 API 서버는 프리셋 파라미터를 검증하고 기본값을 채운다.
+- 검증된 파라미터는 Job에 저장되고 RabbitMQ 메시지로 Worker에 전달된다.
+- API 서버는 문서 이미지 전처리를 직접 수행하지 않는다.
+- 이 API는 단순 resize가 아니라 OCR 전 문서 이미지 전처리 파이프라인의 계약을 설명한다.
 
-## Built-in preset
+## Built-in Preset
 
 | 이름 | 용도 |
 | --- | --- |
-| `A4_SCAN_300DPI` | 일반 A4 문서 스캔 |
-| `LOW_CONTRAST_SCAN` | 저대비 문서 |
+| `A4_SCAN_300DPI` | 일반 A4 300 DPI 스캔 문서 |
+| `LOW_CONTRAST_SCAN` | 저대비 스캔 문서 |
 | `RECEIPT` | 영수증처럼 폭이 좁은 문서 |
 | `NOISY_SCAN` | 배경 노이즈가 강한 문서 |
 | `AUTO` | Worker가 이미지 특성에 따라 프리셋 선택 |
@@ -27,37 +28,14 @@ API 서버는 프리셋 이름과 파라미터 범위를 검증하지만 OpenCV 
 
 | Method | Path | 설명 |
 | --- | --- | --- |
-| `GET` | `/api/v1/preprocess/presets` | built-in preset 목록 |
-| `GET` | `/api/v1/preprocess/presets/{presetName}` | built-in preset 상세 |
+| `GET` | `/api/v1/preprocess/presets` | built-in preset 목록 조회 |
+| `GET` | `/api/v1/preprocess/presets/{presetName}` | built-in preset 상세 조회 |
 | `POST` | `/api/v1/preprocess/presets/validate` | preset 파라미터 검증 |
 | `POST` | `/api/v1/preprocess/presets/custom` | custom preset 생성 |
-| `GET` | `/api/v1/preprocess/presets/custom` | 내 custom preset 목록 |
+| `GET` | `/api/v1/preprocess/presets/custom` | 내 custom preset 목록 조회 |
 | `DELETE` | `/api/v1/preprocess/presets/custom/{presetId}` | custom preset 삭제 |
 
-## built-in preset 목록
-
-Response:
-
-```json
-{
-  "isSuccess": true,
-  "code": "common200",
-  "message": "Request succeeded.",
-  "result": [
-    {
-      "name": "A4_SCAN_300DPI",
-      "type": "BUILT_IN",
-      "displayName": "A4 300 DPI scan",
-      "description": "General A4 document scan preset for OCR preprocessing.",
-      "supportsDebug": true
-    }
-  ]
-}
-```
-
-## preset 상세
-
-Response:
+## Preset 상세 응답 예시
 
 ```json
 {
@@ -65,10 +43,10 @@ Response:
   "code": "common200",
   "message": "Request succeeded.",
   "result": {
-    "name": "LOW_CONTRAST_SCAN",
+    "name": "A4_SCAN_300DPI",
     "type": "BUILT_IN",
-    "displayName": "Low contrast scan",
-    "description": "Improves low contrast scans using stronger contrast normalization before binarization.",
+    "displayName": "A4 300 DPI scan",
+    "description": "General A4 document scan preset for OCR preprocessing.",
     "supportsDebug": true,
     "steps": [
       "DECODE",
@@ -88,7 +66,7 @@ Response:
         "name": "contrastClipLimit",
         "type": "DECIMAL",
         "required": true,
-        "defaultValue": "2.4",
+        "defaultValue": "2.5",
         "minValue": "1.0",
         "maxValue": "4.0",
         "allowedValues": []
@@ -108,8 +86,6 @@ Request:
   "parameters": {
     "targetDpi": "300",
     "binarizationMode": "otsu",
-    "contrastClipLimit": "2.0",
-    "denoiseMode": "median",
     "debugArtifacts": "false"
   }
 }
@@ -127,53 +103,53 @@ Response:
     "valid": true,
     "errors": [],
     "resolvedParameters": {
+      "grayscale": "true",
       "targetDpi": "300",
+      "referenceWidthInches": "8.27",
+      "referenceHeightInches": "11.69",
+      "fallbackSourceDpi": "300",
       "maxDeskewAngle": "40.0",
       "binarizationMode": "otsu",
-      "adaptiveBlockSize": "21",
-      "adaptiveC": "5.0",
-      "contrastClipLimit": "2.0",
+      "adaptiveBlockSize": "31",
+      "adaptiveC": "15.0",
+      "contrastNormalize": "false",
+      "contrastClipLimit": "2.5",
       "contrastTileGridSize": "8",
       "denoiseMode": "median",
       "denoiseKernelSize": "3",
-      "denoiseDiameter": "5",
-      "denoiseSigmaColor": "25.0",
-      "denoiseSigmaRange": "75.0",
-      "morphologyMode": "open_close",
+      "denoiseDiameter": "7",
+      "denoiseSigmaColor": "50.0",
+      "denoiseSigmaRange": "50.0",
+      "morphologyMode": "open",
       "morphologyKernelSize": "2",
       "sharpen": "false",
-      "sharpenAmount": "0.8",
-      "sharpenSigma": "1.5",
+      "sharpenAmount": "0.25",
+      "sharpenSigma": "1.2",
       "debugArtifacts": "false"
     }
   }
 }
 ```
 
-잘못된 파라미터 값은 `valid=false`와 `result.errors`로 반환합니다. 알 수 없는 preset 이름은 일반 API 오류 응답을 반환합니다.
+## 주요 기본값
 
-## custom preset
+| 프리셋 | binarizationMode | contrastNormalize | contrastClipLimit | denoiseMode | morphologyMode | sharpen |
+| --- | --- | --- | --- | --- | --- | --- |
+| `A4_SCAN_300DPI` | `otsu` | `false` | `2.5` | `median` | `open` | `false` |
+| `LOW_CONTRAST_SCAN` | `adaptive` | `true` | `2.5` | `median` | `close` | `true` |
+| `RECEIPT` | `adaptive` | `true` | `2.5` | `median` | `close` | `true` |
+| `NOISY_SCAN` | `adaptive` | `false` | `2.5` | `bilateral` | `open` | `false` |
 
-Create request:
+공통 기본값은 `grayscale=true`, `fallbackSourceDpi=300`, `adaptiveBlockSize=31`, `adaptiveC=15.0`,
+`denoiseDiameter=7`, `denoiseSigmaColor=50.0`, `denoiseSigmaRange=50.0`,
+`morphologyKernelSize=2`, `sharpenAmount=0.25`, `sharpenSigma=1.2`다.
 
-```json
-{
-  "name": "Library low contrast",
-  "description": "For old book scans",
-  "basePresetName": "LOW_CONTRAST_SCAN",
-  "parameters": {
-    "targetDpi": "300",
-    "contrastClipLimit": "2.4",
-    "adaptiveBlockSize": "21",
-    "adaptiveC": "5.0"
-  }
-}
-```
+## 오류
 
-custom preset은 현재 backend skeleton입니다. Job 생성과 Worker 실행 연결은 후속 작업에서 처리합니다.
+알 수 없는 파라미터나 범위를 벗어난 값은 `valid=false`와 `result.errors`로 반환된다.
+존재하지 않는 preset 이름은 공통 실패 응답으로 반환된다.
 
 ## 다음 작업
 
-- Job 생성 시 preset validation 연결 상태를 계속 유지합니다.
-- Worker internal preset lookup endpoint가 필요하면 별도 이슈에서 추가합니다.
-- Worker preset registry와 API contract가 다른 값으로 갈라지지 않도록 테스트를 유지합니다.
+- custom preset 실제 저장/조회 기능은 별도 작업에서 구현한다.
+- Worker registry와 API registry의 기본값이 달라지지 않도록 테스트를 유지한다.

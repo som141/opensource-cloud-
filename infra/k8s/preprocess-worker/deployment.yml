@@ -26,6 +26,15 @@ spec:
                 name: preprocess-worker-config
             - secretRef:
                 name: preprocess-worker-secret
+          env:
+            - name: JAVA_TOOL_OPTIONS
+              value: "-Xms512m -Xmx3g -XX:+ExitOnOutOfMemoryError"
+            - name: SPRING_RABBITMQ_LISTENER_SIMPLE_PREFETCH
+              value: "1"
+            - name: SPRING_RABBITMQ_LISTENER_SIMPLE_CONCURRENCY
+              value: "1"
+            - name: SPRING_RABBITMQ_LISTENER_SIMPLE_MAX_CONCURRENCY
+              value: "1"
           ports:
             - name: management
               containerPort: 8081
@@ -51,4 +60,4 @@ spec:
               memory: 1Gi
             limits:
               cpu: "2"
-              memory: 2Gi
+              memory: 4Gi
