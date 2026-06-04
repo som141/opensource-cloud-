@@ -47,7 +47,7 @@ class SharpenStepTests {
     }
 
     @Test
-    void usesTunedSharpenDefaultsWhenParametersAreMissing() {
+    void usesImageTestSharpenDefaultsWhenParametersAreMissing() {
         PreprocessContext context = context(Map.of("sharpen", "true"));
         ImageMatHolder sourceHolder = ImageMatHolder.decoded("originals/processed.png", grayscaleImage());
         context.storeDecodedImage(sourceHolder);
@@ -55,8 +55,8 @@ class SharpenStepTests {
         step.execute(context);
 
         assertThat(context.consumeStepNote(PreprocessStepName.OPTIONAL_SHARPEN))
-            .contains("amount=0.8")
-            .contains("sigma=1.5");
+            .contains("amount=0.25")
+            .contains("sigma=1.2");
         context.releaseDecodedImage();
     }
 

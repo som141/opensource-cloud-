@@ -58,14 +58,28 @@ class ContrastNormalizeStepTests {
     }
 
     @Test
-    void usesTunedDefaultClipLimitWhenParameterIsMissing() {
+    void usesImageTestDefaultClipLimitWhenParameterIsMissing() {
         PreprocessContext context = context(Map.of());
         ImageMatHolder sourceHolder = ImageMatHolder.decoded("originals/default.png", lowContrastBgrImage());
         context.storeDecodedImage(sourceHolder);
 
         step.execute(context);
 
-        assertThat(context.consumeStepNote(PreprocessStepName.CONTRAST_NORMALIZE)).contains("clipLimit=2.0");
+        assertThat(context.consumeStepNote(PreprocessStepName.CONTRAST_NORMALIZE)).contains("clipLimit=2.5");
+        context.releaseDecodedImage();
+    }
+
+    @Test
+    void skipsWhenDisabledByPresetParameter() {
+        PreprocessContext context = context(Map.of("contrastNormalize", "false"));
+        ImageMatHolder sourceHolder = ImageMatHolder.decoded("originals/default.png", lowContrastBgrImage());
+        context.storeDecodedImage(sourceHolder);
+
+        step.execute(context);
+
+        assertThat(context.decodedImage().orElseThrow()).isSameAs(sourceHolder);
+        assertThat(sourceHolder.released()).isFalse();
+        assertThat(context.consumeStepNote(PreprocessStepName.CONTRAST_NORMALIZE)).contains("disabled");
         context.releaseDecodedImage();
     }
 

@@ -21,7 +21,7 @@ spec:
         queueName: image.preprocess.normal
         mode: QueueLength
         value: "25"
-        activationValue: "1"
+        activationValue: "0"
         vhostName: /
       authenticationRef:
         name: preprocess-worker-rabbitmq-auth
@@ -32,7 +32,7 @@ spec:
         queueName: image.preprocess.high
         mode: QueueLength
         value: "10"
-        activationValue: "1"
+        activationValue: "0"
         vhostName: /
       authenticationRef:
         name: preprocess-worker-rabbitmq-auth

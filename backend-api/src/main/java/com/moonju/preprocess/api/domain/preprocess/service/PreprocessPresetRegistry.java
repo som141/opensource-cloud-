@@ -63,7 +63,7 @@ public class PreprocessPresetRegistry {
             "General A4 document scan preset for OCR preprocessing.",
             true,
             DOCUMENT_PIPELINE_STEPS,
-            commonParameters(300, "otsu", 2.0, "median", false)
+            commonParameters(300, "otsu", false, 2.5, "median", "open", false, 8.27, 11.69, 300)
         ));
         register(new PreprocessPreset(
             PreprocessPresetName.LOW_CONTRAST_SCAN,
@@ -72,7 +72,7 @@ public class PreprocessPresetRegistry {
             "Improves low contrast scans using stronger contrast normalization before binarization.",
             true,
             DOCUMENT_PIPELINE_STEPS,
-            commonParameters(300, "adaptive", 2.4, "median", true)
+            commonParameters(300, "adaptive", true, 2.5, "median", "close", true, 8.27, 11.69, 300)
         ));
         register(new PreprocessPreset(
             PreprocessPresetName.RECEIPT,
@@ -81,7 +81,7 @@ public class PreprocessPresetRegistry {
             "Narrow receipt-like document preset with adaptive thresholding and light morphology cleanup.",
             true,
             DOCUMENT_PIPELINE_STEPS,
-            commonParameters(300, "adaptive", 2.2, "median", true)
+            commonParameters(300, "adaptive", true, 2.5, "median", "close", true, 3.15, 8.0, 300)
         ));
         register(new PreprocessPreset(
             PreprocessPresetName.NOISY_SCAN,
@@ -90,7 +90,7 @@ public class PreprocessPresetRegistry {
             "Preset for scans with strong background noise and more aggressive denoise settings.",
             true,
             DOCUMENT_PIPELINE_STEPS,
-            commonParameters(300, "adaptive", 2.0, "bilateral", false)
+            commonParameters(300, "adaptive", false, 2.5, "bilateral", "open", false, 8.27, 11.69, 300)
         ));
         register(new PreprocessPreset(
             PreprocessPresetName.AUTO,
@@ -114,17 +114,51 @@ public class PreprocessPresetRegistry {
     private List<PresetParameterDefinition> commonParameters(
         int targetDpi,
         String binarizationMode,
+        boolean contrastNormalize,
         double contrastClipLimit,
         String denoiseMode,
-        boolean sharpen
+        String morphologyMode,
+        boolean sharpen,
+        double referenceWidthInches,
+        double referenceHeightInches,
+        int fallbackSourceDpi
     ) {
         return List.of(
+            PresetParameterDefinition.bool(
+                "grayscale",
+                "Whether color normalization should convert input images to grayscale.",
+                true
+            ),
             PresetParameterDefinition.integer(
                 "targetDpi",
                 "Target DPI for OCR-oriented DPI normalization.",
                 true,
                 targetDpi,
                 150,
+                600
+            ),
+            PresetParameterDefinition.decimal(
+                "referenceWidthInches",
+                "Reference document width used to estimate source DPI when metadata is missing.",
+                false,
+                referenceWidthInches,
+                1.0,
+                30.0
+            ),
+            PresetParameterDefinition.decimal(
+                "referenceHeightInches",
+                "Reference document height used to estimate source DPI when metadata is missing.",
+                false,
+                referenceHeightInches,
+                1.0,
+                50.0
+            ),
+            PresetParameterDefinition.integer(
+                "fallbackSourceDpi",
+                "Fallback source DPI used when metadata and reference-size estimation are unavailable.",
+                false,
+                fallbackSourceDpi,
+                72,
                 600
             ),
             PresetParameterDefinition.decimal(
@@ -146,7 +180,7 @@ public class PreprocessPresetRegistry {
                 "adaptiveBlockSize",
                 "Odd block size for adaptive thresholding.",
                 true,
-                21,
+                31,
                 3,
                 99
             ),
@@ -154,9 +188,14 @@ public class PreprocessPresetRegistry {
                 "adaptiveC",
                 "Constant subtracted from the adaptive threshold mean.",
                 true,
-                5.0,
+                15.0,
                 -20.0,
                 20.0
+            ),
+            PresetParameterDefinition.bool(
+                "contrastNormalize",
+                "Whether contrast normalization should run before binarization.",
+                contrastNormalize
             ),
             PresetParameterDefinition.decimal(
                 "contrastClipLimit",
@@ -193,7 +232,7 @@ public class PreprocessPresetRegistry {
                 "denoiseDiameter",
                 "Bilateral filter neighborhood diameter.",
                 true,
-                5,
+                7,
                 3,
                 15
             ),
@@ -201,7 +240,7 @@ public class PreprocessPresetRegistry {
                 "denoiseSigmaColor",
                 "Bilateral filter color sigma. Lower values preserve text edges.",
                 true,
-                25.0,
+                50.0,
                 0.1,
                 200.0
             ),
@@ -209,7 +248,7 @@ public class PreprocessPresetRegistry {
                 "denoiseSigmaRange",
                 "Bilateral filter spatial sigma range.",
                 true,
-                75.0,
+                50.0,
                 0.1,
                 200.0
             ),
@@ -217,7 +256,7 @@ public class PreprocessPresetRegistry {
                 "morphologyMode",
                 "Morphology cleanup strategy.",
                 true,
-                "open_close",
+                morphologyMode,
                 Set.of("open", "close", "open_close", "none", "off", "false")
             ),
             PresetParameterDefinition.integer(
@@ -237,7 +276,7 @@ public class PreprocessPresetRegistry {
                 "sharpenAmount",
                 "Unsharp mask weight for optional sharpen.",
                 true,
-                0.8,
+                0.25,
                 0.1,
                 3.0
             ),
@@ -245,7 +284,7 @@ public class PreprocessPresetRegistry {
                 "sharpenSigma",
                 "Gaussian blur sigma for optional sharpen.",
                 true,
-                1.5,
+                1.2,
                 0.1,
                 10.0
             ),

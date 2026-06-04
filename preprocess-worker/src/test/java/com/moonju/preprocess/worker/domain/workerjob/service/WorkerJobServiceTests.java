@@ -34,6 +34,7 @@ import com.moonju.preprocess.worker.domain.workerjob.dto.WorkerJobResult;
 import com.moonju.preprocess.worker.domain.workerjob.status.WorkerFailureCode;
 import com.moonju.preprocess.worker.domain.workerjob.status.WorkerJobStatus;
 import com.moonju.preprocess.worker.infra.api.BackendApiClient;
+import com.moonju.preprocess.worker.infra.api.BackendApiReportException;
 import com.moonju.preprocess.worker.infra.metrics.WorkerMetricsRecorder;
 import com.moonju.preprocess.worker.infra.opencv.OpenCvLoader;
 import com.moonju.preprocess.worker.infra.storage.ObjectStoragePort;
@@ -206,6 +207,19 @@ class WorkerJobServiceTests {
 
         assertThat(result.failureCode()).isEqualTo(WorkerFailureCode.BACKEND_REPORT_FAILED);
         assertThat(result.retryable()).isTrue();
+    }
+
+    @Test
+    void marksBackendConflictReportFailureAsNonRetryable() {
+        PreprocessJobMessage message = validMessage();
+        doThrow(new BackendApiReportException(
+            "Backend internal API returned status 409 for /internal/v1/jobs/1/items/2/started"
+        )).when(backendApiClient).reportStarted(message);
+
+        WorkerJobResult result = service.process(message);
+
+        assertThat(result.failureCode()).isEqualTo(WorkerFailureCode.BACKEND_REPORT_FAILED);
+        assertThat(result.retryable()).isFalse();
     }
 
     @Test

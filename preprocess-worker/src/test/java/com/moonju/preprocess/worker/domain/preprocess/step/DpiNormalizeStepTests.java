@@ -79,6 +79,51 @@ class DpiNormalizeStepTests {
     }
 
     @Test
+    void usesFallbackSourceDpiWhenMetadataIsMissing() {
+        PreprocessContext context = context(Map.of("targetDpi", "300", "fallbackSourceDpi", "150"));
+        ImageMatHolder sourceHolder = ImageMatHolder.decoded(
+            "originals/fallback-dpi.png",
+            new Mat(5, 10, CvType.CV_8UC3, new Scalar(255, 255, 255))
+        );
+        context.storeDecodedImage(sourceHolder);
+
+        step.execute(context);
+
+        ImageMatHolder normalizedHolder = context.decodedImage().orElseThrow();
+        assertThat(sourceHolder.released()).isTrue();
+        assertThat(normalizedHolder.width()).isEqualTo(20);
+        assertThat(normalizedHolder.height()).isEqualTo(10);
+        assertThat(context.consumeStepNote(PreprocessStepName.DPI_NORMALIZE)).contains("sourceDpiX=150");
+        context.releaseDecodedImage();
+    }
+
+    @Test
+    void estimatesSourceDpiFromReferenceSizeWhenMetadataIsMissing() {
+        PreprocessContext context = context(Map.of(
+            "targetDpi",
+            "300",
+            "referenceWidthInches",
+            "10.0",
+            "referenceHeightInches",
+            "5.0"
+        ));
+        ImageMatHolder sourceHolder = ImageMatHolder.decoded(
+            "originals/reference-dpi.png",
+            new Mat(5, 10, CvType.CV_8UC3, new Scalar(255, 255, 255))
+        );
+        context.storeDecodedImage(sourceHolder);
+
+        step.execute(context);
+
+        ImageMatHolder normalizedHolder = context.decodedImage().orElseThrow();
+        assertThat(sourceHolder.released()).isTrue();
+        assertThat(normalizedHolder.width()).isEqualTo(25);
+        assertThat(normalizedHolder.height()).isEqualTo(13);
+        assertThat(context.consumeStepNote(PreprocessStepName.DPI_NORMALIZE)).contains("sourceDpiX=1");
+        context.releaseDecodedImage();
+    }
+
+    @Test
     void defersWhenDecodedImageIsMissing() {
         PreprocessContext context = context(Map.of());
 

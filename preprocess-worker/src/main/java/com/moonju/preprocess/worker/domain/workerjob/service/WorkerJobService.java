@@ -16,6 +16,7 @@ import com.moonju.preprocess.worker.domain.workerjob.dto.WorkerJobResult;
 import com.moonju.preprocess.worker.domain.workerjob.exception.InvalidWorkerMessageException;
 import com.moonju.preprocess.worker.domain.workerjob.status.WorkerFailureCode;
 import com.moonju.preprocess.worker.infra.api.BackendApiClient;
+import com.moonju.preprocess.worker.infra.api.BackendApiReportException;
 import com.moonju.preprocess.worker.infra.metrics.WorkerMetricsRecorder;
 import com.moonju.preprocess.worker.infra.storage.ObjectStoragePort;
 import java.time.Duration;
@@ -202,7 +203,7 @@ public class WorkerJobService {
                 message,
                 WorkerFailureCode.BACKEND_REPORT_FAILED,
                 exception.getMessage(),
-                true
+                isRetryableBackendReportFailure(exception)
             );
         }
     }
@@ -212,7 +213,16 @@ public class WorkerJobService {
             message,
             WorkerFailureCode.BACKEND_REPORT_FAILED,
             exception.getMessage(),
-            true
+            isRetryableBackendReportFailure(exception)
         );
+    }
+
+    private boolean isRetryableBackendReportFailure(RuntimeException exception) {
+        if (exception instanceof BackendApiReportException
+            && exception.getMessage() != null
+            && exception.getMessage().contains("status 409")) {
+            return false;
+        }
+        return true;
     }
 }

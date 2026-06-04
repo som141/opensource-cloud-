@@ -32,7 +32,7 @@ public class MorphologyCleanupStep implements PreprocessStep {
             return;
         }
 
-        String mode = context.parameters().getOrDefault("morphologyMode", "open_close")
+        String mode = context.parameters().getOrDefault("morphologyMode", "open")
             .toLowerCase(Locale.ROOT);
         if ("none".equals(mode) || "off".equals(mode) || "false".equals(mode)) {
             context.recordStep(name(), "Morphology cleanup skipped: disabled by preset parameters.");
@@ -40,8 +40,8 @@ public class MorphologyCleanupStep implements PreprocessStep {
         }
 
         if (!isSupportedMode(mode)) {
-            context.recordFallback(name(), "Unsupported morphology mode: " + mode, "open_close");
-            mode = "open_close";
+            context.recordFallback(name(), "Unsupported morphology mode: " + mode, "open");
+            mode = "open";
         }
 
         int kernelSize = kernelSize(context);

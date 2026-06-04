@@ -28,6 +28,27 @@ public class ColorNormalizeStep implements PreprocessStep {
         }
 
         String beforeColorSpace = holder.colorSpace();
+        if (grayscaleEnabled(context)) {
+            if ("GRAY".equals(beforeColorSpace)) {
+                context.recordStep(name(), "Color already normalized: GRAY.");
+                return;
+            }
+
+            Mat normalized = new Mat();
+            if ("BGR".equals(beforeColorSpace)) {
+                Imgproc.cvtColor(holder.mat(), normalized, Imgproc.COLOR_BGR2GRAY);
+            } else if ("BGRA".equals(beforeColorSpace)) {
+                Imgproc.cvtColor(holder.mat(), normalized, Imgproc.COLOR_BGRA2GRAY);
+            } else {
+                throw new IllegalStateException("Unsupported color space for normalization: " + beforeColorSpace);
+            }
+
+            ImageMatHolder normalizedHolder = ImageMatHolder.decoded(holder.sourceObjectKey(), normalized);
+            context.storeDecodedImage(normalizedHolder);
+            context.recordStep(name(), "Color normalized: " + beforeColorSpace + " -> GRAY");
+            return;
+        }
+
         if ("BGR".equals(beforeColorSpace)) {
             context.recordStep(name(), "Color already normalized: BGR.");
             return;
@@ -45,5 +66,15 @@ public class ColorNormalizeStep implements PreprocessStep {
         ImageMatHolder normalizedHolder = ImageMatHolder.decoded(holder.sourceObjectKey(), normalized);
         context.storeDecodedImage(normalizedHolder);
         context.recordStep(name(), "Color normalized: " + beforeColorSpace + " -> " + normalizedHolder.colorSpace());
+    }
+
+    private boolean grayscaleEnabled(PreprocessContext context) {
+        String configured = context.parameters().get("grayscale");
+        if (configured == null || configured.isBlank()) {
+            return false;
+        }
+        return "true".equalsIgnoreCase(configured)
+            || "on".equalsIgnoreCase(configured)
+            || "yes".equalsIgnoreCase(configured);
     }
 }

@@ -40,28 +40,40 @@ class PreprocessPresetRegistryTests {
     @Test
     void builtInPresetsExposeQualityTuningParameters() {
         assertThat(registry.findByName("A4_SCAN_300DPI").defaultParameters())
-            .containsEntry("contrastClipLimit", "2.0")
-            .containsEntry("adaptiveBlockSize", "21")
-            .containsEntry("adaptiveC", "5.0")
+            .containsEntry("grayscale", "true")
+            .containsEntry("referenceWidthInches", "8.27")
+            .containsEntry("referenceHeightInches", "11.69")
+            .containsEntry("fallbackSourceDpi", "300")
+            .containsEntry("contrastNormalize", "false")
+            .containsEntry("contrastClipLimit", "2.5")
+            .containsEntry("adaptiveBlockSize", "31")
+            .containsEntry("adaptiveC", "15.0")
             .containsEntry("denoiseMode", "median")
-            .containsEntry("denoiseSigmaColor", "25.0")
-            .containsEntry("morphologyMode", "open_close")
-            .containsEntry("sharpenAmount", "0.8")
-            .containsEntry("sharpenSigma", "1.5");
+            .containsEntry("denoiseDiameter", "7")
+            .containsEntry("denoiseSigmaColor", "50.0")
+            .containsEntry("denoiseSigmaRange", "50.0")
+            .containsEntry("morphologyMode", "open")
+            .containsEntry("sharpenAmount", "0.25")
+            .containsEntry("sharpenSigma", "1.2");
 
         assertThat(registry.findByName("LOW_CONTRAST_SCAN").defaultParameters())
-            .containsEntry("contrastClipLimit", "2.4")
+            .containsEntry("contrastNormalize", "true")
+            .containsEntry("contrastClipLimit", "2.5")
             .containsEntry("denoiseMode", "median")
+            .containsEntry("morphologyMode", "close")
             .containsEntry("sharpen", "true");
 
         assertThat(registry.findByName("RECEIPT").defaultParameters())
-            .containsEntry("contrastClipLimit", "2.2")
+            .containsEntry("contrastNormalize", "true")
+            .containsEntry("contrastClipLimit", "2.5")
             .containsEntry("denoiseMode", "median")
+            .containsEntry("morphologyMode", "close")
             .containsEntry("morphologyKernelSize", "2");
 
         assertThat(registry.findByName("NOISY_SCAN").defaultParameters())
-            .containsEntry("contrastClipLimit", "2.0")
+            .containsEntry("contrastNormalize", "false")
+            .containsEntry("contrastClipLimit", "2.5")
             .containsEntry("denoiseMode", "bilateral")
-            .containsEntry("denoiseSigmaRange", "75.0");
+            .containsEntry("denoiseSigmaRange", "50.0");
     }
 }

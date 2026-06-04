@@ -71,8 +71,8 @@ class BinarizationStepTests {
         step.execute(context);
 
         assertThat(context.consumeStepNote(PreprocessStepName.BINARIZATION))
-            .contains("blockSize=21")
-            .contains("c=5.0");
+            .contains("blockSize=31")
+            .contains("c=15.0");
         context.releaseDecodedImage();
     }
 
