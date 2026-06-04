@@ -21,7 +21,7 @@ export function App() {
       <div className="shell">
         <aside className="sidebar" aria-label="Primary">
           <a className="brand" href="/">
-            <span className="brand-mark">DP</span>
+            <img className="brand-mark" src="/logo.png" alt="DocPrep Cloud" />
             <span>
               <strong>DocPrep Cloud</strong>
               <small>document intelligence ops</small>
