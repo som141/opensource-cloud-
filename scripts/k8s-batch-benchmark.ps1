@@ -240,6 +240,21 @@ function Invoke-KubectlJson {
     }
 }
 
+function Invoke-KubectlText {
+    param([string[]]$Arguments)
+
+    try {
+        $baseArgs = Get-KubectlBaseArgs
+        $output = & kubectl @baseArgs @Arguments 2>$null
+        if ($LASTEXITCODE -ne 0) {
+            return $null
+        }
+        return @($output)
+    } catch {
+        return $null
+    }
+}
+
 function Get-OptionalPropertyValue {
     param(
         $Object,
@@ -254,6 +269,94 @@ function Get-OptionalPropertyValue {
         return $null
     }
     return $property.Value
+}
+
+function Convert-PercentText {
+    param([string]$Value)
+
+    if ([string]::IsNullOrWhiteSpace($Value)) {
+        return $null
+    }
+    $normalized = $Value.Trim().TrimEnd("%")
+    try {
+        return [double]$normalized
+    } catch {
+        return $null
+    }
+}
+
+function Get-NodeResourceSamples {
+    $lines = Invoke-KubectlText @("top", "nodes", "--no-headers")
+    if ($null -eq $lines) {
+        return @()
+    }
+
+    $nodes = @()
+    foreach ($line in $lines) {
+        if ([string]::IsNullOrWhiteSpace($line)) {
+            continue
+        }
+        $parts = $line -split "\s+"
+        if ($parts.Count -lt 5) {
+            continue
+        }
+        $nodes += [ordered]@{
+            node = $parts[0]
+            cpu = $parts[1]
+            cpuPercent = Convert-PercentText $parts[2]
+            memory = $parts[3]
+            memoryPercent = Convert-PercentText $parts[4]
+        }
+    }
+    return @($nodes)
+}
+
+function Get-WorkerPodsByNode {
+    $pods = Invoke-KubectlJson @(
+        "-n",
+        $Namespace,
+        "get",
+        "pods",
+        "-l",
+        "app.kubernetes.io/name=preprocess-worker",
+        "-o",
+        "json"
+    )
+    if ($null -eq $pods -or $null -eq $pods.items) {
+        return @()
+    }
+
+    $groups = @{}
+    foreach ($pod in $pods.items) {
+        $nodeName = Get-OptionalPropertyValue $pod.spec "nodeName"
+        if ([string]::IsNullOrWhiteSpace($nodeName)) {
+            $nodeName = "pending"
+        }
+        if (-not $groups.ContainsKey($nodeName)) {
+            $groups[$nodeName] = [ordered]@{
+                node = $nodeName
+                pods = 0
+                ready = 0
+                pending = 0
+            }
+        }
+        $groups[$nodeName].pods++
+        $phase = Get-OptionalPropertyValue $pod.status "phase"
+        if ($phase -eq "Pending") {
+            $groups[$nodeName].pending++
+        }
+        $conditions = Get-OptionalPropertyValue $pod.status "conditions"
+        $isReady = $false
+        foreach ($condition in @($conditions)) {
+            if ($condition.type -eq "Ready" -and $condition.status -eq "True") {
+                $isReady = $true
+            }
+        }
+        if ($isReady) {
+            $groups[$nodeName].ready++
+        }
+    }
+    return @($groups.Values | Sort-Object node)
 }
 
 function Get-KubernetesSample {
@@ -288,6 +391,8 @@ function Get-KubernetesSample {
         workerReadyReplicas = Get-OptionalPropertyValue $deploymentStatus "readyReplicas"
         hpaCurrentReplicas = Get-OptionalPropertyValue $hpaStatus "currentReplicas"
         hpaDesiredReplicas = Get-OptionalPropertyValue $hpaStatus "desiredReplicas"
+        nodeResources = Get-NodeResourceSamples
+        workerPodsByNode = Get-WorkerPodsByNode
     }
 }
 

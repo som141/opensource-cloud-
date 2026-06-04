@@ -93,7 +93,13 @@ function Show-WorkerStatus {
     Invoke-Kubectl @("-n", $Namespace, "get", "hpa", "keda-hpa-preprocess-worker", "--ignore-not-found") | Out-Host
     Invoke-Kubectl @("-n", $Namespace, "get", "hpa", "preprocess-worker-cpu", "--ignore-not-found") | Out-Host
     Invoke-Kubectl @("-n", $Namespace, "get", "scaledobject", "preprocess-worker", "--ignore-not-found") | Out-Host
-    Invoke-Kubectl @("-n", $Namespace, "get", "pods", "-l", "app.kubernetes.io/name=preprocess-worker") | Out-Host
+    $baseArgs = Get-KubectlBaseArgs
+    $pods = & kubectl @baseArgs -n $Namespace get pods -l "app.kubernetes.io/name=preprocess-worker" --ignore-not-found=true 2>$null
+    if ($LASTEXITCODE -eq 0) {
+        $pods | Out-Host
+    } else {
+        Write-Host "No preprocess-worker pods are running. This is normal for KEDA minReplicaCount=0."
+    }
 }
 
 if ($Mode -eq "keda-on" -or $Mode -eq "keda-on-min1") {

@@ -64,6 +64,9 @@ spec:
             - name: grafana-provisioning
               mountPath: /var/lib/grafana/dashboards/keda-batch-comparison.json
               subPath: keda-batch-comparison.json
+            - name: grafana-provisioning
+              mountPath: /var/lib/grafana/dashboards/node-resource-overview.json
+              subPath: node-resource-overview.json
       volumes:
         - name: grafana-provisioning
           configMap:

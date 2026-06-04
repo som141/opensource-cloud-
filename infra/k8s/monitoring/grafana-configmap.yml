@@ -87,7 +87,7 @@ data:
               "legendFormat": "processed/sec"
             },
             {
-              "expr": "sum(rate(worker_job_failed_total[1m]))",
+              "expr": "sum(rate(worker_job_processed_total{status=\"FAILED\"}[1m]))",
               "legendFormat": "failed/sec"
             }
           ]
@@ -104,6 +104,123 @@ data:
             {
               "expr": "rabbitmq_queue_consumers{queue=\"image.preprocess.high\"}",
               "legendFormat": "high consumers"
+            }
+          ]
+        }
+      ]
+    }
+  node-resource-overview.json: |
+    {
+      "uid": "docprep-node-resource",
+      "title": "DocPrep Node Resource Overview",
+      "schemaVersion": 39,
+      "version": 1,
+      "refresh": "10s",
+      "time": {
+        "from": "now-1h",
+        "to": "now"
+      },
+      "panels": [
+        {
+          "type": "timeseries",
+          "title": "Node CPU 사용률",
+          "gridPos": { "x": 0, "y": 0, "w": 12, "h": 8 },
+          "fieldConfig": {
+            "defaults": {
+              "unit": "percent",
+              "min": 0,
+              "max": 100
+            }
+          },
+          "targets": [
+            {
+              "expr": "100 * (1 - avg by (instance) (rate(node_cpu_seconds_total{mode=\"idle\"}[5m])))",
+              "legendFormat": "{{instance}}"
+            }
+          ]
+        },
+        {
+          "type": "timeseries",
+          "title": "Node 메모리 사용률",
+          "gridPos": { "x": 12, "y": 0, "w": 12, "h": 8 },
+          "fieldConfig": {
+            "defaults": {
+              "unit": "percent",
+              "min": 0,
+              "max": 100
+            }
+          },
+          "targets": [
+            {
+              "expr": "100 * (1 - (node_memory_MemAvailable_bytes / node_memory_MemTotal_bytes))",
+              "legendFormat": "{{instance}}"
+            }
+          ]
+        },
+        {
+          "type": "timeseries",
+          "title": "Node load1",
+          "gridPos": { "x": 0, "y": 8, "w": 8, "h": 8 },
+          "targets": [
+            {
+              "expr": "node_load1",
+              "legendFormat": "{{instance}}"
+            }
+          ]
+        },
+        {
+          "type": "timeseries",
+          "title": "Node filesystem 사용률",
+          "gridPos": { "x": 8, "y": 8, "w": 8, "h": 8 },
+          "fieldConfig": {
+            "defaults": {
+              "unit": "percent",
+              "min": 0,
+              "max": 100
+            }
+          },
+          "targets": [
+            {
+              "expr": "100 * (1 - (node_filesystem_avail_bytes{mountpoint=\"/\"} / node_filesystem_size_bytes{mountpoint=\"/\"}))",
+              "legendFormat": "{{instance}}"
+            }
+          ]
+        },
+        {
+          "type": "timeseries",
+          "title": "Worker Pod 분산",
+          "gridPos": { "x": 16, "y": 8, "w": 8, "h": 8 },
+          "targets": [
+            {
+              "expr": "count by (node) (kube_pod_info{namespace=\"docprep-cloud\",pod=~\"preprocess-worker-.*\"})",
+              "legendFormat": "{{node}}"
+            }
+          ]
+        },
+        {
+          "type": "timeseries",
+          "title": "Node별 Pod CPU request",
+          "gridPos": { "x": 0, "y": 16, "w": 12, "h": 8 },
+          "targets": [
+            {
+              "expr": "sum by (node) (kube_pod_container_resource_requests{namespace=\"docprep-cloud\",resource=\"cpu\"})",
+              "legendFormat": "{{node}}"
+            }
+          ]
+        },
+        {
+          "type": "timeseries",
+          "title": "Node별 Pod memory request",
+          "gridPos": { "x": 12, "y": 16, "w": 12, "h": 8 },
+          "fieldConfig": {
+            "defaults": {
+              "unit": "bytes"
+            }
+          },
+          "targets": [
+            {
+              "expr": "sum by (node) (kube_pod_container_resource_requests{namespace=\"docprep-cloud\",resource=\"memory\"})",
+              "legendFormat": "{{node}}"
             }
           ]
         }

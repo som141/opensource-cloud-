@@ -43,6 +43,7 @@
 | `prometheus` | 1 | 200m | 512Mi | 1 | 1Gi | metric 수집, 7일 retention |
 | `grafana` | 1 | 100m | 256Mi | 500m | 512Mi | dashboard 제공 |
 | `kube-state-metrics` | 1 | 100m | 128Mi | 500m | 512Mi | Deployment/HPA/Pod metric 제공 |
+| `node-exporter` | 노드당 1 | 50m | 64Mi | 200m | 128Mi | 노드 CPU/메모리/파일시스템 metric 제공 |
 | `otel-collector` | 1 | 50m | 128Mi | 250m | 256Mi | OTLP trace 수집 |
 
 Grafana 현재 기본 계정은 manifest 기준 `admin/admin`이다. 공개 운영 전에는 반드시 Secret 기반으로 교체한다.
