@@ -471,6 +471,13 @@ export function UploadPage() {
 
   return (
     <div className="upload-console">
+      {error && (
+        <div className="status-card error">
+          <strong>Batch flow failed</strong>
+          <span>{error}</span>
+        </div>
+      )}
+
       <section className="console-hero">
         <div>
           <span className="status-pill accent">Batch pipeline</span>
@@ -564,14 +571,7 @@ export function UploadPage() {
             title="3. Batch monitor"
             description="Track upload preparation, Worker progress, and downloadable artifacts."
           >
-            {error && (
-              <div className="status-card error">
-                <strong>Batch flow failed</strong>
-                <span>{error}</span>
-              </div>
-            )}
-
-            {fileRows.length > 0 ? (
+              {fileRows.length > 0 ? (
               <div className="file-list">
                 {fileRows.map((row) => (
                   <div className="file-row" key={row.key}>

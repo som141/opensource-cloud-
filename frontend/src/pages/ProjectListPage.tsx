@@ -95,6 +95,13 @@ export function ProjectListPage() {
 
   return (
     <div className="project-console">
+      {error && (
+        <div className="status-card error">
+          <strong>Project flow failed</strong>
+          <span>{error}</span>
+        </div>
+      )}
+
       <section className="console-hero">
         <div>
           <span className="status-pill accent">Project workspace</span>
@@ -110,13 +117,6 @@ export function ProjectListPage() {
           <small>{loading ? 'Loading workspace data' : 'Ready for upload batches'}</small>
         </div>
       </section>
-
-      {error && (
-        <div className="status-card error">
-          <strong>Project flow failed</strong>
-          <span>{error}</span>
-        </div>
-      )}
 
       <div className="project-layout">
         <PageSection title="Create project" description="Create a workspace for a document image batch.">
