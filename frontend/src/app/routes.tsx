@@ -1,6 +1,7 @@
 import { DashboardPage } from '../pages/DashboardPage';
 import { ImageDetailPage } from '../pages/ImageDetailPage';
 import { JobDetailPage } from '../pages/JobDetailPage';
+import { LandingPage } from '../pages/LandingPage';
 import { LoginPage } from '../pages/LoginPage';
 import { OAuthSuccessPage } from '../pages/OAuthSuccessPage';
 import { ProjectDetailPage } from '../pages/ProjectDetailPage';
@@ -16,7 +17,8 @@ export type AppRoute = {
 };
 
 export const routes: AppRoute[] = [
-  { path: '/', label: 'Dashboard', element: <DashboardPage />, eyebrow: 'Operations overview' },
+  { path: '/', label: 'Landing', element: <LandingPage />, showInNav: false },
+  { path: '/dashboard', label: 'Dashboard', element: <DashboardPage />, eyebrow: 'Operations overview' },
   { path: '/login', label: 'Login', element: <LoginPage />, showInNav: false },
   { path: '/oauth2/success', label: 'OAuth Success', element: <OAuthSuccessPage />, showInNav: false },
   { path: '/projects', label: 'Projects', element: <ProjectListPage />, eyebrow: 'Workspace scope' },
@@ -42,5 +44,5 @@ export function resolveRoute(pathname: string): AppRoute {
     return routes.find((route) => route.path === '/images/:imageId') ?? routes[0];
   }
 
-  return routes[0];
+  return routes.find((route) => route.path === '/dashboard') ?? routes[0];
 }

@@ -14,13 +14,22 @@ type CurrentUser = {
 };
 
 export function App() {
-  const route = resolveRoute(window.location.pathname);
+  const pathname = window.location.pathname;
+  const route = resolveRoute(pathname);
+
+  if (pathname === '/') {
+    return (
+      <AppProviders>
+        {route.element}
+      </AppProviders>
+    );
+  }
 
   return (
     <AppProviders>
       <div className="shell">
         <aside className="sidebar" aria-label="Primary">
-          <a className="brand" href="/">
+          <a className="brand" href="/dashboard">
             <img className="brand-mark" src="/logo.png" alt="DocPrep Cloud" />
             <span>
               <strong>DocPrep Cloud</strong>
