@@ -121,10 +121,10 @@ export function DashboardPage() {
     <div className="project-console">
       {error && (
         <div className="status-card error">
-          <strong>Dashboard failed</strong>
-          <span>{error}</span>
+          <strong>Dashboard unavailable</strong>
+          <span>Your session may have expired. Please sign in again to continue.</span>
           <div className="download-actions">
-            <a className="primary-action" href="/oauth2/authorization/google">
+            <a className="primary-action sm" href="/oauth2/authorization/google">
               Continue with Google
             </a>
             <button className="secondary-action" type="button" onClick={() => void loadDashboard(false)}>
@@ -134,14 +134,12 @@ export function DashboardPage() {
         </div>
       )}
 
-      <section className="console-hero">
+      <section className={`console-hero ${error ? 'offline' : 'online'}`}>
         <div>
           <span className="status-pill accent">Operations overview</span>
-          <h2>Track the preprocessing workspace before the next batch.</h2>
+          <h2>Track your workspace and batch progress at a glance.</h2>
           <p>
-            Dashboard data is loaded from the same MVP APIs used by Projects, Upload, and Job detail. It summarizes
-            project scope, uploaded images, queue-backed jobs, and processed outputs without reintroducing admin-only
-            features.
+            View your projects, uploaded images, and recent job activity all in one place. Monitor pipeline health, track success rates, and jump straight into your next batch without switching between pages.
           </p>
         </div>
         <div className="session-card">
