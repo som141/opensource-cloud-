@@ -471,29 +471,34 @@ export function UploadPage() {
 
   return (
     <div className="upload-console">
-      <section className="console-hero">
+      {error && (
+        <div className="status-card error">
+          <strong>Batch flow failed</strong>
+          <span>{error}</span>
+        </div>
+      )}
+
+      {!accessToken && (
+        <div className="status-card error">
+          <strong>Sign in required</strong>
+          <span>You need to be signed in with Google to upload and process documents.</span>
+          <a className="primary-action sm" style={{ marginTop: '0.4rem' }} href="/oauth2/authorization/google">Continue with Google</a>
+        </div>
+      )}
+
+      <section className={`console-hero ${error || !accessToken ? 'offline' : 'online'}`}>
         <div>
           <span className="status-pill accent">Batch pipeline</span>
-          <h2>Prepare scanned documents for OCR at queue scale.</h2>
+          <h2>Upload documents and run preprocessing jobs.</h2>
           <p>
-            Upload multiple scans, let the API create one JobItem per image, and watch the Worker produce processed
-            images that can be downloaded as the final output.
+            Select images or a ZIP file, and we'll queue a preprocessing job for each one automatically. Track upload progress, monitor Worker results, and download processed outputs when ready.
           </p>
         </div>
         <div className="session-card">
           <span className={`status-dot ${accessToken ? 'online' : 'offline'}`} />
           <strong>{accessToken ? 'Authenticated' : 'Login required'}</strong>
-          <small>Access token value is hidden. Refresh token stays in an HttpOnly cookie.</small>
         </div>
       </section>
-
-      {!accessToken && (
-        <div className="status-card warning">
-          <strong>Google session required</strong>
-          <span>Sign in first. The OAuth callback now refreshes the access token without exposing it in the URL.</span>
-          <a className="primary-action" href="/oauth2/authorization/google">Continue with Google</a>
-        </div>
-      )}
 
       <section className="metric-strip">
         <MetricCard label="Selected" value={String(selectedFiles.length)} detail="images" />
@@ -564,14 +569,7 @@ export function UploadPage() {
             title="3. Batch monitor"
             description="Track upload preparation, Worker progress, and downloadable artifacts."
           >
-            {error && (
-              <div className="status-card error">
-                <strong>Batch flow failed</strong>
-                <span>{error}</span>
-              </div>
-            )}
-
-            {fileRows.length > 0 ? (
+              {fileRows.length > 0 ? (
               <div className="file-list">
                 {fileRows.map((row) => (
                   <div className="file-row" key={row.key}>

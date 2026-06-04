@@ -14,14 +14,23 @@ type CurrentUser = {
 };
 
 export function App() {
-  const route = resolveRoute(window.location.pathname);
+  const pathname = window.location.pathname;
+  const route = resolveRoute(pathname);
+
+  if (pathname === '/') {
+    return (
+      <AppProviders>
+        {route.element}
+      </AppProviders>
+    );
+  }
 
   return (
     <AppProviders>
       <div className="shell">
         <aside className="sidebar" aria-label="Primary">
-          <a className="brand" href="/">
-            <span className="brand-mark">DP</span>
+          <a className="brand" href="/dashboard">
+            <img className="brand-mark" src="/logo.png" alt="DocPrep Cloud" />
             <span>
               <strong>DocPrep Cloud</strong>
               <small>document intelligence ops</small>
@@ -39,12 +48,8 @@ export function App() {
           <SidebarAccount />
         </aside>
         <main className="content">
-          <div className="topbar">
-            <span>Local MVP</span>
-            <strong>Queue-backed preprocessing workspace</strong>
-          </div>
           <header className="page-header">
-            <p className="eyebrow">Large-scale document image preprocessing</p>
+            {route.eyebrow && <p className="eyebrow">{route.eyebrow}</p>}
             <h1>{route.label}</h1>
           </header>
           {route.element}

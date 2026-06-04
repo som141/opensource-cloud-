@@ -95,13 +95,19 @@ export function ProjectListPage() {
 
   return (
     <div className="project-console">
-      <section className="console-hero">
+      {error && (
+        <div className="status-card error">
+          <strong>Failed to load projects</strong>
+          <span>Please try again. If the problem persists, signing out and back in may help.</span>
+        </div>
+      )}
+
+      <section className={`console-hero ${error ? 'offline' : 'online'}`}>
         <div>
           <span className="status-pill accent">Project workspace</span>
-          <h2>Group scan batches before queueing preprocessing work.</h2>
+          <h2>Organize batches and manage team access.</h2>
           <p>
-            Projects own uploaded images, default presets, access roles, and the preprocessing jobs created from those
-            image sets.
+            Each project holds uploaded images, preprocessing settings, and job history for your team. Create a new project or open an existing one to review images and recent jobs.
           </p>
         </div>
         <div className="session-card">
@@ -110,13 +116,6 @@ export function ProjectListPage() {
           <small>{loading ? 'Loading workspace data' : 'Ready for upload batches'}</small>
         </div>
       </section>
-
-      {error && (
-        <div className="status-card error">
-          <strong>Project flow failed</strong>
-          <span>{error}</span>
-        </div>
-      )}
 
       <div className="project-layout">
         <PageSection title="Create project" description="Create a workspace for a document image batch.">

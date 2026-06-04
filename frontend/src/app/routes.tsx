@@ -1,6 +1,7 @@
 import { DashboardPage } from '../pages/DashboardPage';
 import { ImageDetailPage } from '../pages/ImageDetailPage';
 import { JobDetailPage } from '../pages/JobDetailPage';
+import { LandingPage } from '../pages/LandingPage';
 import { LoginPage } from '../pages/LoginPage';
 import { OAuthSuccessPage } from '../pages/OAuthSuccessPage';
 import { ProjectDetailPage } from '../pages/ProjectDetailPage';
@@ -12,17 +13,19 @@ export type AppRoute = {
   label: string;
   element: JSX.Element;
   showInNav?: boolean;
+  eyebrow?: string;
 };
 
 export const routes: AppRoute[] = [
-  { path: '/', label: 'Dashboard', element: <DashboardPage /> },
+  { path: '/', label: 'Landing', element: <LandingPage />, showInNav: false },
+  { path: '/dashboard', label: 'Dashboard', element: <DashboardPage />, eyebrow: 'Operations overview' },
   { path: '/login', label: 'Login', element: <LoginPage />, showInNav: false },
   { path: '/oauth2/success', label: 'OAuth Success', element: <OAuthSuccessPage />, showInNav: false },
-  { path: '/projects', label: 'Projects', element: <ProjectListPage /> },
-  { path: '/projects/:projectId', label: 'Project Detail', element: <ProjectDetailPage /> },
-  { path: '/upload', label: 'Upload', element: <UploadPage /> },
-  { path: '/jobs/:jobId', label: 'Job Detail', element: <JobDetailPage /> },
-  { path: '/images/:imageId', label: 'Image Detail', element: <ImageDetailPage /> }
+  { path: '/projects', label: 'Projects', element: <ProjectListPage />, eyebrow: 'Workspace scope' },
+  { path: '/projects/:projectId', label: 'Project Detail', element: <ProjectDetailPage />, eyebrow: 'Project workspace' },
+  { path: '/upload', label: 'Upload', element: <UploadPage />, eyebrow: 'Batch processing' },
+  { path: '/jobs/:jobId', label: 'Job Detail', element: <JobDetailPage />, eyebrow: 'Job monitoring' },
+  { path: '/images/:imageId', label: 'Image Detail', element: <ImageDetailPage />, eyebrow: 'Image artifact' }
 ];
 
 export function resolveRoute(pathname: string): AppRoute {
@@ -41,5 +44,5 @@ export function resolveRoute(pathname: string): AppRoute {
     return routes.find((route) => route.path === '/images/:imageId') ?? routes[0];
   }
 
-  return routes[0];
+  return routes.find((route) => route.path === '/dashboard') ?? routes[0];
 }
