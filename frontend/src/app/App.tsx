@@ -39,12 +39,7 @@ export function App() {
           <SidebarAccount />
         </aside>
         <main className="content">
-          <div className="topbar">
-            <span>Local MVP</span>
-            <strong>Queue-backed preprocessing workspace</strong>
-          </div>
           <header className="page-header">
-            <p className="eyebrow">Large-scale document image preprocessing</p>
             <h1>{route.label}</h1>
           </header>
           {route.element}
