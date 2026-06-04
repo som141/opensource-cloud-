@@ -54,7 +54,7 @@ button {
     linear-gradient(180deg, rgba(18, 56, 45, 0.96), rgba(18, 56, 45, 0.88)),
     radial-gradient(circle at top left, rgba(255, 255, 255, 0.16), transparent 18rem);
   color: #f7f3e7;
-  padding: 1.5rem;
+  padding: 0.75rem 1.5rem 1.5rem;
 }
 
 .brand {
@@ -65,8 +65,8 @@ button {
 }
 
 .brand-mark {
-  width: 5.5rem;
-  height: 5.5rem;
+  width: 5rem;
+  height: 5rem;
   object-fit: contain;
   margin-left: -0.75rem;
 }
@@ -219,7 +219,7 @@ button {
 
 .page-header {
   max-width: 70rem;
-  margin-bottom: 2rem;
+  margin-bottom: 3rem;
 }
 
 .eyebrow {
@@ -238,6 +238,7 @@ button {
   font-size: clamp(2.6rem, 7vw, 6.8rem);
   letter-spacing: -0.08em;
   line-height: 0.88;
+  text-transform: capitalize;
 }
 
 .page-section {
@@ -331,7 +332,7 @@ button {
 .console-hero h2 {
   max-width: 48rem;
   margin: 0.75rem 0;
-  font-size: clamp(2rem, 4vw, 4rem);
+  font-size: clamp(2rem, 3.5vw, 3.5rem);
   letter-spacing: -0.06em;
   line-height: 0.95;
 }
@@ -340,6 +341,7 @@ button {
   max-width: 48rem;
   margin: 0;
   color: var(--muted);
+  font-size: 1.05rem;
   line-height: 1.7;
 }
 
@@ -629,7 +631,7 @@ button {
   display: grid;
   grid-template-columns: minmax(24rem, 1.05fr) minmax(18rem, 0.95fr);
   gap: 1.1rem;
-  align-items: start;
+  align-items: stretch;
 }
 
 .dashboard-action-grid {
@@ -641,7 +643,7 @@ button {
 .dashboard-action-card {
   display: grid;
   gap: 0.4rem;
-  min-height: 9rem;
+  min-height: 13rem;
   border: 1px solid rgba(18, 56, 45, 0.12);
   border-radius: 1.15rem;
   background:
